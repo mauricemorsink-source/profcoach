@@ -7,6 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -14,20 +15,45 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - name: Install
+      - name: Install dependencies
         run: npm ci
 
-      - name: Build (static export)
-        run: npm run build
+      - name: Generate Prisma client
+        run: npx prisma generate
 
-      - name: Upload via SCP
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Prepare deploy package
+        run: |
+          mkdir -p deploy/.next
+          cp -r .next/standalone/. deploy/
+          cp -r .next/static deploy/.next/static
+          cp -r public deploy/public
+
+      - name: Upload to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
           port: ${{ secrets.SFTP_PORT }}
-          source: "out/*"
+          source: "deploy/"
           target: ${{ secrets.SFTP_TARGET }}
+          strip_components: 1
           overwrite: true
+
+      - name: Restart application
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          port: ${{ secrets.SFTP_PORT }}
+          script: |
+            cd ${{ secrets.SFTP_TARGET }}
+            pm2 restart profcoach 2>/dev/null || pm2 start server.js --name profcoach

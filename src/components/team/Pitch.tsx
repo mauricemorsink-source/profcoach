@@ -49,7 +49,7 @@ function SlotCard({
     <div
       onClick={locked ? undefined : onClick}
       className={`
-        relative rounded-xl border-2 text-center px-2 py-2 w-[100px] h-[96px] overflow-hidden transition-all select-none
+        relative rounded-xl border-2 text-center px-2 py-2 w-[100px] h-[112px] overflow-hidden transition-all select-none
         ${locked
           ? "cursor-default opacity-70 border-white/20 bg-black/30"
           : isActive
@@ -106,7 +106,7 @@ export default function Pitch({
       className="relative w-full rounded-2xl overflow-hidden"
       style={{
         background: "linear-gradient(180deg, #0d3d1a 0%, #145c26 40%, #145c26 60%, #0d3d1a 100%)",
-        minHeight: 460,
+        minHeight: 520,
         boxShadow: "0 0 30px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,0,0,0.2)",
       }}
     >
@@ -129,7 +129,7 @@ export default function Pitch({
       </div>
 
       {/* Spelers (ATT bovenaan, GK onderaan — aanvalsveld-perspectief) */}
-      <div className="relative z-10 flex flex-col-reverse justify-around h-full py-5 gap-2" style={{ minHeight: 460 }}>
+      <div className="relative z-10 flex flex-col-reverse justify-around h-full py-5 gap-2" style={{ minHeight: 520 }}>
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className="flex justify-center gap-3 flex-wrap px-4">
             {row.map((slot) => (
