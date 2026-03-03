@@ -4,17 +4,12 @@ import { useState, useEffect, useMemo } from "react";
 import type { Player, Formation, Season, SlotDef } from "./types";
 import { buildSlots } from "./formationSlots";
 
-// Herverdeelt huidige spelers over nieuwe slots bij formatieverandering.
-// Prioriteit: spelers in juiste positie-slots plaatsen; overgebleven spelers
-// (bijv. 4e verdediger bij 3-back) gaan in lege slots van andere posities.
 function remapSlots(
   oldSlotValues: (string | null)[],
   newSlots: SlotDef[],
   playersById: Record<string, Player>
 ): (string | null)[] {
   const result: (string | null)[] = Array(11).fill(null);
-
-  // Groepeer huidig geselecteerde spelers op hun DB-positie
   const byPos: Record<string, string[]> = {};
   for (const playerId of oldSlotValues) {
     if (!playerId) continue;
@@ -23,25 +18,18 @@ function remapSlots(
     if (!byPos[p.position]) byPos[p.position] = [];
     byPos[p.position].push(playerId);
   }
-
-  // Eerste ronde: vul slots met spelers van de juiste positie
   for (const slot of newSlots) {
     const available = byPos[slot.position];
-    if (available?.length) {
-      result[slot.slotIndex] = available.shift()!;
-    }
+    if (available?.length) result[slot.slotIndex] = available.shift()!;
   }
-
-  // Tweede ronde: resterende spelers (overflow) in lege slots
   const overflow = (Object.values(byPos) as string[][]).flat();
   for (const slot of newSlots) {
-    if (result[slot.slotIndex] === null && overflow.length) {
+    if (result[slot.slotIndex] === null && overflow.length)
       result[slot.slotIndex] = overflow.shift()!;
-    }
   }
-
   return result;
 }
+
 import { validateTeam, CLUB_LABEL } from "./validate";
 import Pitch from "./Pitch";
 
@@ -68,6 +56,9 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
   const [saving, setSaving] = useState(false);
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [playerSearch, setPlayerSearch] = useState("");
+  const [captainEnabled, setCaptainEnabled] = useState(false);
+  const [captainSlot, setCaptainSlot] = useState<number | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -78,8 +69,8 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
   );
 
   const validation = useMemo(
-    () => validateTeam(slotValues, playersById, formation, budget),
-    [slotValues, playersById, formation, budget]
+    () => validateTeam(slotValues, playersById, formation, budget, captainEnabled, captainSlot),
+    [slotValues, playersById, formation, budget, captainEnabled, captainSlot]
   );
 
   useEffect(() => {
@@ -102,6 +93,8 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
       setTeamEntryId(team.id);
       setFormationId(team.formationId);
       setLocked(team.locked);
+      setCaptainEnabled(draftData.captainEnabled ?? false);
+      setCaptainSlot(team.captainSlot ?? null);
       localStorage.setItem(DRAFT_KEY, team.id);
 
       const restored = Array(11).fill(null);
@@ -122,6 +115,8 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     setFormationId(newFormationId);
     setSelectedSlot(null);
     setShowPickerModal(false);
+    // Captain slot resetten als de speler in dat slot verplaatst is
+    setCaptainSlot(null);
   }
 
   function handleSlotClick(slotIndex: number) {
@@ -146,11 +141,19 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
 
   function handleClearSlot() {
     if (selectedSlot === null) return;
+    if (captainSlot === selectedSlot) setCaptainSlot(null);
     setSlotValues((prev) => {
       const next = [...prev];
       next[selectedSlot] = null;
       return next;
     });
+    setShowPickerModal(false);
+    setSelectedSlot(null);
+  }
+
+  function handleSetCaptain() {
+    if (selectedSlot === null) return;
+    setCaptainSlot((prev) => (prev === selectedSlot ? null : selectedSlot));
     setShowPickerModal(false);
     setSelectedSlot(null);
   }
@@ -161,7 +164,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     await fetch("/api/team/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamEntryId, formationId, slots: slotValues }),
+      body: JSON.stringify({ teamEntryId, formationId, slots: slotValues, captainSlot }),
     });
     setSaving(false);
   }
@@ -180,6 +183,14 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     setSaving(false);
   }
 
+  async function handleShareCopy() {
+    if (!teamEntryId) return;
+    const url = `${window.location.origin}/team/${teamEntryId}`;
+    await navigator.clipboard.writeText(url);
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 2000);
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500">
@@ -189,8 +200,9 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
   }
 
   const activeSlot = selectedSlot !== null ? slots[selectedSlot] : null;
+  const currentInSlot = activeSlot ? slotValues[activeSlot.slotIndex] : null;
+  const activeSlotIsCaptain = selectedSlot !== null && captainSlot === selectedSlot;
 
-  // Gefilterde spelers voor modal
   const modalPlayers = activeSlot
     ? players
         .filter((p) => p.position === activeSlot.position)
@@ -202,7 +214,6 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     : [];
 
   const chosenIds = new Set(slotValues.filter(Boolean) as string[]);
-  const currentInSlot = activeSlot ? slotValues[activeSlot.slotIndex] : null;
 
   return (
     <div className="max-w-3xl mx-auto px-4 pb-10">
@@ -265,6 +276,13 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
         </div>
       </div>
 
+      {/* Aanvoerder hint */}
+      {captainEnabled && !locked && captainSlot === null && (
+        <div className="mb-4 bg-amber-900/20 border border-amber-500/30 rounded-xl px-4 py-2.5 text-xs text-amber-400">
+          Tik op een spelerskaart om een aanvoerder te kiezen.
+        </div>
+      )}
+
       {/* Veld */}
       <Pitch
         slots={slots}
@@ -273,10 +291,11 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
         slotValues={slotValues}
         onSlotClick={handleSlotClick}
         locked={locked}
+        captainSlot={captainEnabled ? captainSlot : null}
       />
 
       {/* Knoppen */}
-      <div className="flex gap-3 mt-4">
+      <div className="flex gap-3 mt-4 flex-wrap">
         <button
           onClick={handleSave}
           disabled={locked || saving || !teamEntryId}
@@ -291,6 +310,14 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
         >
           {saving ? "Bezig..." : "Team indienen"}
         </button>
+        {teamEntryId && (
+          <button
+            onClick={handleShareCopy}
+            className="ml-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-semibold text-sm border border-slate-700 transition-colors"
+          >
+            {copyFeedback ? "Link gekopieerd!" : "Delen"}
+          </button>
+        )}
       </div>
 
       {/* Player picker modal */}
@@ -306,12 +333,25 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
                 </h3>
               </div>
               <div className="flex items-center gap-2">
+                {/* Aanvoerder toggle — alleen als captainEnabled en er een speler in het slot zit */}
+                {captainEnabled && currentInSlot && (
+                  <button
+                    onClick={handleSetCaptain}
+                    className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition-colors ${
+                      activeSlotIsCaptain
+                        ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                        : "bg-slate-800 text-slate-400 border-slate-700 hover:text-amber-400 hover:border-amber-500/40"
+                    }`}
+                  >
+                    {activeSlotIsCaptain ? "C Aanvoerder" : "Aanvoerder"}
+                  </button>
+                )}
                 {currentInSlot && (
                   <button
                     onClick={handleClearSlot}
                     className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg bg-red-900/20 border border-red-500/30 transition-colors"
                   >
-                    Slot leegmaken
+                    Leegmaken
                   </button>
                 )}
                 <button
@@ -379,5 +419,4 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
       )}
     </div>
   );
-
 }

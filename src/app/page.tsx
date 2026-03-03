@@ -39,6 +39,9 @@ export default async function HomePage() {
             <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
               Tussenstand bekijken
             </Link>
+            <Link href="/rules" className="block w-full text-center py-2.5 px-6 text-slate-400 hover:text-white text-sm font-medium transition-colors">
+              Spelregels
+            </Link>
             <p className="text-center text-sm text-slate-500 pt-1">
               Al een account?{" "}
               <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium">Inloggen</Link>

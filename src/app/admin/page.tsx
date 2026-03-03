@@ -6,6 +6,7 @@ type GameSettings = {
   budget: number;
   deadline: string | null;
   registrationOpen: boolean;
+  captainEnabled: boolean;
   rulesText: string;
 };
 
@@ -172,7 +173,7 @@ export default function AdminPage() {
   // Game settings
   const [settings, setSettings] = useState<GameSettings | null>(null);
   const [settingsForm, setSettingsForm] = useState<GameSettings>({
-    budget: 1750, deadline: null, registrationOpen: true, rulesText: "",
+    budget: 1750, deadline: null, registrationOpen: true, captainEnabled: false, rulesText: "",
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -216,6 +217,7 @@ export default function AdminPage() {
         budget: data.budget,
         deadline: data.deadline ? data.deadline.slice(0, 16) : "",
         registrationOpen: data.registrationOpen,
+        captainEnabled: data.captainEnabled ?? false,
         rulesText: data.rulesText,
       });
     }
@@ -306,7 +308,7 @@ export default function AdminPage() {
 
   async function saveSettings() {
     setSettingsSaving(true); setSettingsMsg(null);
-    const res = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: Number(settingsForm.budget), deadline: settingsForm.deadline || null, registrationOpen: settingsForm.registrationOpen, rulesText: settingsForm.rulesText }) });
+    const res = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: Number(settingsForm.budget), deadline: settingsForm.deadline || null, registrationOpen: settingsForm.registrationOpen, captainEnabled: settingsForm.captainEnabled, rulesText: settingsForm.rulesText }) });
     const data = await res.json(); setSettingsSaving(false);
     if (!res.ok) { setSettingsMsg({ type: "err", text: data.error || "Opslaan mislukt" }); }
     else { setSettings(data); setSettingsMsg({ type: "ok", text: "Instellingen opgeslagen" }); }
@@ -408,12 +410,25 @@ export default function AdminPage() {
                     {settingsForm.registrationOpen ? "Aan" : "Uit"}
                   </span>
                 </div>
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={settingsForm.captainEnabled} onChange={(e) => setSettingsForm({ ...settingsForm, captainEnabled: e.target.checked })} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                  </label>
+                  <span className="text-sm font-medium text-slate-300">Aanvoerder verplicht</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.captainEnabled ? "bg-amber-900/40 text-amber-400 border border-amber-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
+                    {settingsForm.captainEnabled ? "Aan" : "Uit"}
+                  </span>
+                  <span className="text-xs text-slate-500">— aanvoerder krijgt 2× punten</span>
+                </div>
                 <div>
                   <label className={LABEL}>Spelregels</label>
-                  <textarea value={settingsForm.rulesText} onChange={(e) => setSettingsForm({ ...settingsForm, rulesText: e.target.value })} rows={8}
-                    className={INPUT + " resize-y"}
-                    placeholder="Schrijf hier de spelregels. Elke regel op een nieuwe lijn." />
-                  <p className="text-xs text-slate-600 mt-1">Zichtbaar op de spelregelspagina voor deelnemers.</p>
+                  <textarea value={settingsForm.rulesText} onChange={(e) => setSettingsForm({ ...settingsForm, rulesText: e.target.value })} rows={12}
+                    className={INPUT + " resize-y font-mono text-sm"}
+                    placeholder={"## Spelregels\n\nSchrijf hier de spelregels in markdown-opmaak.\n\n**Vet** of *cursief* tekst.\n\n## Sectie 2\n\n- Punt 1\n- Punt 2\n- Punt 3"} />
+                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    Opmaak via markdown: <span className="text-slate-400 font-mono">## Koptekst</span> · <span className="text-slate-400 font-mono">**vet**</span> · <span className="text-slate-400 font-mono">*cursief*</span> · <span className="text-slate-400 font-mono">- lijstitem</span>
+                  </p>
                 </div>
                 {settingsMsg && (
                   <p className={`text-sm px-3 py-2 rounded-lg border ${settingsMsg.type === "ok" ? "bg-green-900/20 text-green-400 border-green-500/30" : "bg-red-900/20 text-red-400 border-red-500/30"}`}>

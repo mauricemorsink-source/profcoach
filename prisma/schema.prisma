@@ -59,6 +59,7 @@ model GameSettings {
   budget             Int       @default(1750)
   deadline           DateTime?
   registrationOpen   Boolean   @default(true)
+  captainEnabled     Boolean   @default(false)
   rulesText          String    @default("")
   standingsUpdatedAt DateTime?
   isProcessing       Boolean   @default(false)
@@ -97,12 +98,13 @@ model Player {
 }
 
 model TeamEntry {
-  id          String            @id @default(cuid())
-  seasonId    String
-  formationId String
-  userId      String?
-  locked      Boolean           @default(false)
-  createdAt   DateTime          @default(now())
+  id           String            @id @default(cuid())
+  seasonId     String
+  formationId  String
+  userId       String?
+  locked       Boolean           @default(false)
+  captainSlot  Int?
+  createdAt    DateTime          @default(now())
   season      Season            @relation(fields: [seasonId], references: [id])
   formation   Formation         @relation(fields: [formationId], references: [id])
   user        User?             @relation(fields: [userId], references: [id])

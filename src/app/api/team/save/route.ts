@@ -11,10 +11,11 @@ const teamInclude = {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { teamEntryId, formationId, slots } = body as {
+  const { teamEntryId, formationId, slots, captainSlot } = body as {
     teamEntryId: string;
     formationId: string;
     slots: (string | null)[];
+    captainSlot?: number | null;
   };
 
   if (!Array.isArray(slots) || slots.length !== 11) {
@@ -25,9 +26,21 @@ export async function POST(req: Request) {
   if (!team) return NextResponse.json({ error: "Team niet gevonden" }, { status: 404 });
   if (team.locked) return NextResponse.json({ error: "Team is gelockt" }, { status: 400 });
 
+  // Controleer deadline
+  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
+  if (settings?.deadline && new Date() > new Date(settings.deadline)) {
+    return NextResponse.json({ error: "De deadline is verstreken" }, { status: 403 });
+  }
+
   await prisma.$transaction([
     prisma.teamEntryPlayer.deleteMany({ where: { teamEntryId } }),
-    prisma.teamEntry.update({ where: { id: teamEntryId }, data: { formationId } }),
+    prisma.teamEntry.update({
+      where: { id: teamEntryId },
+      data: {
+        formationId,
+        captainSlot: captainSlot !== undefined ? captainSlot : null,
+      },
+    }),
     prisma.teamEntryPlayer.createMany({
       data: slots
         .map((playerId, slotIndex) => ({ teamEntryId, playerId: playerId!, slotIndex }))

@@ -19,6 +19,12 @@ export async function POST(req: Request) {
   if (!team) return NextResponse.json({ error: "Team niet gevonden" }, { status: 404 });
   if (team.locked) return NextResponse.json({ team, alreadyLocked: true });
 
+  // Controleer deadline
+  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
+  if (settings?.deadline && new Date() > new Date(settings.deadline)) {
+    return NextResponse.json({ error: "De deadline is verstreken" }, { status: 403 });
+  }
+
   const locked = await prisma.teamEntry.update({
     where: { id: teamEntryId },
     data: { locked: true },

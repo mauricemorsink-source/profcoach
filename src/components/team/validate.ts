@@ -30,7 +30,9 @@ export function validateTeam(
   slots: (string | null)[],
   playersById: Record<string, Player>,
   formation: Formation,
-  budget = 1750
+  budget = 1750,
+  captainEnabled = false,
+  captainSlot: number | null = null
 ): ValidationResult {
   const errors: string[] = [];
   const countsByPos: Record<string, number> = {};
@@ -114,6 +116,18 @@ export function validateTeam(
       };
     }),
   ];
+
+  // Aanvoerder regel
+  if (captainEnabled) {
+    const captainInFilledSlot = captainSlot !== null && slots[captainSlot] != null;
+    rules.push({
+      key: "captain",
+      label: "Aanvoerder",
+      display: captainInFilledSlot ? "Gekozen" : "Niet gekozen",
+      met: captainInFilledSlot,
+    });
+    if (!captainInFilledSlot) errors.push("Kies een aanvoerder");
+  }
 
   // Positie-fouten (niet al gedekt via club-loop)
   if (selectedCount !== 11) errors.push(`Je hebt ${selectedCount} van 11 spelers gekozen`);

@@ -18,20 +18,36 @@ export async function POST(req: Request) {
   const season = await prisma.season.findFirst({ where: { isActive: true } });
   if (!season) return NextResponse.json({ error: "Geen actief seizoen" }, { status: 400 });
 
+  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
+  const pastDeadline = settings?.deadline ? new Date() > new Date(settings.deadline) : false;
+
+  async function maybeAutoLock(teamId: string, currentlyLocked: boolean): Promise<boolean> {
+    if (pastDeadline && !currentlyLocked) {
+      await prisma.teamEntry.update({ where: { id: teamId }, data: { locked: true } });
+      return true;
+    }
+    return currentlyLocked;
+  }
+
   // Als ingelogd: zoek op userId + seizoen
   if (session) {
     const existing = await prisma.teamEntry.findFirst({
       where: { userId: session.userId, seasonId: season.id },
       include: teamInclude,
     });
-    if (existing) return NextResponse.json({ team: existing, isNew: false });
+    if (existing) {
+      const locked = await maybeAutoLock(existing.id, existing.locked);
+      return NextResponse.json({ team: { ...existing, locked }, isNew: false, captainEnabled: settings?.captainEnabled ?? false });
+    }
   } else if (draftId) {
-    // Niet ingelogd: zoek op draftId uit localStorage
     const existing = await prisma.teamEntry.findUnique({
       where: { id: draftId },
       include: teamInclude,
     });
-    if (existing) return NextResponse.json({ team: existing, isNew: false });
+    if (existing) {
+      const locked = await maybeAutoLock(existing.id, existing.locked);
+      return NextResponse.json({ team: { ...existing, locked }, isNew: false, captainEnabled: settings?.captainEnabled ?? false });
+    }
   }
 
   const formation = await prisma.formation.findFirst({ orderBy: { code: "asc" } });
@@ -46,5 +62,5 @@ export async function POST(req: Request) {
     include: teamInclude,
   });
 
-  return NextResponse.json({ team, isNew: true });
+  return NextResponse.json({ team, isNew: true, captainEnabled: settings?.captainEnabled ?? false });
 }
