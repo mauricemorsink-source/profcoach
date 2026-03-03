@@ -29,7 +29,7 @@ export function buildSlots(formation: Formation): SlotDef[] {
     slots.push({
       slotIndex: slots.length,
       position: "ATT",
-      label: `ATT ${i + 1}`,
+      label: `AAN ${i + 1}`,
     });
   }
 

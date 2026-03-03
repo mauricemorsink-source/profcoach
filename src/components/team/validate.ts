@@ -6,7 +6,7 @@ export const CLUB_LABEL: Record<string, string> = {
   THREE: "Rietmolen 3",
   FOUR:  "Rietmolen 4",
   FIVE:  "Rietmolen 5",
-  DAMES: "Rietmolen Dames",
+  DAMES: "Rietmolen VR1",
 };
 
 export interface ValidationRule {
@@ -77,30 +77,6 @@ export function validateTeam(
       display: `€${totalValue} / €${budget}`,
       met:     totalValue <= budget,
     },
-    {
-      key:     "gk",
-      label:   "Keeper",
-      display: `${gkCount}/1`,
-      met:     gkCount === 1,
-    },
-    {
-      key:     "def",
-      label:   "Verdedigers",
-      display: `${defCount}/${formation.defenders}`,
-      met:     defCount === formation.defenders,
-    },
-    {
-      key:     "mid",
-      label:   "Middenvelders",
-      display: `${midCount}/${formation.midfielders}`,
-      met:     midCount === formation.midfielders,
-    },
-    {
-      key:     "att",
-      label:   "Aanvallers",
-      display: `${attCount}/${formation.attackers}`,
-      met:     attCount === formation.attackers,
-    },
     ...["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"].map((club) => {
       const count = countsByClub[club] ?? 0;
       const clubMet = count >= 1 && count <= 2;
@@ -129,13 +105,9 @@ export function validateTeam(
     if (!captainInFilledSlot) errors.push("Kies een aanvoerder");
   }
 
-  // Positie-fouten (niet al gedekt via club-loop)
+  // Overige fouten
   if (selectedCount !== 11) errors.push(`Je hebt ${selectedCount} van 11 spelers gekozen`);
   if (totalValue > budget)  errors.push(`Budget overschreden: €${totalValue} / €${budget}`);
-  if (gkCount !== 1)        errors.push("Je hebt exact 1 keeper nodig");
-  if (defCount !== formation.defenders) errors.push(`Je hebt ${formation.defenders} verdedigers nodig`);
-  if (midCount !== formation.midfielders) errors.push(`Je hebt ${formation.midfielders} middenvelders nodig`);
-  if (attCount !== formation.attackers) errors.push(`Je hebt ${formation.attackers} aanvallers nodig`);
 
   // Max 2 per club (al in rules, maar ook fout-melding)
   for (const [club, count] of Object.entries(countsByClub)) {

@@ -2,13 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 const TEAM_LABEL: Record<string, string> = {
-  ONE: "Elftal 1", TWO: "Elftal 2", THREE: "Elftal 3",
-  FOUR: "Elftal 4", FIVE: "Elftal 5", DAMES: "Dames",
+  ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
+  FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
 
-const POSITION_LABEL: Record<string, string> = {
-  GK: "Keeper", DEF: "Verdediger", MID: "Middenvelder", ATT: "Aanvaller",
-};
 
 function Delta({ value }: { value: number }) {
   if (value === 0) return <span className="text-slate-600 text-xs">–</span>;
@@ -190,7 +187,7 @@ export default async function TussenstandPage({
                       <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
                       <div className="flex-1">
                         <span className="font-medium text-white">{p.playerName}</span>
-                        <span className="text-slate-500 text-xs ml-2">{POSITION_LABEL[p.position]} · {TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                        <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
                       </div>
                       <span className="font-bold text-cyan-400">{p.goals}</span>
                     </li>
@@ -211,7 +208,7 @@ export default async function TussenstandPage({
                       <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
                       <div className="flex-1">
                         <span className="font-medium text-white">{p.playerName}</span>
-                        <span className="text-slate-500 text-xs ml-2">{POSITION_LABEL[p.position]} · {TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                        <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
                       </div>
                       <span className="font-bold text-cyan-400">{p.assists}</span>
                     </li>
@@ -232,7 +229,7 @@ export default async function TussenstandPage({
                       <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
                       <div className="flex-1">
                         <span className="font-medium text-white">{p.playerName}</span>
-                        <span className="text-slate-500 text-xs ml-2">{POSITION_LABEL[p.position]} · {TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                        <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
                       </div>
                       <div className="text-right">
                         <span className="font-bold text-cyan-400">{p.totalPoints}</span>

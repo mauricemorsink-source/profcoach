@@ -4,8 +4,8 @@ import { getSession } from "@/lib/auth";
 import ManagerClient from "./ManagerClient";
 
 const TEAM_LABEL: Record<string, string> = {
-  ONE: "Elftal 1", TWO: "Elftal 2", THREE: "Elftal 3",
-  FOUR: "Elftal 4", FIVE: "Elftal 5", DAMES: "Dames",
+  ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
+  FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
 const TEAMS = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
 
