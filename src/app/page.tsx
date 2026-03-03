@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export default async function HomePage() {
   const session = await getSession();
+  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
+  const registrationOpen = settings?.registrationOpen ?? false;
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center p-8"
@@ -33,9 +36,15 @@ export default async function HomePage() {
           </>
         ) : (
           <>
-            <Link href="/register" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
-              Deelnemen
-            </Link>
+            {registrationOpen ? (
+              <Link href="/register" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
+                Deelnemen
+              </Link>
+            ) : (
+              <div className="w-full text-center py-3 px-6 bg-slate-800/50 text-slate-500 font-bold rounded-xl text-lg border border-slate-700/50 cursor-not-allowed">
+                Inschrijving gesloten
+              </div>
+            )}
             <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
               Tussenstand bekijken
             </Link>

@@ -43,7 +43,7 @@ export default async function TussenstandPage({
     });
 
     const teamEntries = await prisma.teamEntry.findMany({
-      where: { seasonId: season.id, userId: { not: null } },
+      where: { seasonId: season.id, userId: { not: null }, user: { isParticipant: true } },
       include: {
         user: { select: { id: true, name: true, email: true } },
         players: { select: { playerId: true, slotIndex: true } },
@@ -103,7 +103,7 @@ export default async function TussenstandPage({
   }
 
   const updatedAt = settings?.standingsUpdatedAt
-    ? new Date(settings.standingsUpdatedAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    ? new Date(settings.standingsUpdatedAt).toLocaleString("nl-NL", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })
     : null;
 
   return (

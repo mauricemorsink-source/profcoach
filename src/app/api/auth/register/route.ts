@@ -6,8 +6,8 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { email, password, name } = body;
 
-  if (!email?.trim() || !password) {
-    return NextResponse.json({ error: "Email en wachtwoord zijn verplicht" }, { status: 400 });
+  if (!name?.trim() || !email?.trim() || !password) {
+    return NextResponse.json({ error: "Naam, email en wachtwoord zijn verplicht" }, { status: 400 });
   }
   if (password.length < 8) {
     return NextResponse.json({ error: "Wachtwoord moet minimaal 8 tekens bevatten" }, { status: 400 });

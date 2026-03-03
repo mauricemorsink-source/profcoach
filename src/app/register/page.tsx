@@ -45,8 +45,8 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={LABEL}>Naam <span className="text-slate-600">(optioneel)</span></label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={INPUT} placeholder="Jouw naam" />
+            <label className={LABEL}>Naam</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className={INPUT} placeholder="Jouw naam" />
           </div>
           <div>
             <label className={LABEL}>E-mailadres</label>

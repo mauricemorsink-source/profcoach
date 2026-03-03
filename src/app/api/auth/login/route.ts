@@ -4,7 +4,7 @@ import { verifyPassword, setSessionCookie } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { email, password } = body;
+  const { email, password, rememberMe = true } = body;
 
   if (!email?.trim() || !password) {
     return NextResponse.json({ error: "Email en wachtwoord zijn verplicht" }, { status: 400 });
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     role: user.role,
     managedTeam: user.managedTeam,
     isParticipant: user.isParticipant ?? true,
-  });
+  }, rememberMe);
 
   return NextResponse.json({ id: user.id, email: user.email, name: user.name, role: user.role });
 }

@@ -65,11 +65,10 @@ export function calculateMatchPoints(
     const pos = perf.player.position;
     let pts = 0;
 
-    // Doelpunten (normaal, excl. penalty)
-    const normalGoals = perf.goals - perf.penaltyGoals;
-    if (normalGoals > 0) pts += normalGoals * getPoints(configMap, "goal", pos);
+    // Alle doelpunten krijgen basis doelpuntpunten (incl. strafschoppen)
+    if (perf.goals > 0) pts += perf.goals * getPoints(configMap, "goal", pos);
 
-    // Strafschop-doelpunten
+    // Strafschop-doelpunten krijgen extra bonus bovenop het basis doelpunt
     if (perf.penaltyGoals > 0) pts += perf.penaltyGoals * getPoints(configMap, "penaltyGoal", pos);
 
     // Assists

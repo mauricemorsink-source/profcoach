@@ -8,6 +8,8 @@ type GameSettings = {
   registrationOpen: boolean;
   captainEnabled: boolean;
   rulesText: string;
+  termsText: string;
+  privacyText: string;
 };
 
 type Player = {
@@ -173,7 +175,7 @@ export default function AdminPage() {
   // Game settings
   const [settings, setSettings] = useState<GameSettings | null>(null);
   const [settingsForm, setSettingsForm] = useState<GameSettings>({
-    budget: 1750, deadline: null, registrationOpen: true, captainEnabled: false, rulesText: "",
+    budget: 1750, deadline: null, registrationOpen: true, captainEnabled: false, rulesText: "", termsText: "", privacyText: "",
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -218,7 +220,9 @@ export default function AdminPage() {
         deadline: data.deadline ? data.deadline.slice(0, 16) : "",
         registrationOpen: data.registrationOpen,
         captainEnabled: data.captainEnabled ?? false,
-        rulesText: data.rulesText,
+        rulesText: data.rulesText ?? "",
+        termsText: data.termsText ?? "",
+        privacyText: data.privacyText ?? "",
       });
     }
   }
@@ -308,7 +312,7 @@ export default function AdminPage() {
 
   async function saveSettings() {
     setSettingsSaving(true); setSettingsMsg(null);
-    const res = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: Number(settingsForm.budget), deadline: settingsForm.deadline || null, registrationOpen: settingsForm.registrationOpen, captainEnabled: settingsForm.captainEnabled, rulesText: settingsForm.rulesText }) });
+    const res = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: Number(settingsForm.budget), deadline: settingsForm.deadline || null, registrationOpen: settingsForm.registrationOpen, captainEnabled: settingsForm.captainEnabled, rulesText: settingsForm.rulesText, termsText: settingsForm.termsText, privacyText: settingsForm.privacyText }) });
     const data = await res.json(); setSettingsSaving(false);
     if (!res.ok) { setSettingsMsg({ type: "err", text: data.error || "Opslaan mislukt" }); }
     else {
@@ -319,6 +323,8 @@ export default function AdminPage() {
         registrationOpen: data.registrationOpen,
         captainEnabled: data.captainEnabled ?? false,
         rulesText: data.rulesText ?? "",
+        termsText: data.termsText ?? "",
+        privacyText: data.privacyText ?? "",
       });
       setSettingsMsg({ type: "ok", text: "Instellingen opgeslagen" });
     }
@@ -410,15 +416,22 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={settingsForm.registrationOpen} onChange={(e) => setSettingsForm({ ...settingsForm, registrationOpen: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
-                  </label>
-                  <span className="text-sm font-medium text-slate-300">Registratie open</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.registrationOpen ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-red-900/40 text-red-400 border border-red-500/30"}`}>
-                    {settingsForm.registrationOpen ? "Aan" : "Uit"}
-                  </span>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={settingsForm.registrationOpen} onChange={(e) => setSettingsForm({ ...settingsForm, registrationOpen: e.target.checked })} className="sr-only peer" />
+                      <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                    </label>
+                    <span className="text-sm font-medium text-slate-300">Registratie open</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.registrationOpen ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-red-900/40 text-red-400 border border-red-500/30"}`}>
+                      {settingsForm.registrationOpen ? "Aan" : "Uit"}
+                    </span>
+                  </div>
+                  {settingsForm.registrationOpen && settingsForm.deadline && new Date(settingsForm.deadline) < new Date() && (
+                    <p className="mt-1.5 text-xs text-amber-400 bg-amber-900/20 border border-amber-500/30 px-3 py-2 rounded-lg">
+                      Let op: de deadline ({new Date(settingsForm.deadline).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}) is al verstreken. Nieuwe aanmeldingen worden geblokkeerd totdat de deadline wordt aangepast of verwijderd.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -435,10 +448,22 @@ export default function AdminPage() {
                   <label className={LABEL}>Spelregels</label>
                   <textarea value={settingsForm.rulesText} onChange={(e) => setSettingsForm({ ...settingsForm, rulesText: e.target.value })} rows={12}
                     className={INPUT + " resize-y font-mono text-sm"}
-                    placeholder={"## Spelregels\n\nSchrijf hier de spelregels in markdown-opmaak.\n\n**Vet** of *cursief* tekst.\n\n## Sectie 2\n\n- Punt 1\n- Punt 2\n- Punt 3"} />
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                    Opmaak via markdown: <span className="text-slate-400 font-mono">## Koptekst</span> · <span className="text-slate-400 font-mono">**vet**</span> · <span className="text-slate-400 font-mono">*cursief*</span> · <span className="text-slate-400 font-mono">- lijstitem</span>
+                    placeholder={"## Spelregels\n\nSchrijf hier de spelregels in markdown-opmaak."} />
+                  <p className="text-xs text-slate-500 mt-1.5">
+                    Markdown: <span className="text-slate-400 font-mono">## Koptekst</span> · <span className="text-slate-400 font-mono">**vet**</span> · <span className="text-slate-400 font-mono">- lijstitem</span>
                   </p>
+                </div>
+                <div>
+                  <label className={LABEL}>Algemene voorwaarden <span className="text-slate-600 font-normal">(/terms)</span></label>
+                  <textarea value={settingsForm.termsText} onChange={(e) => setSettingsForm({ ...settingsForm, termsText: e.target.value })} rows={8}
+                    className={INPUT + " resize-y font-mono text-sm"}
+                    placeholder={"## Algemene voorwaarden\n\nSchrijf hier de algemene voorwaarden in markdown-opmaak."} />
+                </div>
+                <div>
+                  <label className={LABEL}>Privacybeleid <span className="text-slate-600 font-normal">(/privacy)</span></label>
+                  <textarea value={settingsForm.privacyText} onChange={(e) => setSettingsForm({ ...settingsForm, privacyText: e.target.value })} rows={8}
+                    className={INPUT + " resize-y font-mono text-sm"}
+                    placeholder={"## Privacybeleid\n\nSchrijf hier het privacybeleid in markdown-opmaak."} />
                 </div>
                 {settingsMsg && (
                   <p className={`text-sm px-3 py-2 rounded-lg border ${settingsMsg.type === "ok" ? "bg-green-900/20 text-green-400 border-green-500/30" : "bg-red-900/20 text-red-400 border-red-500/30"}`}>
@@ -531,7 +556,7 @@ export default function AdminPage() {
                           <td className="py-2 font-medium text-white">{player.name}</td>
                           <td className="py-2 text-slate-400">{POSITION_LABEL[player.position]}</td>
                           <td className="py-2 text-slate-400">{TEAM_LABEL[player.clubTeam]}</td>
-                          <td className="py-2 text-slate-400">{player.value}</td>
+                          <td className="py-2 text-slate-400">€{player.value}</td>
                           <td className="py-2 text-right">
                             <div className="flex justify-end gap-1.5">
                               <button onClick={() => openEdit(player)} className="px-3 py-1 text-xs bg-blue-900/40 text-blue-400 rounded hover:bg-blue-900/60 font-medium border border-blue-500/30 transition-colors">Bewerken</button>

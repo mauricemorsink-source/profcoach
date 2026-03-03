@@ -45,6 +45,9 @@ const POSITION_LABEL: Record<string, string> = {
   GK: "Keeper", DEF: "Verdediger", MID: "Middenvelder", ATT: "Aanvaller",
 };
 
+const CLUB_ORDER = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
+const POS_ORDER = ["GK", "DEF", "MID", "ATT"];
+
 export default function TeamBuilder({ formations, season, budget }: TeamBuilderProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [teamEntryId, setTeamEntryId] = useState<string | null>(null);
@@ -54,6 +57,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [playerSearch, setPlayerSearch] = useState("");
   const [captainEnabled, setCaptainEnabled] = useState(false);
@@ -115,7 +119,6 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     setFormationId(newFormationId);
     setSelectedSlot(null);
     setShowPickerModal(false);
-    // Captain slot resetten als de speler in dat slot verplaatst is
     setCaptainSlot(null);
   }
 
@@ -151,13 +154,6 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     setSelectedSlot(null);
   }
 
-  function handleSetCaptain() {
-    if (selectedSlot === null) return;
-    setCaptainSlot((prev) => (prev === selectedSlot ? null : selectedSlot));
-    setShowPickerModal(false);
-    setSelectedSlot(null);
-  }
-
   async function handleSave() {
     if (!teamEntryId) return;
     setSaving(true);
@@ -183,6 +179,20 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     setSaving(false);
   }
 
+  async function handleUnlock() {
+    if (!teamEntryId) return;
+    setUnlocking(true);
+    const res = await fetch("/api/team/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamEntryId }),
+    });
+    if (res.ok) {
+      setLocked(false);
+    }
+    setUnlocking(false);
+  }
+
   async function handleShareCopy() {
     if (!teamEntryId) return;
     const url = `${window.location.origin}/team/${teamEntryId}`;
@@ -201,7 +211,6 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
 
   const activeSlot = selectedSlot !== null ? slots[selectedSlot] : null;
   const currentInSlot = activeSlot ? slotValues[activeSlot.slotIndex] : null;
-  const activeSlotIsCaptain = selectedSlot !== null && captainSlot === selectedSlot;
 
   const modalPlayers = activeSlot
     ? players
@@ -211,9 +220,21 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
           p.name.toLowerCase().includes(playerSearch.toLowerCase()) ||
           CLUB_LABEL[p.clubTeam]?.toLowerCase().includes(playerSearch.toLowerCase())
         )
+        .sort((a, b) => {
+          const clubDiff = CLUB_ORDER.indexOf(a.clubTeam) - CLUB_ORDER.indexOf(b.clubTeam);
+          if (clubDiff !== 0) return clubDiff;
+          const posDiff = POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position);
+          if (posDiff !== 0) return posDiff;
+          return a.name.localeCompare(b.name, "nl");
+        })
     : [];
 
   const chosenIds = new Set(slotValues.filter(Boolean) as string[]);
+
+  // Geselecteerde spelers voor aanvoerderkeuze
+  const selectedPlayers = slots
+    .map((slot) => ({ slot, playerId: slotValues[slot.slotIndex] }))
+    .filter((x) => x.playerId !== null) as { slot: SlotDef; playerId: string }[];
 
   return (
     <div className="max-w-3xl mx-auto px-4 pb-10">
@@ -256,30 +277,42 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
       </div>
 
       {/* Regels checklist */}
-      <div className={`mb-5 rounded-2xl border p-4 transition-colors ${
-        validation.allValid
-          ? "bg-green-900/15 border-green-500/30"
-          : "bg-red-900/15 border-red-500/20"
-      }`}>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
-          {validation.rules.map((rule) => (
-            <div key={rule.key} className="flex items-center gap-1.5 text-xs">
-              <span className={rule.met ? "text-green-400" : "text-red-400"}>
-                {rule.met ? "✓" : "✗"}
-              </span>
-              <span className="text-slate-400 truncate">{rule.label}:</span>
-              <span className={`font-bold shrink-0 ${rule.met ? "text-green-400" : "text-red-400"}`}>
-                {rule.display}
-              </span>
-            </div>
-          ))}
+      {!locked && (
+        <div className={`mb-5 rounded-2xl border p-4 transition-colors ${
+          validation.allValid
+            ? "bg-green-900/15 border-green-500/30"
+            : "bg-red-900/15 border-red-500/20"
+        }`}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
+            {validation.rules.map((rule) => (
+              <div key={rule.key} className="flex items-center gap-1.5 text-xs">
+                <span className={rule.met ? "text-green-400" : "text-red-400"}>
+                  {rule.met ? "✓" : "✗"}
+                </span>
+                <span className="text-slate-400 truncate">{rule.label}:</span>
+                <span className={`font-bold shrink-0 ${rule.met ? "text-green-400" : "text-red-400"}`}>
+                  {rule.display}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Aanvoerder hint */}
-      {captainEnabled && !locked && captainSlot === null && (
-        <div className="mb-4 bg-amber-900/20 border border-amber-500/30 rounded-xl px-4 py-2.5 text-xs text-amber-400">
-          Tik op een spelerskaart om een aanvoerder te kiezen.
+      {/* Team ingediend banner */}
+      {locked && (
+        <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-green-400 font-bold text-sm">Team ingediend</p>
+            <p className="text-slate-400 text-xs mt-0.5">Je team is opgeslagen. Je kunt het hieronder nog bekijken.</p>
+          </div>
+          <button
+            onClick={handleUnlock}
+            disabled={unlocking}
+            className="shrink-0 px-3 py-1.5 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {unlocking ? "Bezig..." : "Terugtrekken"}
+          </button>
         </div>
       )}
 
@@ -293,6 +326,37 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
         locked={locked}
         captainSlot={captainEnabled ? captainSlot : null}
       />
+
+      {/* Aanvoerder selectie */}
+      {captainEnabled && !locked && selectedPlayers.length > 0 && (
+        <div className="mt-4 bg-slate-900 neon-border rounded-2xl p-4">
+          <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Aanvoerder kiezen</p>
+          <div className="flex flex-wrap gap-2">
+            {selectedPlayers.map(({ slot, playerId }) => {
+              const player = playersById[playerId];
+              if (!player) return null;
+              const isCaptain = captainSlot === slot.slotIndex;
+              return (
+                <button
+                  key={playerId}
+                  onClick={() => setCaptainSlot(isCaptain ? null : slot.slotIndex)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm transition-colors ${
+                    isCaptain
+                      ? "bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold"
+                      : "bg-slate-800 border-slate-700 text-slate-300 hover:border-amber-500/40 hover:text-amber-400"
+                  }`}
+                >
+                  {isCaptain && <span className="text-xs font-black">C</span>}
+                  <span>{player.shortName ?? player.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          {captainSlot === null && (
+            <p className="text-xs text-amber-400/70 mt-2">Nog geen aanvoerder gekozen</p>
+          )}
+        </div>
+      )}
 
       {/* Knoppen */}
       <div className="flex gap-3 mt-4 flex-wrap">
@@ -333,19 +397,6 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
                 </h3>
               </div>
               <div className="flex items-center gap-2">
-                {/* Aanvoerder toggle — alleen als captainEnabled en er een speler in het slot zit */}
-                {captainEnabled && currentInSlot && (
-                  <button
-                    onClick={handleSetCaptain}
-                    className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition-colors ${
-                      activeSlotIsCaptain
-                        ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                        : "bg-slate-800 text-slate-400 border-slate-700 hover:text-amber-400 hover:border-amber-500/40"
-                    }`}
-                  >
-                    {activeSlotIsCaptain ? "C Aanvoerder" : "Aanvoerder"}
-                  </button>
-                )}
                 {currentInSlot && (
                   <button
                     onClick={handleClearSlot}

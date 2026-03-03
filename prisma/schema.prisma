@@ -61,6 +61,8 @@ model GameSettings {
   registrationOpen   Boolean   @default(true)
   captainEnabled     Boolean   @default(false)
   rulesText          String    @default("")
+  termsText          String    @default("")
+  privacyText        String    @default("")
   standingsUpdatedAt DateTime?
   isProcessing       Boolean   @default(false)
   updatedAt          DateTime  @updatedAt

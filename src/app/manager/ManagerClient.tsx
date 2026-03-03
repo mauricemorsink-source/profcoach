@@ -404,18 +404,19 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
   const LABEL = "block text-xs font-medium text-slate-400 mb-1";
   const NUM_INPUT = "w-14 bg-slate-800 border border-slate-600 text-white rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30 disabled:cursor-not-allowed";
 
+  const TH = "px-3 py-3 font-medium sticky top-0 bg-slate-800 z-10";
   const perfTableHeader = (
-    <tr className="text-left text-slate-500 border-b border-slate-700/50 bg-slate-800/50">
-      <th className="px-4 py-3 font-medium">Speler</th>
-      <th className="px-3 py-3 font-medium">Pos.</th>
-      <th className="px-3 py-3 font-medium text-center">Speelde mee</th>
-      <th className="px-3 py-3 font-medium text-center">Goals</th>
-      <th className="px-3 py-3 font-medium text-center">Pen.</th>
-      <th className="px-3 py-3 font-medium text-center">Ass.</th>
-      <th className="px-3 py-3 font-medium text-center">E.G.</th>
-      <th className="px-3 py-3 font-medium text-center">Geel</th>
-      <th className="px-3 py-3 font-medium text-center">Rood</th>
-      <th className="px-3 py-3 font-medium text-center w-8"></th>
+    <tr className="text-left text-slate-500 border-b border-slate-700/50">
+      <th className={`${TH} px-4`}>Speler</th>
+      <th className={TH}>Pos.</th>
+      <th className={`${TH} text-center`}>Speelde mee</th>
+      <th className={`${TH} text-center`}>Goals</th>
+      <th className={`${TH} text-center`}>Pen.</th>
+      <th className={`${TH} text-center`}>Ass.</th>
+      <th className={`${TH} text-center`}>E.G.</th>
+      <th className={`${TH} text-center`}>Geel</th>
+      <th className={`${TH} text-center`}>Rood</th>
+      <th className={`${TH} text-center w-8`}></th>
     </tr>
   );
 
@@ -539,7 +540,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   </span>
                 </div>
 
-                <div className="bg-slate-900 neon-border rounded-xl overflow-x-auto">
+                <div className="bg-slate-900 neon-border rounded-xl overflow-auto max-h-[60vh]">
                   <table className="w-full text-sm">
                     <thead>{perfTableHeader}</thead>
                     <tbody>

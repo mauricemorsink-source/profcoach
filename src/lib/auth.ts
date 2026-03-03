@@ -50,7 +50,7 @@ export async function verifyToken(
 
 // --- Cookie helpers (server components / route handlers) ---
 
-export async function setSessionCookie(payload: SessionPayload): Promise<void> {
+export async function setSessionCookie(payload: SessionPayload, rememberMe = true): Promise<void> {
   const token = await signToken(payload);
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
@@ -58,7 +58,7 @@ export async function setSessionCookie(payload: SessionPayload): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 dagen
+    ...(rememberMe ? { maxAge: 60 * 60 * 24 * 30 } : {}),
   });
 }
 
