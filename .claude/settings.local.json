@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /c/Users/mauri/profcoach/.env*)",
+      "Bash(npm install bcryptjs jose)",
+      "Bash(npm install -D @types/bcryptjs)",
+      "Bash(npx prisma db push)",
+      "Bash(npx prisma generate)",
+      "Bash(npx tsx prisma/seed.ts)"
+    ]
+  }
+}

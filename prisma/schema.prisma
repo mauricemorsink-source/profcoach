@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Position {
+  GK
+  DEF
+  MID
+  ATT
+}
+
+enum ClubTeamCode {
+  ONE
+  TWO
+  THREE
+  FOUR
+  FIVE
+  DAMES
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  MANAGER
+}
+
+enum MatchStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSED
+}
+
+enum HomeAway {
+  HOME
+  AWAY
+  NEUTRAL
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  password       String
+  name           String?
+  role           UserRole      @default(USER)
+  managedTeam    ClubTeamCode?
+  isParticipant  Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  teamEntries    TeamEntry[]
+  createdMatches Match[]
+}
+
+model GameSettings {
+  id                 String    @id @default("singleton")
+  budget             Int       @default(1750)
+  deadline           DateTime?
+  registrationOpen   Boolean   @default(true)
+  rulesText          String    @default("")
+  standingsUpdatedAt DateTime?
+  isProcessing       Boolean   @default(false)
+  updatedAt          DateTime  @updatedAt
+}
+
+model Season {
+  id          String              @id @default(cuid())
+  name        String
+  isActive    Boolean             @default(false)
+  teamEntries TeamEntry[]
+  matches     Match[]
+  playerStats PlayerSeasonStats[]
+}
+
+model Formation {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  defenders   Int
+  midfielders Int
+  attackers   Int
+  teamEntries TeamEntry[]
+}
+
+model Player {
+  id               String              @id @default(cuid())
+  name             String
+  shortName        String?
+  position         Position
+  clubTeam         ClubTeamCode
+  value            Int
+  active           Boolean             @default(true)
+  teamEntryPlayers TeamEntryPlayer[]
+  performances     MatchPerformance[]
+  seasonStats      PlayerSeasonStats[]
+}
+
+model TeamEntry {
+  id          String            @id @default(cuid())
+  seasonId    String
+  formationId String
+  userId      String?
+  locked      Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  season      Season            @relation(fields: [seasonId], references: [id])
+  formation   Formation         @relation(fields: [formationId], references: [id])
+  user        User?             @relation(fields: [userId], references: [id])
+  players     TeamEntryPlayer[]
+}
+
+model TeamEntryPlayer {
+  id          String    @id @default(cuid())
+  teamEntryId String
+  playerId    String
+  slotIndex   Int
+  teamEntry   TeamEntry @relation(fields: [teamEntryId], references: [id])
+  player      Player    @relation(fields: [playerId], references: [id])
+
+  @@unique([teamEntryId, slotIndex])
+  @@unique([teamEntryId, playerId])
+}
+
+model PointsConfig {
+  id        String   @id
+  label     String
+  gkPoints  Int?
+  defPoints Int?
+  midPoints Int?
+  attPoints Int?
+  updatedAt DateTime @updatedAt
+}
+
+model Match {
+  id            String             @id @default(cuid())
+  seasonId      String
+  clubTeam      ClubTeamCode
+  name          String
+  homeAway      HomeAway           @default(HOME)
+  matchDate     DateTime
+  goalsScored   Int                @default(0)
+  goalsConceded Int                @default(0)
+  status        MatchStatus        @default(PENDING)
+  processedAt   DateTime?
+  createdAt     DateTime           @default(now())
+  createdById   String?
+  season        Season             @relation(fields: [seasonId], references: [id])
+  createdBy     User?              @relation(fields: [createdById], references: [id])
+  performances  MatchPerformance[]
+}
+
+model MatchPerformance {
+  id           String  @id @default(cuid())
+  matchId      String
+  playerId     String
+  played       Boolean @default(false)
+  goals        Int     @default(0)
+  penaltyGoals Int     @default(0)
+  assists      Int     @default(0)
+  ownGoals     Int     @default(0)
+  yellowCards  Int     @default(0)
+  redCard      Boolean @default(false)
+  match        Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player       Player  @relation(fields: [playerId], references: [id])
+
+  @@unique([matchId, playerId])
+}
+
+model PlayerSeasonStats {
+  id            String   @id @default(cuid())
+  playerId      String
+  seasonId      String
+  totalPoints   Int      @default(0)
+  prevPoints    Int      @default(0)
+  goals         Int      @default(0)
+  penaltyGoals  Int      @default(0)
+  assists       Int      @default(0)
+  ownGoals      Int      @default(0)
+  yellowCards   Int      @default(0)
+  redCards      Int      @default(0)
+  cleanSheets   Int      @default(0)
+  goalsConceded Int      @default(0)
+  wins          Int      @default(0)
+  draws         Int      @default(0)
+  matchesPlayed Int      @default(0)
+  updatedAt     DateTime @updatedAt
+  player        Player   @relation(fields: [playerId], references: [id])
+  season        Season   @relation(fields: [seasonId], references: [id])
+
+  @@unique([playerId, seasonId])
+}
