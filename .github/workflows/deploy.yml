@@ -1,0 +1,25 @@
+name: Deploy to TransIP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SFTP
+        uses: milanmk/ftp-sftp-file-deployer@v1.17
+        with:
+          host: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          port: ${{ secrets.SFTP_PORT }}
+          localDir: "./"
+          remoteDir: ${{ secrets.SFTP_TARGET }}
+          protocol: sftp
