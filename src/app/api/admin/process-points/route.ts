@@ -73,7 +73,7 @@ export async function POST() {
     const currentStats = await prisma.playerSeasonStats.findMany({
       where: { playerId: { in: playerIds }, seasonId: season.id },
     });
-    const currentStatsMap = new Map(currentStats.map((s) => [s.playerId, s]));
+    const currentStatsMap = new Map(currentStats.map((s) => [s.playerId, s] as [string, typeof currentStats[number]]));
 
     // Update PlayerSeasonStats
     for (const [playerId, delta] of totalDeltas) {
