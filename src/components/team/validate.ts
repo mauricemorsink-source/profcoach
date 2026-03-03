@@ -58,14 +58,6 @@ export function validateTeam(
     countsByClub[player.clubTeam] = (countsByClub[player.clubTeam] ?? 0) + 1;
   }
 
-  // Club-validatie (niet zichtbaar in checklist, wel vereist voor indienen)
-  let clubsValid = true;
-  for (const club of ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"]) {
-    const count = countsByClub[club] ?? 0;
-    if (count < 1) { errors.push(`Je hebt minimaal 1 speler uit ${CLUB_LABEL[club]} nodig`); clubsValid = false; }
-    if (count > 2) { errors.push(`Maximaal 2 spelers uit ${CLUB_LABEL[club]} (je hebt er ${count})`); clubsValid = false; }
-  }
-
   // Zichtbare regels in checklist
   const rules: ValidationRule[] = [
     {
@@ -80,6 +72,18 @@ export function validateTeam(
       display: `€${totalValue} / €${budget}`,
       met:     totalValue <= budget,
     },
+    ...["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"].map((club) => {
+      const count = countsByClub[club] ?? 0;
+      const clubMet = count >= 1 && count <= 2;
+      if (count < 1) errors.push(`Je hebt minimaal 1 speler uit ${CLUB_LABEL[club]} nodig`);
+      if (count > 2) errors.push(`Maximaal 2 spelers uit ${CLUB_LABEL[club]} (je hebt er ${count})`);
+      return {
+        key:     `club_${club}`,
+        label:   CLUB_LABEL[club],
+        display: `${count}/2`,
+        met:     clubMet,
+      };
+    }),
   ];
 
   // Aanvoerder regel
@@ -97,7 +101,7 @@ export function validateTeam(
   if (selectedCount !== 11) errors.push(`Je hebt ${selectedCount} van 11 spelers gekozen`);
   if (totalValue > budget)  errors.push(`Budget overschreden: €${totalValue} / €${budget}`);
 
-  const allValid = rules.every((r) => r.met) && seenIds.size === selectedCount && clubsValid;
+  const allValid = rules.every((r) => r.met) && seenIds.size === selectedCount;
 
   return { errors, rules, allValid, totalValue, selectedCount, countsByPos, countsByClub };
 }
