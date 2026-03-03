@@ -41,3 +41,10 @@ body {
 ::-webkit-scrollbar-track { background: var(--surface); }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.2); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(56,189,248,0.4); }
+
+/* Prevent iOS Safari input zoom (requires font-size >= 16px on focused inputs) */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}

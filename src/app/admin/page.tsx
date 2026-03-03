@@ -311,7 +311,17 @@ export default function AdminPage() {
     const res = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: Number(settingsForm.budget), deadline: settingsForm.deadline || null, registrationOpen: settingsForm.registrationOpen, captainEnabled: settingsForm.captainEnabled, rulesText: settingsForm.rulesText }) });
     const data = await res.json(); setSettingsSaving(false);
     if (!res.ok) { setSettingsMsg({ type: "err", text: data.error || "Opslaan mislukt" }); }
-    else { setSettings(data); setSettingsMsg({ type: "ok", text: "Instellingen opgeslagen" }); }
+    else {
+      setSettings(data);
+      setSettingsForm({
+        budget: data.budget,
+        deadline: data.deadline ? data.deadline.slice(0, 16) : "",
+        registrationOpen: data.registrationOpen,
+        captainEnabled: data.captainEnabled ?? false,
+        rulesText: data.rulesText ?? "",
+      });
+      setSettingsMsg({ type: "ok", text: "Instellingen opgeslagen" });
+    }
   }
 
   async function savePointsConfig() {
@@ -413,10 +423,10 @@ export default function AdminPage() {
                 <div className="flex items-center gap-3">
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={settingsForm.captainEnabled} onChange={(e) => setSettingsForm({ ...settingsForm, captainEnabled: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-amber-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
                   </label>
                   <span className="text-sm font-medium text-slate-300">Aanvoerder verplicht</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.captainEnabled ? "bg-amber-900/40 text-amber-400 border border-amber-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.captainEnabled ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-red-900/40 text-red-400 border border-red-500/30"}`}>
                     {settingsForm.captainEnabled ? "Aan" : "Uit"}
                   </span>
                   <span className="text-xs text-slate-500">— aanvoerder krijgt 2× punten</span>

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth";
+import MobileMenu from "./MobileMenu";
 
 export default async function NavBar() {
   const session = await getSession();
 
   return (
-    <nav className="bg-slate-900/95 border-b border-cyan-500/15 sticky top-0 z-40 backdrop-blur-sm" style={{ boxShadow: "0 1px 20px rgba(34,211,238,0.08)" }}>
+    <nav className="relative bg-slate-900/95 border-b border-cyan-500/15 sticky top-0 z-40 backdrop-blur-sm" style={{ boxShadow: "0 1px 20px rgba(34,211,238,0.08)" }}>
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
 
         {/* Logo */}
@@ -13,8 +14,8 @@ export default async function NavBar() {
           ProfCoach
         </Link>
 
-        {/* Primaire navigatie */}
-        <div className="flex items-center gap-0.5 flex-1 min-w-0 overflow-x-auto">
+        {/* Desktop: primaire navigatie */}
+        <div className="hidden sm:flex items-center gap-0.5 flex-1 min-w-0">
           {session && (session.isParticipant ?? true) && (
             <Link href="/play" className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 whitespace-nowrap transition-colors">
               Mijn team
@@ -28,19 +29,21 @@ export default async function NavBar() {
           </Link>
         </div>
 
-        {/* Secundaire navigatie */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Spacer op mobile */}
+        <div className="flex-1 sm:hidden" />
+
+        {/* Desktop: secundaire navigatie */}
+        <div className="hidden sm:flex items-center gap-1 shrink-0">
           {session?.role === "ADMIN" && (
-            <Link href="/admin" className="hidden sm:block px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 whitespace-nowrap transition-colors">
+            <Link href="/admin" className="px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 whitespace-nowrap transition-colors">
               Admin
             </Link>
           )}
           {(session?.role === "MANAGER" || session?.role === "ADMIN") && (
-            <Link href="/manager" className="hidden sm:block px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 whitespace-nowrap transition-colors">
+            <Link href="/manager" className="px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 whitespace-nowrap transition-colors">
               Manager
             </Link>
           )}
-
           {session ? (
             <form action="/api/auth/logout" method="POST">
               <button type="submit" className="px-3 py-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors">
@@ -58,17 +61,11 @@ export default async function NavBar() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Mobiel: admin/manager links */}
-      {session && (session.role === "ADMIN" || session.role === "MANAGER") && (
-        <div className="sm:hidden border-t border-slate-800 px-4 py-2 flex gap-2">
-          {session.role === "ADMIN" && (
-            <Link href="/admin" className="px-3 py-1 rounded text-xs font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 transition-colors">Admin</Link>
-          )}
-          <Link href="/manager" className="px-3 py-1 rounded text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 transition-colors">Manager</Link>
-        </div>
-      )}
+        {/* Mobile: hamburger menu */}
+        <MobileMenu session={session} />
+
+      </div>
     </nav>
   );
 }
