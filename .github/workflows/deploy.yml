@@ -21,3 +21,4 @@ jobs:
           source: "./*"
           target: ${{ secrets.SFTP_TARGET }}
           overwrite: true
+          debug: true
