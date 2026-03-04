@@ -639,7 +639,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     <label className={LABEL}>Tegenstander</label>
                     <input type="text" value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} className={INPUT} placeholder="Naam tegenstander" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className={LABEL}>Thuis / Uit</label>
                       <select value={addForm.homeAway} onChange={(e) => setAddForm({ ...addForm, homeAway: e.target.value })} className={INPUT}>

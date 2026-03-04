@@ -12,11 +12,8 @@ export async function PATCH(
   }
 
   const { matchId } = await params;
-  const { status } = await req.json();
-
-  if (!["APPROVED", "REJECTED", "PENDING"].includes(status)) {
-    return NextResponse.json({ error: "Ongeldige status" }, { status: 400 });
-  }
+  const body = await req.json();
+  const { status, name, matchDate, goalsScored, goalsConceded, homeAway } = body;
 
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) {
@@ -26,9 +23,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Verwerkte wedstrijden kunnen niet meer worden gewijzigd" }, { status: 400 });
   }
 
+  if (status && !["APPROVED", "REJECTED", "PENDING"].includes(status)) {
+    return NextResponse.json({ error: "Ongeldige status" }, { status: 400 });
+  }
+
   const updated = await prisma.match.update({
     where: { id: matchId },
-    data: { status },
+    data: {
+      ...(status && { status }),
+      ...(name !== undefined && { name: String(name) }),
+      ...(matchDate !== undefined && { matchDate: new Date(matchDate) }),
+      ...(goalsScored !== undefined && { goalsScored: Number(goalsScored) }),
+      ...(goalsConceded !== undefined && { goalsConceded: Number(goalsConceded) }),
+      ...(homeAway !== undefined && { homeAway }),
+    },
   });
 
   return NextResponse.json(updated);

@@ -45,15 +45,15 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={LABEL}>Naam</label>
+            <label className={LABEL}>Naam <span className="text-cyan-500">*</span></label>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className={INPUT} placeholder="Jouw naam" />
           </div>
           <div>
-            <label className={LABEL}>E-mailadres</label>
+            <label className={LABEL}>E-mailadres <span className="text-cyan-500">*</span></label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={INPUT} placeholder="jouw@email.nl" />
           </div>
           <div>
-            <label className={LABEL}>Wachtwoord</label>
+            <label className={LABEL}>Wachtwoord <span className="text-cyan-500">*</span></label>
             <div className="relative">
               <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className={INPUT + " pr-16"} placeholder="Minimaal 8 tekens" />
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs transition-colors" tabIndex={-1}>

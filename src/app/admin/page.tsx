@@ -185,7 +185,7 @@ export default function AdminPage() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [viewingTeam, setViewingTeam] = useState<User | null>(null);
   const [roleModal, setRoleModal] = useState<User | null>(null);
-  const [roleForm, setRoleForm] = useState<{ role: string; managedTeam: string; isParticipant: boolean }>({ role: "USER", managedTeam: "ONE", isParticipant: true });
+  const [roleForm, setRoleForm] = useState<{ role: string; managedTeam: string; isParticipant: boolean; name: string; email: string }>({ role: "USER", managedTeam: "ONE", isParticipant: true, name: "", email: "" });
   const [roleSaving, setRoleSaving] = useState(false);
   const [roleError, setRoleError] = useState("");
 
@@ -201,6 +201,11 @@ export default function AdminPage() {
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [viewingMatchPerfs, setViewingMatchPerfs] = useState<AdminMatch | null>(null);
+  const [matchFilterTeam, setMatchFilterTeam] = useState("");
+  const [editingMatch, setEditingMatch] = useState<AdminMatch | null>(null);
+  const [editMatchForm, setEditMatchForm] = useState({ name: "", matchDate: "", goalsScored: 0, goalsConceded: 0, homeAway: "HOME" });
+  const [editMatchSaving, setEditMatchSaving] = useState(false);
+  const [editMatchError, setEditMatchError] = useState("");
 
   async function loadPlayers() {
     setLoadingPlayers(true);
@@ -355,15 +360,29 @@ export default function AdminPage() {
   async function saveRole() {
     if (!roleModal) return;
     setRoleSaving(true); setRoleError("");
-    const res = await fetch(`/api/admin/users/${roleModal.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: roleForm.role, managedTeam: roleForm.role === "MANAGER" ? roleForm.managedTeam : null, isParticipant: roleForm.isParticipant }) });
+    const res = await fetch(`/api/admin/users/${roleModal.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: roleForm.role, managedTeam: roleForm.role === "MANAGER" ? roleForm.managedTeam : null, isParticipant: roleForm.isParticipant, name: roleForm.name || null, email: roleForm.email }) });
     const data = await res.json(); setRoleSaving(false);
     if (!res.ok) { setRoleError(data.error || "Er is een fout opgetreden"); return; }
     setRoleModal(null); await loadUsers();
   }
 
   function openRoleModal(user: User) {
-    setRoleForm({ role: user.role, managedTeam: user.managedTeam ?? "ONE", isParticipant: user.isParticipant ?? true });
+    setRoleForm({ role: user.role, managedTeam: user.managedTeam ?? "ONE", isParticipant: user.isParticipant ?? true, name: user.name ?? "", email: user.email });
     setRoleError(""); setRoleModal(user);
+  }
+
+  function openEditMatch(m: AdminMatch) {
+    setEditMatchForm({ name: m.name, matchDate: m.matchDate.slice(0, 16), goalsScored: m.goalsScored, goalsConceded: m.goalsConceded, homeAway: m.homeAway });
+    setEditMatchError(""); setEditingMatch(m);
+  }
+
+  async function saveEditMatch() {
+    if (!editingMatch) return;
+    setEditMatchSaving(true); setEditMatchError("");
+    const res = await fetch(`/api/admin/matches/${editingMatch.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editMatchForm.name, matchDate: editMatchForm.matchDate, goalsScored: Number(editMatchForm.goalsScored), goalsConceded: Number(editMatchForm.goalsConceded), homeAway: editMatchForm.homeAway }) });
+    const data = await res.json(); setEditMatchSaving(false);
+    if (!res.ok) { setEditMatchError(data.error || "Opslaan mislukt"); return; }
+    setEditingMatch(null); await loadAdminMatches();
   }
 
   function updatePointsCell(id: string, field: "gkPoints" | "defPoints" | "midPoints" | "attPoints", value: string) {
@@ -371,9 +390,21 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-56px)] flex" style={{ background: "#060b14" }}>
-      {/* Sidebar */}
-      <aside className="w-52 shrink-0 bg-slate-900 border-r border-slate-800 p-4 flex flex-col">
+    <div className="min-h-[calc(100vh-56px)] flex flex-col md:flex-row" style={{ background: "#060b14" }}>
+      {/* Mobile tab bar */}
+      <div className="md:hidden flex overflow-x-auto bg-slate-900 border-b border-slate-800 px-2 gap-1 shrink-0">
+        {TAB_SECTIONS.map((section) => section.tabs.map((tab) => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`shrink-0 px-3 py-3 text-sm font-medium transition-colors whitespace-nowrap border-b-2 -mb-px ${
+              activeTab === tab.id ? "text-cyan-400 border-cyan-500" : "text-slate-400 border-transparent hover:text-white"
+            }`}>
+            {tab.label}
+          </button>
+        )))}
+      </div>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-52 shrink-0 bg-slate-900 border-r border-slate-800 p-4 flex-col">
         <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide px-2 mb-3">Admin</p>
         {TAB_SECTIONS.map((section, i) => (
           <div key={section.heading} className={i > 0 ? "mt-4" : ""}>
@@ -392,7 +423,7 @@ export default function AdminPage() {
         ))}
       </aside>
 
-      <main className="flex-1 p-6 max-w-4xl overflow-y-auto">
+      <main className="flex-1 p-4 md:p-6 max-w-4xl overflow-y-auto">
 
         {/* Tab: Spelinstellingen */}
         {activeTab === "instellingen" && (
@@ -615,6 +646,16 @@ export default function AdminPage() {
               <h2 className="text-lg font-bold text-white">Wedstrijden</h2>
               <button onClick={loadAdminMatches} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Vernieuwen</button>
             </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <select value={matchFilterTeam} onChange={(e) => setMatchFilterTeam(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40">
+                <option value="">Alle elftallen</option>
+                {TEAMS.map((t) => <option key={t} value={t}>{TEAM_LABEL[t]}</option>)}
+              </select>
+              {matchFilterTeam && (
+                <button onClick={() => setMatchFilterTeam("")} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Wis filter</button>
+              )}
+            </div>
             {loadingMatches ? (
               <p className="text-slate-500 text-sm py-4">Laden...</p>
             ) : adminMatches.length === 0 ? (
@@ -624,37 +665,38 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-slate-500 border-b border-slate-800">
-                      <th className="pb-2 font-semibold">Datum</th>
-                      <th className="pb-2 font-semibold">Elftal</th>
-                      <th className="pb-2 font-semibold">Tegenstander</th>
-                      <th className="pb-2 font-semibold">T/U</th>
-                      <th className="pb-2 font-semibold">Score</th>
-                      <th className="pb-2 font-semibold">Status</th>
-                      <th className="pb-2 font-semibold text-right">Acties</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">Elftal</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">Tegenstander</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">T/U</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">Score</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">Status</th>
+                      <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {adminMatches.map((m) => (
+                    {adminMatches.filter((m) => !matchFilterTeam || m.clubTeam === matchFilterTeam).map((m) => (
                       <tr key={m.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
-                        <td className="py-2 text-slate-400 text-xs">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
-                        <td className="py-2 text-slate-400">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
+                        <td className="py-2 text-slate-400 text-xs whitespace-nowrap">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
+                        <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
                         <td className="py-2 font-medium text-white">{m.name}</td>
-                        <td className="py-2 text-slate-500 text-xs">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
-                        <td className="py-2 text-slate-400">{m.goalsScored}–{m.goalsConceded}</td>
-                        <td className="py-2">
+                        <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
+                        <td className="py-2 text-slate-400 whitespace-nowrap">{m.goalsScored}–{m.goalsConceded}</td>
+                        <td className="py-2 whitespace-nowrap">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
                         </td>
                         <td className="py-2 text-right">
-                          <div className="flex justify-end gap-1.5">
+                          <div className="flex justify-end gap-1 flex-wrap">
+                            <button onClick={() => openEditMatch(m)} className={BTN_SMALL}>Bewerken</button>
                             <button onClick={() => setViewingMatchPerfs(m)} className={BTN_SMALL}>Prestaties</button>
                             {m.status === "PENDING" && (
                               <>
-                                <button onClick={() => approveMatch(m.id, "APPROVED")} disabled={approvingId === m.id} className="px-2 py-1 text-xs bg-green-900/40 text-green-400 rounded hover:bg-green-900/60 font-medium border border-green-500/30 disabled:opacity-50 transition-colors">Goedkeuren</button>
-                                <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afkeuren</button>
+                                <button onClick={() => approveMatch(m.id, "APPROVED")} disabled={approvingId === m.id} className="px-2 py-1 text-xs bg-green-900/40 text-green-400 rounded hover:bg-green-900/60 font-medium border border-green-500/30 disabled:opacity-50 transition-colors">OK</button>
+                                <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
                               </>
                             )}
                             {m.status === "APPROVED" && (
-                              <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afkeuren</button>
+                              <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
                             )}
                           </div>
                         </td>
@@ -690,10 +732,10 @@ export default function AdminPage() {
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-800">
                         <th className="pb-2 font-semibold">Actie</th>
-                        <th className="pb-2 font-semibold text-center w-24">Keeper</th>
-                        <th className="pb-2 font-semibold text-center w-24">Verdediger</th>
-                        <th className="pb-2 font-semibold text-center w-24">Middenvelder</th>
-                        <th className="pb-2 font-semibold text-center w-24">Aanvaller</th>
+                        <th className="pb-2 font-semibold text-center w-16">GK</th>
+                        <th className="pb-2 font-semibold text-center w-16">DEF</th>
+                        <th className="pb-2 font-semibold text-center w-16">MID</th>
+                        <th className="pb-2 font-semibold text-center w-16">ATT</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -745,18 +787,18 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-slate-500 border-b border-slate-800">
-                      <th className="pb-2 font-semibold">Naam</th>
-                      <th className="pb-2 font-semibold">E-mailadres</th>
-                      <th className="pb-2 font-semibold">Rol</th>
-                      <th className="pb-2 font-semibold">Geregistreerd</th>
-                      <th className="pb-2 font-semibold text-right">Acties</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">Naam</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">E-mail</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap">Rol</th>
+                      <th className="pb-2 font-semibold whitespace-nowrap text-center">Meedoet</th>
+                      <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((user) => (
                       <tr key={user.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
-                        <td className="py-2 font-medium text-white">{user.name ?? <span className="text-slate-500 italic">Geen naam</span>}</td>
-                        <td className="py-2 text-slate-400">{user.email}</td>
+                        <td className="py-2 font-medium text-white whitespace-nowrap">{user.name ?? <span className="text-slate-500 italic">Geen naam</span>}</td>
+                        <td className="py-2 text-slate-400 text-xs">{user.email}</td>
                         <td className="py-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
@@ -771,12 +813,16 @@ export default function AdminPage() {
                             {user.managedTeam && <span className="text-xs text-slate-500">{TEAM_LABEL[user.managedTeam] ?? user.managedTeam}</span>}
                           </div>
                         </td>
-                        <td className="py-2 text-slate-500 text-xs">{new Date(user.createdAt).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}</td>
+                        <td className="py-2 text-center">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${user.isParticipant ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"}`}>
+                            {user.isParticipant ? "Ja" : "Nee"}
+                          </span>
+                        </td>
                         <td className="py-2 text-right">
                           <div className="flex justify-end gap-1.5">
-                            <button onClick={() => openRoleModal(user)} className="px-3 py-1 text-xs bg-blue-900/40 text-blue-400 rounded hover:bg-blue-900/60 font-medium border border-blue-500/30 transition-colors">Rol wijzigen</button>
+                            <button onClick={() => openRoleModal(user)} className="px-3 py-1 text-xs bg-blue-900/40 text-blue-400 rounded hover:bg-blue-900/60 font-medium border border-blue-500/30 transition-colors">Bewerken</button>
                             {user.teamEntries.length > 0 ? (
-                              <button onClick={() => setViewingTeam(user)} className="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors">Team bekijken</button>
+                              <button onClick={() => setViewingTeam(user)} className="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors">Team</button>
                             ) : (
                               <span className="text-xs text-slate-600 py-1">Geen team</span>
                             )}
@@ -888,13 +934,21 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Modal: rol wijzigen */}
+      {/* Modal: gebruiker bewerken */}
       {roleModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-bold text-white mb-1">Rol wijzigen</h3>
-            <p className="text-sm text-slate-500 mb-4">{roleModal.name ?? roleModal.email}</p>
+            <h3 className="text-lg font-bold text-white mb-1">Gebruiker bewerken</h3>
+            <p className="text-sm text-slate-500 mb-4">{roleModal.email}</p>
             <div className="space-y-4">
+              <div>
+                <label className={LABEL}>Naam</label>
+                <input type="text" value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} className={INPUT} placeholder="Voornaam Achternaam" />
+              </div>
+              <div>
+                <label className={LABEL}>E-mailadres</label>
+                <input type="email" value={roleForm.email} onChange={(e) => setRoleForm({ ...roleForm, email: e.target.value })} className={INPUT} />
+              </div>
               <div>
                 <label className={LABEL}>Rol</label>
                 <select value={roleForm.role} onChange={(e) => setRoleForm({ ...roleForm, role: e.target.value })} className={SELECT}>
@@ -911,23 +965,64 @@ export default function AdminPage() {
                   </select>
                 </div>
               )}
-              {(roleForm.role === "MANAGER" || roleForm.role === "ADMIN") && (
-                <label className="flex items-center gap-3 cursor-pointer select-none">
-                  <div className="relative inline-flex items-center">
-                    <input type="checkbox" checked={roleForm.isParticipant} onChange={(e) => setRoleForm({ ...roleForm, isParticipant: e.target.checked })} className="sr-only peer" />
-                    <div className="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-slate-300">Deelneemt ook als fantasiespeler</span>
-                    <p className="text-xs text-slate-600">Kan ook een fantasy-team samenstellen</p>
-                  </div>
-                </label>
-              )}
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div className="relative inline-flex items-center">
+                  <input type="checkbox" checked={roleForm.isParticipant} onChange={(e) => setRoleForm({ ...roleForm, isParticipant: e.target.checked })} className="sr-only peer" />
+                  <div className="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-slate-300">Doet mee aan tussenstand</span>
+                  <p className="text-xs text-slate-600">Verschijnt in de tussenstand als deelnemer</p>
+                </div>
+              </label>
               {roleError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{roleError}</p>}
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setRoleModal(null)} className={BTN_SECONDARY}>Annuleer</button>
               <button onClick={saveRole} disabled={roleSaving} className={BTN_PRIMARY}>{roleSaving ? "Opslaan..." : "Opslaan"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: wedstrijd bewerken */}
+      {editingMatch && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-white mb-1">Wedstrijd bewerken</h3>
+            <p className="text-sm text-slate-500 mb-4">{TEAM_LABEL[editingMatch.clubTeam] ?? editingMatch.clubTeam}</p>
+            <div className="space-y-4">
+              <div>
+                <label className={LABEL}>Tegenstander</label>
+                <input type="text" value={editMatchForm.name} onChange={(e) => setEditMatchForm({ ...editMatchForm, name: e.target.value })} className={INPUT} />
+              </div>
+              <div>
+                <label className={LABEL}>Datum & tijd</label>
+                <input type="datetime-local" value={editMatchForm.matchDate} onChange={(e) => setEditMatchForm({ ...editMatchForm, matchDate: e.target.value })} className={INPUT} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className={LABEL}>Thuis/Uit</label>
+                  <select value={editMatchForm.homeAway} onChange={(e) => setEditMatchForm({ ...editMatchForm, homeAway: e.target.value })} className={SELECT}>
+                    <option value="HOME">Thuis</option>
+                    <option value="AWAY">Uit</option>
+                    <option value="NEUTRAL">Neutraal</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={LABEL}>Goals voor</label>
+                  <input type="number" value={editMatchForm.goalsScored} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsScored: Number(e.target.value) })} className={INPUT} min="0" />
+                </div>
+                <div>
+                  <label className={LABEL}>Goals tegen</label>
+                  <input type="number" value={editMatchForm.goalsConceded} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsConceded: Number(e.target.value) })} className={INPUT} min="0" />
+                </div>
+              </div>
+              {editMatchError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{editMatchError}</p>}
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setEditingMatch(null)} className={BTN_SECONDARY}>Annuleer</button>
+              <button onClick={saveEditMatch} disabled={editMatchSaving} className={BTN_PRIMARY}>{editMatchSaving ? "Opslaan..." : "Opslaan"}</button>
             </div>
           </div>
         </div>
