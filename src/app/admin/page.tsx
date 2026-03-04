@@ -218,10 +218,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [editMatchError, setEditMatchError] = useState("");
   const [matchMenuId, setMatchMenuId] = useState<string | null>(null);
   const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
-  const [processingMatchId, setProcessingMatchId] = useState<string | null>(null);
-  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
-  const [bulkDeletingMatches, setBulkDeletingMatches] = useState(false);
-  const [confirmBulkMatches, setConfirmBulkMatches] = useState(false);
+  const [revertingMatchId, setRevertingMatchId] = useState<string | null>(null);
   const [editPerfsData, setEditPerfsData] = useState<Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }>>({});
 
   async function loadPlayers() {
@@ -298,6 +295,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     (!matchFilterTeam || m.clubTeam === matchFilterTeam) &&
     (!matchFilterStatus || m.status === matchFilterStatus)
   );
+
+  const editMatchReadOnly = !!editingMatch && (editingMatch.status === "PROCESSED" || editingMatch.status === "CORRECTION");
 
   function openAdd() { setForm(emptyForm); setFormError(""); setEditingPlayer(null); setModal("add"); }
 
@@ -395,19 +394,13 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     }
   }
 
-  async function processMatch(id: string) {
-    const matchStatus = adminMatches.find(m => m.id === id)?.status;
-    setMatchMenuId(null); setProcessingMatchId(id); setPointsMsg(null);
-    const res = await fetch("/api/admin/process-points", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchIds: [id] }),
-    });
-    const data = await res.json(); setProcessingMatchId(null);
-    if (!res.ok) { setPointsMsg({ type: "err", text: data.error || "Verwerking mislukt" }); }
+  async function revertMatch(id: string) {
+    setMatchMenuId(null); setRevertingMatchId(id); setPointsMsg(null);
+    const res = await fetch(`/api/admin/matches/${id}/revert`, { method: "POST" });
+    const data = await res.json(); setRevertingMatchId(null);
+    if (!res.ok) { setPointsMsg({ type: "err", text: data.error || "Terugdraaien mislukt" }); }
     else {
-      const msg = matchStatus === "CORRECTION" ? "Correctie verwerkt, punten teruggedraaid" : "Wedstrijd verwerkt, tussenstand bijgewerkt";
-      setPointsMsg({ type: "ok", text: msg });
+      setPointsMsg({ type: "ok", text: `Wedstrijd teruggezet naar 'Goedgekeurd', ${data.playersReverted} spelers bijgewerkt` });
       await loadAdminMatches();
     }
   }
@@ -468,19 +461,14 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     if (res.ok) await loadAdminMatches();
   }
 
-  function toggleMatchSelection(id: string) {
-    setSelectedMatchIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  function toggleProcessSelect(id: string) {
+    setProcessSelectedIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   }
 
-  function toggleAllMatchSelection() {
-    setSelectedMatchIds(selectedMatchIds.size === filteredMatches.length ? new Set() : new Set(filteredMatches.map((m) => m.id)));
-  }
-
-  async function bulkDeleteMatches() {
-    setBulkDeletingMatches(true);
-    await Promise.all([...selectedMatchIds].map((id) => fetch(`/api/admin/matches/${id}`, { method: "DELETE" })));
-    setSelectedMatchIds(new Set()); setConfirmBulkMatches(false); setBulkDeletingMatches(false);
-    await loadAdminMatches();
+  function toggleAllProcessSelect() {
+    const processable = filteredMatches.filter((m) => m.status === "APPROVED" || m.status === "CORRECTION");
+    const allSelected = processable.length > 0 && processable.every((m) => processSelectedIds.has(m.id));
+    setProcessSelectedIds(allSelected ? new Set() : new Set(processable.map((m) => m.id)));
   }
 
 
@@ -764,6 +752,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
               <h2 className="text-lg font-bold text-white">Wedstrijden</h2>
               <button onClick={loadAdminMatches} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Vernieuwen</button>
             </div>
+            {/* Filters */}
             <div className="flex flex-wrap gap-2 mb-4">
               <select value={matchFilterTeam} onChange={(e) => setMatchFilterTeam(e.target.value)}
                 className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40">
@@ -783,29 +772,21 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 <button onClick={() => { setMatchFilterTeam(""); setMatchFilterStatus(""); }} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Wis filters</button>
               )}
             </div>
-            {/* Verwerk-feedback bovenaan */}
+            {/* Feedback */}
             {pointsMsg && (
               <div className={`flex items-center gap-2 rounded-xl px-4 py-2.5 mb-3 border text-sm ${pointsMsg.type === "ok" ? "bg-green-900/20 border-green-500/30 text-green-400" : "bg-red-900/20 border-red-500/30 text-red-400"}`}>
                 <span className="flex-1">{pointsMsg.text}</span>
                 <button onClick={() => setPointsMsg(null)} className="text-slate-500 hover:text-slate-300 text-lg leading-none">×</button>
               </div>
             )}
-            {/* Bulk actiebalk */}
-            {selectedMatchIds.size > 0 && (
-              <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 mb-3">
-                <span className="text-sm text-slate-300 flex-1">{selectedMatchIds.size} geselecteerd</span>
-                {confirmBulkMatches ? (
-                  <>
-                    <span className="text-sm text-red-400">Zeker weten?</span>
-                    <button onClick={bulkDeleteMatches} disabled={bulkDeletingMatches} className={BTN_DANGER + " disabled:opacity-50"}>{bulkDeletingMatches ? "Verwijderen..." : "Ja, verwijder"}</button>
-                    <button onClick={() => setConfirmBulkMatches(false)} className={BTN_SECONDARY}>Annuleer</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => setConfirmBulkMatches(true)} className={BTN_DANGER}>Verwijder geselecteerde</button>
-                    <button onClick={() => setSelectedMatchIds(new Set())} className={BTN_SECONDARY}>Deselecteer</button>
-                  </>
-                )}
+            {/* Actiebalk voor geselecteerde wedstrijden */}
+            {processSelectedIds.size > 0 && (
+              <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 mb-3 flex-wrap">
+                <span className="text-sm text-slate-300 flex-1">{processSelectedIds.size} geselecteerd voor verwerking</span>
+                <button onClick={processPoints} disabled={processing} className={BTN_PRIMARY + " disabled:opacity-40"}>
+                  {processing ? "Verwerken..." : `Verwerk ${processSelectedIds.size} geselecteerde`}
+                </button>
+                <button onClick={() => setProcessSelectedIds(new Set())} className={BTN_SECONDARY}>Deselecteer</button>
               </div>
             )}
 
@@ -817,171 +798,106 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
               <>
                 {/* Mobiel: kaartjes */}
                 <div className="md:hidden space-y-2">
-                  {filteredMatches.map((m) => (
-                    <div key={m.id} className={`bg-slate-800/50 rounded-xl p-3 border transition-colors ${selectedMatchIds.has(m.id) ? "border-cyan-500/50 bg-cyan-500/5" : "border-slate-700"}`}>
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-start gap-2 min-w-0">
-                          <input type="checkbox" checked={selectedMatchIds.has(m.id)} onChange={() => toggleMatchSelection(m.id)} className="mt-0.5 accent-cyan-500 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-white text-sm truncate">{m.name}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              {TEAM_LABEL[m.clubTeam]} · {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} · {m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}
-                            </p>
+                  {filteredMatches.map((m) => {
+                    const isProcessable = m.status === "APPROVED" || m.status === "CORRECTION";
+                    return (
+                      <div key={m.id} className={`bg-slate-800/50 rounded-xl p-3 border transition-colors ${isProcessable && processSelectedIds.has(m.id) ? "border-cyan-500/50 bg-cyan-500/5" : "border-slate-700"}`}>
+                        <div className="flex items-start gap-2 mb-2">
+                          {isProcessable
+                            ? <input type="checkbox" checked={processSelectedIds.has(m.id)} onChange={() => toggleProcessSelect(m.id)} className="mt-0.5 accent-cyan-500 shrink-0" />
+                            : <span className="w-4 shrink-0" />
+                          }
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium text-white text-sm truncate">{m.name}</p>
+                                <p className="text-xs text-slate-500 mt-0.5">{TEAM_LABEL[m.clubTeam]} · {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} · {m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
+                                <span className="text-sm font-bold text-slate-300">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
-                          <span className="text-sm font-bold text-slate-300">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}</span>
-                          <span className="text-xs text-slate-500">{m.performances.filter(p => p.played).length} spelers</span>
+                        <div className="pl-6">
+                          <div className="relative inline-block">
+                            <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
+                            {matchMenuId === m.id && (
+                              <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[200px] overflow-hidden">
+                                {m.status !== "PROCESSED" && m.status !== "CORRECTION" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
+                                <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
+                                {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
+                                {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                                {m.status === "PROCESSED" && <button onClick={() => { revertMatch(m.id); }} disabled={revertingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors disabled:opacity-50">{revertingMatchId === m.id ? "Bezig..." : "Terugdraaien"}</button>}
+                                {m.status === "CORRECTION" && <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>}
+                                {m.status !== "PROCESSED" && <><div className="border-t border-slate-700" /><button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button></>}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {(m.status === "APPROVED" || m.status === "CORRECTION") && (
-                          <button
-                            onClick={() => processMatch(m.id)}
-                            disabled={processingMatchId === m.id}
-                            className={BTN_SMALL + " " + (m.status === "CORRECTION" ? "text-orange-400 border-orange-500/40" : "text-cyan-400 border-cyan-500/40") + " disabled:opacity-50"}
-                          >
-                            {processingMatchId === m.id ? "..." : m.status === "CORRECTION" ? "Terugdraaien" : "Verwerk"}
-                          </button>
-                        )}
-                        <div className="relative">
-                          <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
-                          {matchMenuId === m.id && (
-                            <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
-                              {m.status === "CORRECTION" ? (
-                                <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
-                              ) : (
-                                <>
-                                  {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
-                                  {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
-                                  {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
-                                  <div className="border-t border-slate-700" />
-                                  <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {/* Desktop: tabel */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-800">
-                        <th className="pb-2 w-8"><input type="checkbox" checked={filteredMatches.length > 0 && selectedMatchIds.size === filteredMatches.length} onChange={toggleAllMatchSelection} className="accent-cyan-500" /></th>
+                        <th className="pb-2 w-8">
+                          <input type="checkbox"
+                            checked={filteredMatches.filter(m => m.status === "APPROVED" || m.status === "CORRECTION").length > 0 && filteredMatches.filter(m => m.status === "APPROVED" || m.status === "CORRECTION").every(m => processSelectedIds.has(m.id))}
+                            ref={(el) => { if (el) { const p = filteredMatches.filter(m => m.status === "APPROVED" || m.status === "CORRECTION"); el.indeterminate = p.some(m => processSelectedIds.has(m.id)) && !p.every(m => processSelectedIds.has(m.id)); } }}
+                            onChange={toggleAllProcessSelect} className="accent-cyan-500" />
+                        </th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Elftal</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Tegenstander</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">T/U</th>
-                        <th className="pb-2 font-semibold whitespace-nowrap">Score</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">Uitslag</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Status</th>
                         <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredMatches.map((m) => (
-                        <tr key={m.id} className={`border-b border-slate-800/60 ${selectedMatchIds.has(m.id) ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}>
-                          <td className="py-2"><input type="checkbox" checked={selectedMatchIds.has(m.id)} onChange={() => toggleMatchSelection(m.id)} className="accent-cyan-500" /></td>
-                          <td className="py-2 text-slate-400 text-xs whitespace-nowrap">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
-                          <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
-                          <td className="py-2 font-medium text-white">{m.name}</td>
-                          <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
-                          <td className="py-2 text-slate-400 whitespace-nowrap">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}<span className="text-xs text-slate-600 ml-1.5">({m.performances.filter(p => p.played).length})</span></td>
-                          <td className="py-2 whitespace-nowrap">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
-                          </td>
-                          <td className="py-2 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {(m.status === "APPROVED" || m.status === "CORRECTION") && (
-                                <button
-                                  onClick={() => processMatch(m.id)}
-                                  disabled={processingMatchId === m.id}
-                                  className={BTN_SMALL + " " + (m.status === "CORRECTION" ? "text-orange-400 border-orange-500/40" : "text-cyan-400 border-cyan-500/40") + " disabled:opacity-50"}
-                                >
-                                  {processingMatchId === m.id ? "..." : m.status === "CORRECTION" ? "Terugdraaien" : "Verwerk"}
-                                </button>
-                              )}
-                              <div className="relative">
+                      {filteredMatches.map((m) => {
+                        const isProcessable = m.status === "APPROVED" || m.status === "CORRECTION";
+                        return (
+                          <tr key={m.id} className={`border-b border-slate-800/60 ${isProcessable && processSelectedIds.has(m.id) ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}>
+                            <td className="py-2">
+                              {isProcessable && <input type="checkbox" checked={processSelectedIds.has(m.id)} onChange={() => toggleProcessSelect(m.id)} className="accent-cyan-500" />}
+                            </td>
+                            <td className="py-2 text-slate-400 text-xs whitespace-nowrap">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
+                            <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
+                            <td className="py-2 font-medium text-white">{m.name}</td>
+                            <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
+                            <td className="py-2 text-slate-400 whitespace-nowrap">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}<span className="text-xs text-slate-600 ml-1.5">({m.performances.filter(p => p.played).length})</span></td>
+                            <td className="py-2 whitespace-nowrap"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span></td>
+                            <td className="py-2 text-right">
+                              <div className="relative inline-block">
                                 <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
                                 {matchMenuId === m.id && (
-                                  <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
-                                    {m.status === "CORRECTION" ? (
-                                      <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
-                                    ) : (
-                                      <>
-                                        {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
-                                        {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
-                                        {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
-                                        <div className="border-t border-slate-700" />
-                                        <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
-                                      </>
-                                    )}
+                                  <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[200px] overflow-hidden">
+                                    {m.status !== "PROCESSED" && m.status !== "CORRECTION" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
+                                    <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
+                                    {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
+                                    {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                                    {m.status === "PROCESSED" && <button onClick={() => { revertMatch(m.id); }} disabled={revertingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors disabled:opacity-50">{revertingMatchId === m.id ? "Bezig..." : "Terugdraaien"}</button>}
+                                    {m.status === "CORRECTION" && <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>}
+                                    {m.status !== "PROCESSED" && <><div className="border-t border-slate-700" /><button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button></>}
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </>
             )}
-            {/* Te verwerken panel */}
-            <div className="mt-5 pt-5 border-t border-slate-800">
-              <p className="text-sm font-semibold text-slate-400 mb-3">Te verwerken bij volgende update</p>
-              {(() => {
-                const toProcess = adminMatches.filter(m => m.status === "APPROVED" || m.status === "CORRECTION");
-                if (toProcess.length === 0) {
-                  return <p className="text-slate-600 text-sm mb-4">Geen wedstrijden klaarstaan voor verwerking.</p>;
-                }
-                const allSelected = toProcess.every(m => processSelectedIds.has(m.id));
-                return (
-                  <div className="space-y-1.5 mb-4">
-                    {/* Selecteer alles */}
-                    <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer mb-1 select-none">
-                      <input
-                        type="checkbox"
-                        className="accent-cyan-500"
-                        checked={allSelected}
-                        onChange={() => setProcessSelectedIds(allSelected ? new Set() : new Set(toProcess.map(m => m.id)))}
-                      />
-                      Alles selecteren
-                    </label>
-                    {toProcess.map(m => (
-                      <label key={m.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 border text-sm cursor-pointer select-none transition-colors ${processSelectedIds.has(m.id) ? (m.status === "CORRECTION" ? "bg-orange-900/30 border-orange-500/50" : "bg-green-900/30 border-green-500/50") : "bg-slate-800/40 border-slate-700"}`}>
-                        <input
-                          type="checkbox"
-                          className={m.status === "CORRECTION" ? "accent-orange-500" : "accent-green-500"}
-                          checked={processSelectedIds.has(m.id)}
-                          onChange={() => setProcessSelectedIds(prev => { const next = new Set(prev); next.has(m.id) ? next.delete(m.id) : next.add(m.id); return next; })}
-                        />
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
-                        <span className="font-medium text-white truncate">{m.name}</span>
-                        <span className="text-slate-500 shrink-0">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</span>
-                        <span className="text-slate-600 shrink-0">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</span>
-                        <span className={`ml-auto text-xs shrink-0 ${m.status === "CORRECTION" ? "text-orange-400" : "text-green-400"}`}>
-                          {m.status === "CORRECTION" ? "punten terugdraaien" : "punten toevoegen"}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                );
-              })()}
-              <div className="flex items-center gap-4 flex-wrap">
-                <button onClick={processPoints} disabled={processing || processSelectedIds.size === 0} className={BTN_PRIMARY + " disabled:opacity-40"}>
-                  {processing ? "Verwerken..." : processSelectedIds.size > 0 ? `Verwerk ${processSelectedIds.size} geselecteerde` : "Selecteer wedstrijden"}
-                </button>
-                {pointsMsg && (
-                  <p className={`text-sm ${pointsMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>{pointsMsg.text}</p>
-                )}
-              </div>
-            </div>
           </section>
         )}
 
@@ -1238,49 +1154,58 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         <div className="fixed inset-0 z-40" onClick={() => setMatchMenuId(null)} />
       )}
 
-      {/* Modal: wedstrijd bewerken (details + prestaties gecombineerd) */}
+      {/* Modal: wedstrijd bewerken / prestaties bekijken */}
       {editingMatch && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto overflow-x-hidden">
             {/* Header */}
             <div className="flex items-start justify-between mb-5">
               <div>
-                <h3 className="text-lg font-bold text-white">Wedstrijd bewerken</h3>
+                <h3 className="text-lg font-bold text-white">{editMatchReadOnly ? "Prestaties bekijken" : "Wedstrijd bewerken"}</h3>
                 <p className="text-sm text-slate-500">{TEAM_LABEL[editingMatch.clubTeam] ?? editingMatch.clubTeam}</p>
               </div>
               <button onClick={() => setEditingMatch(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
             </div>
 
-            {/* Wedstrijd details */}
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className={LABEL}>Tegenstander</label>
-                <input type="text" value={editMatchForm.name} onChange={(e) => setEditMatchForm({ ...editMatchForm, name: e.target.value })} className={INPUT} />
+            {/* Wedstrijd details: bewerkbaar of readonly */}
+            {editMatchReadOnly ? (
+              <div className="flex flex-wrap gap-3 mb-6">
+                <div className="bg-slate-800/60 rounded-lg px-3 py-2 text-sm"><span className="text-slate-500">Tegenstander: </span><span className="text-white font-medium">{editingMatch.name}</span></div>
+                <div className="bg-slate-800/60 rounded-lg px-3 py-2 text-sm"><span className="text-slate-500">Datum: </span><span className="text-white">{new Date(editingMatch.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}</span></div>
+                <div className="bg-slate-800/60 rounded-lg px-3 py-2 text-sm"><span className="text-slate-500">Uitslag: </span><span className="text-white font-bold">{editingMatch.homeAway === "AWAY" ? `${editingMatch.goalsConceded}–${editingMatch.goalsScored}` : `${editingMatch.goalsScored}–${editingMatch.goalsConceded}`}</span></div>
+                <div className="bg-slate-800/60 rounded-lg px-3 py-2 text-sm"><span className="text-slate-500">Status: </span><span className={`font-medium ${STATUS_STYLE[editingMatch.status].includes("orange") ? "text-orange-400" : STATUS_STYLE[editingMatch.status].includes("blue") ? "text-blue-400" : "text-slate-300"}`}>{STATUS_LABEL[editingMatch.status]}</span></div>
               </div>
-              <div>
-                <label className={LABEL}>Datum & tijd</label>
-                <input type="datetime-local" value={editMatchForm.matchDate} onChange={(e) => setEditMatchForm({ ...editMatchForm, matchDate: e.target.value })} className={INPUT} />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
+            ) : (
+              <div className="space-y-4 mb-6">
                 <div>
-                  <label className={LABEL}>Thuis/Uit</label>
-                  <select value={editMatchForm.homeAway} onChange={(e) => setEditMatchForm({ ...editMatchForm, homeAway: e.target.value })} className={SELECT}>
-                    <option value="HOME">Thuis</option>
-                    <option value="AWAY">Uit</option>
-                    <option value="NEUTRAL">Neutraal</option>
-                  </select>
+                  <label className={LABEL}>Tegenstander</label>
+                  <input type="text" value={editMatchForm.name} onChange={(e) => setEditMatchForm({ ...editMatchForm, name: e.target.value })} className={INPUT} />
                 </div>
                 <div>
-                  <label className={LABEL}>Goals voor</label>
-                  <input type="number" value={editMatchForm.goalsScored} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsScored: Number(e.target.value) })} className={INPUT} min="0" />
+                  <label className={LABEL}>Datum & tijd</label>
+                  <input type="datetime-local" value={editMatchForm.matchDate} onChange={(e) => setEditMatchForm({ ...editMatchForm, matchDate: e.target.value })} className={INPUT} />
                 </div>
-                <div>
-                  <label className={LABEL}>Goals tegen</label>
-                  <input type="number" value={editMatchForm.goalsConceded} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsConceded: Number(e.target.value) })} className={INPUT} min="0" />
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className={LABEL}>Thuis/Uit</label>
+                    <select value={editMatchForm.homeAway} onChange={(e) => setEditMatchForm({ ...editMatchForm, homeAway: e.target.value })} className={SELECT}>
+                      <option value="HOME">Thuis</option>
+                      <option value="AWAY">Uit</option>
+                      <option value="NEUTRAL">Neutraal</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={LABEL}>Goals voor</label>
+                    <input type="number" value={editMatchForm.goalsScored} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsScored: Number(e.target.value) })} className={INPUT} min="0" />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Goals tegen</label>
+                    <input type="number" value={editMatchForm.goalsConceded} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsConceded: Number(e.target.value) })} className={INPUT} min="0" />
+                  </div>
                 </div>
+                {editMatchError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{editMatchError}</p>}
               </div>
-              {editMatchError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{editMatchError}</p>}
-            </div>
+            )}
 
             {/* Spelersbijdragen */}
             <div className="border-t border-slate-700 pt-5">
@@ -1311,13 +1236,13 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                               {p.player.name}
                               <span className="text-slate-500 text-xs ml-1">{POSITION_LABEL[p.player.position] ?? p.player.position}</span>
                             </td>
-                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.played} onChange={(e) => updatePerfField(p.playerId, "played", e.target.checked)} className="accent-cyan-500" /></td>
-                            <td className="py-1.5 text-center"><input type="number" value={ed.goals} min={0} onChange={(e) => updatePerfField(p.playerId, "goals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                            <td className="py-1.5 text-center"><input type="number" value={ed.penaltyGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "penaltyGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                            <td className="py-1.5 text-center"><input type="number" value={ed.assists} min={0} onChange={(e) => updatePerfField(p.playerId, "assists", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                            <td className="py-1.5 text-center"><input type="number" value={ed.ownGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "ownGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                            <td className="py-1.5 text-center"><input type="number" value={ed.yellowCards} min={0} max={2} onChange={(e) => updatePerfField(p.playerId, "yellowCards", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-red-500" /></td>
+                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.played} disabled={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "played", e.target.checked)} className="accent-cyan-500 disabled:opacity-60" /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.goals} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "goals", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.penaltyGoals} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "penaltyGoals", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.assists} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "assists", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.ownGoals} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "ownGoals", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.yellowCards} min={0} max={2} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "yellowCards", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
+                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} disabled={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-red-500 disabled:opacity-60" /></td>
                           </tr>
                         );
                       })}
@@ -1329,8 +1254,14 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
             {/* Footer */}
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditingMatch(null)} className={BTN_SECONDARY}>Annuleer</button>
-              <button onClick={saveAll} disabled={editMatchSaving} className={BTN_PRIMARY}>{editMatchSaving ? "Opslaan..." : "Opslaan"}</button>
+              {editMatchReadOnly ? (
+                <button onClick={() => setEditingMatch(null)} className={BTN_SECONDARY}>Sluiten</button>
+              ) : (
+                <>
+                  <button onClick={() => setEditingMatch(null)} className={BTN_SECONDARY}>Annuleer</button>
+                  <button onClick={saveAll} disabled={editMatchSaving} className={BTN_PRIMARY}>{editMatchSaving ? "Opslaan..." : "Opslaan"}</button>
+                </>
+              )}
             </div>
           </div>
         </div>
