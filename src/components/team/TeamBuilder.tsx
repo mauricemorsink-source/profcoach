@@ -48,6 +48,9 @@ const POSITION_LABEL: Record<string, string> = {
 const CLUB_ORDER = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
 const POS_ORDER = ["GK", "DEF", "MID", "ATT"];
 
+const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
+const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700 disabled:opacity-50";
+
 export default function TeamBuilder({ formations, season, budget }: TeamBuilderProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [teamEntryId, setTeamEntryId] = useState<string | null>(null);
@@ -309,7 +312,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
           <button
             onClick={handleUnlock}
             disabled={unlocking}
-            className="shrink-0 px-3 py-1.5 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors disabled:opacity-50"
+            className={BTN_SECONDARY + " shrink-0"}
           >
             {unlocking ? "Bezig..." : "Terugtrekken"}
           </button>
@@ -363,21 +366,21 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
         <button
           onClick={handleSave}
           disabled={locked || saving || !teamEntryId}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg disabled:opacity-50 font-semibold text-sm border border-slate-700 transition-colors"
+          className={BTN_SECONDARY}
         >
           {saving ? "Bezig..." : "Opslaan"}
         </button>
         <button
           onClick={handleSubmit}
           disabled={locked || saving || !validation.allValid}
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm"
+          className={BTN_PRIMARY}
         >
           {saving ? "Bezig..." : "Team indienen"}
         </button>
         {teamEntryId && (
           <button
             onClick={handleShareCopy}
-            className="ml-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-semibold text-sm border border-slate-700 transition-colors"
+            className={BTN_SECONDARY + " ml-auto"}
           >
             {copyFeedback ? "Link gekopieerd!" : "Delen"}
           </button>
