@@ -13,13 +13,31 @@ export default async function HomePage() {
   return (
     <div className="relative min-h-[calc(100vh-56px)] flex flex-col items-center justify-center p-8 overflow-hidden bg-[#060b14]">
 
+      <style>{`
+        @keyframes glowFloat {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); }
+          30%       { transform: translate(-42%, -58%) scale(1.12); }
+          65%       { transform: translate(-58%, -44%) scale(0.91); }
+        }
+        @keyframes borderGlow {
+          0%, 100% {
+            box-shadow: 0 0 10px rgba(34,211,238,0.1), 0 0 30px rgba(34,211,238,0.04);
+            border-color: rgba(34,211,238,0.28);
+          }
+          50% {
+            box-shadow: 0 0 22px rgba(34,211,238,0.3), 0 0 55px rgba(34,211,238,0.12);
+            border-color: rgba(34,211,238,0.65);
+          }
+        }
+      `}</style>
+
       {/* Achtergrond foto - subtiel */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-        style={{ backgroundImage: "url('/veld.avif')", opacity: 0.15 }}
+        style={{ backgroundImage: "url('/veld.webp')", opacity: 0.15 }}
       />
 
-      {/* Donkere vignette — randen volledig donker, midden licht zichtbaar */}
+      {/* Donkere vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(ellipse at 50% 40%, rgba(6,11,20,0.1) 0%, rgba(6,11,20,0.6) 65%, #060b14 88%)" }}
@@ -27,12 +45,14 @@ export default async function HomePage() {
 
       {/* Bewegende blauwe gloed */}
       <div
-        className="absolute pointer-events-none bg-glow-animated"
+        className="absolute pointer-events-none"
         style={{
           top: "40%", left: "50%",
           width: "70%", height: "70%",
           background: "radial-gradient(ellipse, rgba(20,80,200,0.45) 0%, transparent 70%)",
           filter: "blur(60px)",
+          animation: "glowFloat 18s ease-in-out infinite",
+          willChange: "transform",
         }}
       />
 
@@ -46,7 +66,14 @@ export default async function HomePage() {
         </p>
       </div>
 
-      <div className="relative z-10 bg-slate-900 neon-border-animated rounded-2xl p-8 w-full max-w-sm space-y-3 shadow-2xl">
+      <div
+        className="relative z-10 bg-slate-900 rounded-2xl p-8 w-full max-w-sm space-y-3 shadow-2xl"
+        style={{
+          border: "1px solid rgba(34,211,238,0.28)",
+          boxShadow: "0 0 10px rgba(34,211,238,0.1)",
+          animation: "borderGlow 4s ease-in-out infinite",
+        }}
+      >
         {session ? (
           <>
             <p className="text-center text-slate-400 text-sm pb-1">

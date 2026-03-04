@@ -215,6 +215,11 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [editMatchForm, setEditMatchForm] = useState({ name: "", matchDate: "", goalsScored: 0, goalsConceded: 0, homeAway: "HOME" });
   const [editMatchSaving, setEditMatchSaving] = useState(false);
   const [editMatchError, setEditMatchError] = useState("");
+  const [matchMenuId, setMatchMenuId] = useState<string | null>(null);
+  const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
+  const [editPerfsMode, setEditPerfsMode] = useState(false);
+  const [editPerfsData, setEditPerfsData] = useState<Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }>>({});
+  const [savingPerfs, setSavingPerfs] = useState(false);
 
   async function loadPlayers() {
     setLoadingPlayers(true);
@@ -397,6 +402,38 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     const data = await res.json(); setEditMatchSaving(false);
     if (!res.ok) { setEditMatchError(data.error || "Opslaan mislukt"); return; }
     setEditingMatch(null); await loadAdminMatches();
+  }
+
+  async function deleteMatch(id: string) {
+    setDeletingMatchId(id); setMatchMenuId(null);
+    const res = await fetch(`/api/admin/matches/${id}`, { method: "DELETE" });
+    setDeletingMatchId(null);
+    if (res.ok) await loadAdminMatches();
+  }
+
+  function openPerfsEdit(m: AdminMatch) {
+    const data: Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }> = {};
+    for (const p of m.performances) {
+      data[p.playerId] = { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
+    }
+    setEditPerfsData(data);
+    setEditPerfsMode(true);
+  }
+
+  async function savePerfs() {
+    if (!viewingMatchPerfs) return;
+    setSavingPerfs(true);
+    const performances = Object.entries(editPerfsData).map(([playerId, d]) => ({ playerId, ...d }));
+    const res = await fetch(`/api/admin/matches/${viewingMatchPerfs.id}/performances`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ performances }),
+    });
+    setSavingPerfs(false);
+    if (res.ok) { setEditPerfsMode(false); await loadAdminMatches(); }
+  }
+
+  function updatePerfField(playerId: string, field: string, value: boolean | number) {
+    setEditPerfsData((prev) => ({ ...prev, [playerId]: { ...prev[playerId], [field]: value } }));
   }
 
   function updatePointsCell(id: string, field: "gkPoints" | "defPoints" | "midPoints" | "attPoints", value: string) {
@@ -716,17 +753,18 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           <span className="text-xs text-slate-500">{m.performances.filter(p => p.played).length} spelers</span>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        <button onClick={() => openEditMatch(m)} className={BTN_SMALL}>Bewerken</button>
-                        <button onClick={() => setViewingMatchPerfs(m)} className={BTN_SMALL}>Prestaties</button>
-                        {m.status === "PENDING" && (
-                          <>
-                            <button onClick={() => approveMatch(m.id, "APPROVED")} disabled={approvingId === m.id} className="px-2 py-1 text-xs bg-green-900/40 text-green-400 rounded hover:bg-green-900/60 font-medium border border-green-500/30 disabled:opacity-50 transition-colors">Goedkeuren</button>
-                            <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afkeuren</button>
-                          </>
-                        )}
-                        {m.status === "APPROVED" && (
-                          <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afkeuren</button>
+                      <div className="relative">
+                        <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
+                        {matchMenuId === m.id && (
+                          <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[170px] overflow-hidden">
+                            <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>
+                            <button onClick={() => { setViewingMatchPerfs(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
+                            <div className="border-t border-slate-700" />
+                            {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
+                            {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                            <div className="border-t border-slate-700" />
+                            <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -758,17 +796,18 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
                           </td>
                           <td className="py-2 text-right">
-                            <div className="flex justify-end gap-1 flex-wrap">
-                              <button onClick={() => openEditMatch(m)} className={BTN_SMALL}>Bewerken</button>
-                              <button onClick={() => setViewingMatchPerfs(m)} className={BTN_SMALL}>Prestaties</button>
-                              {m.status === "PENDING" && (
-                                <>
-                                  <button onClick={() => approveMatch(m.id, "APPROVED")} disabled={approvingId === m.id} className="px-2 py-1 text-xs bg-green-900/40 text-green-400 rounded hover:bg-green-900/60 font-medium border border-green-500/30 disabled:opacity-50 transition-colors">OK</button>
-                                  <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
-                                </>
-                              )}
-                              {m.status === "APPROVED" && (
-                                <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
+                            <div className="relative inline-block">
+                              <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
+                              {matchMenuId === m.id && (
+                                <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[170px] overflow-hidden">
+                                  <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>
+                                  <button onClick={() => { setViewingMatchPerfs(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
+                                  <div className="border-t border-slate-700" />
+                                  {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors">Goedkeuren</button>}
+                                  {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors">Afkeuren</button>}
+                                  <div className="border-t border-slate-700" />
+                                  <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                                </div>
                               )}
                             </div>
                           </td>
@@ -1081,7 +1120,12 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         </div>
       )}
 
-      {/* Modal: wedstrijdprestaties bekijken */}
+      {/* Backdrop: sluit dropdown menu bij klik buiten */}
+      {matchMenuId && (
+        <div className="fixed inset-0 z-40" onClick={() => setMatchMenuId(null)} />
+      )}
+
+      {/* Modal: wedstrijdprestaties bekijken / bewerken */}
       {viewingMatchPerfs && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto overflow-x-hidden">
@@ -1094,47 +1138,74 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   {viewingMatchPerfs.goalsScored}–{viewingMatchPerfs.goalsConceded}
                 </p>
               </div>
-              <button onClick={() => setViewingMatchPerfs(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
+              <button onClick={() => { setViewingMatchPerfs(null); setEditPerfsMode(false); }} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
             </div>
             {viewingMatchPerfs.performances.length === 0 ? (
               <p className="text-slate-500 text-sm">Nog geen prestaties ingevoerd.</p>
             ) : (
               <div className="overflow-x-auto -mx-6 px-6">
-              <table className="w-full text-sm min-w-[520px]">
-                <thead>
-                  <tr className="text-left text-slate-500 border-b border-slate-800">
-                    <th className="pb-2 font-semibold">Speler</th>
-                    <th className="pb-2 font-semibold text-center">Speelde</th>
-                    <th className="pb-2 font-semibold text-center">Goals</th>
-                    <th className="pb-2 font-semibold text-center">Pen.</th>
-                    <th className="pb-2 font-semibold text-center">Assists</th>
-                    <th className="pb-2 font-semibold text-center">E.G.</th>
-                    <th className="pb-2 font-semibold text-center">Geel</th>
-                    <th className="pb-2 font-semibold text-center">Rood</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {viewingMatchPerfs.performances.map((p) => (
-                    <tr key={p.playerId} className={`border-b border-slate-800/60 ${!p.played ? "opacity-30" : ""}`}>
-                      <td className="py-1.5 font-medium text-white">
-                        {p.player.name}
-                        <span className="text-slate-500 text-xs ml-1">{POSITION_LABEL[p.player.position] ?? p.player.position}</span>
-                      </td>
-                      <td className="py-1.5 text-center text-cyan-400">{p.played ? "✓" : "–"}</td>
-                      <td className="py-1.5 text-center text-slate-300">{p.goals}</td>
-                      <td className="py-1.5 text-center text-slate-300">{p.penaltyGoals}</td>
-                      <td className="py-1.5 text-center text-slate-300">{p.assists}</td>
-                      <td className="py-1.5 text-center text-slate-300">{p.ownGoals}</td>
-                      <td className="py-1.5 text-center">{p.yellowCards > 0 ? "🟡" : <span className="text-slate-600">–</span>}</td>
-                      <td className="py-1.5 text-center">{p.redCard ? "🔴" : <span className="text-slate-600">–</span>}</td>
+                <table className="w-full text-sm min-w-[520px]">
+                  <thead>
+                    <tr className="text-left text-slate-500 border-b border-slate-800">
+                      <th className="pb-2 font-semibold">Speler</th>
+                      <th className="pb-2 font-semibold text-center">Mee</th>
+                      <th className="pb-2 font-semibold text-center">Goals</th>
+                      <th className="pb-2 font-semibold text-center">Pen.</th>
+                      <th className="pb-2 font-semibold text-center">Ass.</th>
+                      <th className="pb-2 font-semibold text-center">E.G.</th>
+                      <th className="pb-2 font-semibold text-center">Geel</th>
+                      <th className="pb-2 font-semibold text-center">Rood</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {viewingMatchPerfs.performances.map((p) => {
+                      const ed = editPerfsData[p.playerId] ?? { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
+                      return (
+                        <tr key={p.playerId} className={`border-b border-slate-800/60 ${!( editPerfsMode ? ed.played : p.played) ? "opacity-40" : ""}`}>
+                          <td className="py-1.5 font-medium text-white">
+                            {p.player.name}
+                            <span className="text-slate-500 text-xs ml-1">{POSITION_LABEL[p.player.position] ?? p.player.position}</span>
+                          </td>
+                          {editPerfsMode ? (
+                            <>
+                              <td className="py-1.5 text-center"><input type="checkbox" checked={ed.played} onChange={(e) => updatePerfField(p.playerId, "played", e.target.checked)} className="accent-cyan-500" /></td>
+                              <td className="py-1.5 text-center"><input type="number" value={ed.goals} min={0} onChange={(e) => updatePerfField(p.playerId, "goals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                              <td className="py-1.5 text-center"><input type="number" value={ed.penaltyGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "penaltyGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                              <td className="py-1.5 text-center"><input type="number" value={ed.assists} min={0} onChange={(e) => updatePerfField(p.playerId, "assists", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                              <td className="py-1.5 text-center"><input type="number" value={ed.ownGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "ownGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                              <td className="py-1.5 text-center"><input type="number" value={ed.yellowCards} min={0} max={2} onChange={(e) => updatePerfField(p.playerId, "yellowCards", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                              <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-red-500" /></td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-1.5 text-center text-cyan-400">{p.played ? "✓" : "–"}</td>
+                              <td className="py-1.5 text-center text-slate-300">{p.goals}</td>
+                              <td className="py-1.5 text-center text-slate-300">{p.penaltyGoals}</td>
+                              <td className="py-1.5 text-center text-slate-300">{p.assists}</td>
+                              <td className="py-1.5 text-center text-slate-300">{p.ownGoals}</td>
+                              <td className="py-1.5 text-center">{p.yellowCards > 0 ? `🟡×${p.yellowCards}` : <span className="text-slate-600">–</span>}</td>
+                              <td className="py-1.5 text-center">{p.redCard ? "🔴" : <span className="text-slate-600">–</span>}</td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
-            <div className="flex justify-end mt-4">
-              <button onClick={() => setViewingMatchPerfs(null)} className={BTN_SECONDARY}>Sluiten</button>
+            <div className="flex justify-between mt-5">
+              {editPerfsMode ? (
+                <>
+                  <button onClick={() => setEditPerfsMode(false)} className={BTN_SECONDARY}>Annuleer</button>
+                  <button onClick={savePerfs} disabled={savingPerfs} className={BTN_PRIMARY}>{savingPerfs ? "Opslaan..." : "Opslaan"}</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => openPerfsEdit(viewingMatchPerfs)} className={BTN_SECONDARY}>Bewerken</button>
+                  <button onClick={() => setViewingMatchPerfs(null)} className={BTN_SECONDARY}>Sluiten</button>
+                </>
+              )}
             </div>
           </div>
         </div>

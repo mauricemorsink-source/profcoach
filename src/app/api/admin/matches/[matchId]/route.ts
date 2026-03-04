@@ -41,3 +41,22 @@ export async function PATCH(
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ matchId: string }> }
+) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
+  const { matchId } = await params;
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
+
+  await prisma.matchPerformance.deleteMany({ where: { matchId } });
+  await prisma.match.delete({ where: { id: matchId } });
+
+  return NextResponse.json({ ok: true });
+}
