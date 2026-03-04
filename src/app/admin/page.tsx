@@ -1084,7 +1084,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
       {/* Modal: wedstrijdprestaties bekijken */}
       {viewingMatchPerfs && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto overflow-x-hidden">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold text-white">{viewingMatchPerfs.name}</h3>
@@ -1099,7 +1099,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
             {viewingMatchPerfs.performances.length === 0 ? (
               <p className="text-slate-500 text-sm">Nog geen prestaties ingevoerd.</p>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-6 px-6">
+              <table className="w-full text-sm min-w-[520px]">
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-800">
                     <th className="pb-2 font-semibold">Speler</th>
@@ -1130,6 +1131,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             <div className="flex justify-end mt-4">
               <button onClick={() => setViewingMatchPerfs(null)} className={BTN_SECONDARY}>Sluiten</button>
