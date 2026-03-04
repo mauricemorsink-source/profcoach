@@ -273,12 +273,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
       const toProcessIds: string[] = matches
         .filter((m: AdminMatch) => m.status === "APPROVED" || m.status === "CORRECTION")
         .map((m: AdminMatch) => m.id);
-      setProcessSelectedIds(prev => {
-        const next = new Set(toProcessIds.filter(id => prev.size === 0 || prev.has(id)));
-        // Bij lege prev (eerste load): selecteer alles; anders behoud huidige selectie
-        if (prev.size === 0) toProcessIds.forEach(id => next.add(id));
-        return next;
-      });
+      // Altijd alle te-verwerken wedstrijden selecteren; gebruiker kan deselecteren
+      setProcessSelectedIds(new Set(toProcessIds));
     }
     setLoadingMatches(false);
   }
@@ -393,13 +389,14 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
       if (data.processed > 0) parts.push(`${data.processed} wedstrijden verwerkt`);
       if (data.reversed > 0) parts.push(`${data.reversed} correcties teruggedraaid`);
       if (parts.length === 0) parts.push("Niets te verwerken");
-      parts.push(`${data.playersUpdated} spelers bijgewerkt`);
+      else parts.push(`${data.playersUpdated} spelers bijgewerkt`);
       setPointsMsg({ type: "ok", text: parts.join(", ") });
       await loadAdminMatches();
     }
   }
 
   async function processMatch(id: string) {
+    const matchStatus = adminMatches.find(m => m.id === id)?.status;
     setMatchMenuId(null); setProcessingMatchId(id); setPointsMsg(null);
     const res = await fetch("/api/admin/process-points", {
       method: "POST",
@@ -408,7 +405,11 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     });
     const data = await res.json(); setProcessingMatchId(null);
     if (!res.ok) { setPointsMsg({ type: "err", text: data.error || "Verwerking mislukt" }); }
-    else { setPointsMsg({ type: "ok", text: "Wedstrijd verwerkt, tussenstand bijgewerkt" }); await loadAdminMatches(); }
+    else {
+      const msg = matchStatus === "CORRECTION" ? "Correctie verwerkt, punten teruggedraaid" : "Wedstrijd verwerkt, tussenstand bijgewerkt";
+      setPointsMsg({ type: "ok", text: msg });
+      await loadAdminMatches();
+    }
   }
 
   async function approveMatch(id: string, status: "APPROVED" | "REJECTED") {
@@ -454,7 +455,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     if (!res.ok) { setEditMatchSaving(false); setEditMatchError(data.error || "Opslaan mislukt"); return; }
     const performances = Object.entries(editPerfsData).map(([playerId, d]) => ({ playerId, ...d }));
     if (performances.length > 0) {
-      await fetch(`/api/admin/matches/${editingMatch.id}/performances`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ performances }) });
+      const perfRes = await fetch(`/api/admin/matches/${editingMatch.id}/performances`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ performances }) });
+      if (!perfRes.ok) { setEditMatchSaving(false); setEditMatchError("Prestaties opslaan mislukt"); return; }
     }
     setEditMatchSaving(false); setEditingMatch(null); await loadAdminMatches();
   }

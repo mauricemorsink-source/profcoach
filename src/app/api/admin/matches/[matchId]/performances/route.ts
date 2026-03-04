@@ -14,6 +14,9 @@ export async function PUT(
   const { matchId } = await params;
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
+  if (match.status === "PROCESSED" || match.status === "CORRECTION") {
+    return NextResponse.json({ error: "Prestaties van verwerkte wedstrijden kunnen niet worden gewijzigd" }, { status: 400 });
+  }
 
   const { performances } = await req.json() as {
     performances: {
