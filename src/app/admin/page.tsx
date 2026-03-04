@@ -833,28 +833,34 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           <span className="text-xs text-slate-500">{m.performances.filter(p => p.played).length} spelers</span>
                         </div>
                       </div>
-                      <div className="relative">
-                        <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} disabled={processingMatchId === m.id} className={BTN_SMALL}>{processingMatchId === m.id ? "Verwerken..." : "Acties ▾"}</button>
-                        {matchMenuId === m.id && (
-                          <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
-                            {m.status === "CORRECTION" ? (
-                              <>
-                                <button onClick={() => processMatch(m.id)} disabled={processing} className="w-full text-left px-4 py-2.5 text-sm text-cyan-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Verwerk (terugdraaien)</button>
-                                <div className="border-t border-slate-700" />
-                                <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
-                              </>
-                            ) : (
-                              <>
-                                {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
-                                {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
-                                {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
-                                {m.status === "APPROVED" && <button onClick={() => processMatch(m.id)} disabled={processing} className="w-full text-left px-4 py-2.5 text-sm text-cyan-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Verwerk direct</button>}
-                                <div className="border-t border-slate-700" />
-                                <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
-                              </>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-2">
+                        {(m.status === "APPROVED" || m.status === "CORRECTION") && (
+                          <button
+                            onClick={() => processMatch(m.id)}
+                            disabled={processingMatchId === m.id}
+                            className={BTN_SMALL + " " + (m.status === "CORRECTION" ? "text-orange-400 border-orange-500/40" : "text-cyan-400 border-cyan-500/40") + " disabled:opacity-50"}
+                          >
+                            {processingMatchId === m.id ? "..." : m.status === "CORRECTION" ? "Terugdraaien" : "Verwerk"}
+                          </button>
                         )}
+                        <div className="relative">
+                          <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
+                          {matchMenuId === m.id && (
+                            <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
+                              {m.status === "CORRECTION" ? (
+                                <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
+                              ) : (
+                                <>
+                                  {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
+                                  {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
+                                  {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                                  <div className="border-t border-slate-700" />
+                                  <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -887,28 +893,34 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
                           </td>
                           <td className="py-2 text-right">
-                            <div className="relative inline-block">
-                              <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} disabled={processingMatchId === m.id} className={BTN_SMALL}>{processingMatchId === m.id ? "Verwerken..." : "Acties ▾"}</button>
-                              {matchMenuId === m.id && (
-                                <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
-                                  {m.status === "CORRECTION" ? (
-                                    <>
-                                      <button onClick={() => processMatch(m.id)} disabled={processing} className="w-full text-left px-4 py-2.5 text-sm text-cyan-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Verwerk (terugdraaien)</button>
-                                      <div className="border-t border-slate-700" />
-                                      <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
-                                      {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors">Goedkeuren</button>}
-                                      {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors">Afkeuren</button>}
-                                      {m.status === "APPROVED" && <button onClick={() => processMatch(m.id)} disabled={processing} className="w-full text-left px-4 py-2.5 text-sm text-cyan-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Verwerk direct</button>}
-                                      <div className="border-t border-slate-700" />
-                                      <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
-                                    </>
-                                  )}
-                                </div>
+                            <div className="flex items-center justify-end gap-2">
+                              {(m.status === "APPROVED" || m.status === "CORRECTION") && (
+                                <button
+                                  onClick={() => processMatch(m.id)}
+                                  disabled={processingMatchId === m.id}
+                                  className={BTN_SMALL + " " + (m.status === "CORRECTION" ? "text-orange-400 border-orange-500/40" : "text-cyan-400 border-cyan-500/40") + " disabled:opacity-50"}
+                                >
+                                  {processingMatchId === m.id ? "..." : m.status === "CORRECTION" ? "Terugdraaien" : "Verwerk"}
+                                </button>
                               )}
+                              <div className="relative">
+                                <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
+                                {matchMenuId === m.id && (
+                                  <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
+                                    {m.status === "CORRECTION" ? (
+                                      <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
+                                    ) : (
+                                      <>
+                                        {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
+                                        {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
+                                        {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                                        <div className="border-t border-slate-700" />
+                                        <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
