@@ -76,7 +76,7 @@ type AdminMatch = {
   matchDate: string;
   goalsScored: number;
   goalsConceded: number;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED" | "CORRECTION";
   createdBy: { name: string | null; email: string } | null;
   performances: {
     playerId: string;
@@ -113,7 +113,7 @@ const TEAM_LABEL: Record<string, string> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Ingediend", APPROVED: "Goedgekeurd", REJECTED: "Afgekeurd", PROCESSED: "Verwerkt",
+  PENDING: "Ingediend", APPROVED: "Goedgekeurd", REJECTED: "Afgekeurd", PROCESSED: "Verwerkt", CORRECTION: "Correctie",
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -121,6 +121,7 @@ const STATUS_STYLE: Record<string, string> = {
   APPROVED: "bg-green-900/40 text-green-400 border border-green-500/30",
   REJECTED: "bg-red-900/40 text-red-400 border border-red-500/30",
   PROCESSED: "bg-blue-900/40 text-blue-400 border border-blue-500/30",
+  CORRECTION: "bg-orange-900/40 text-orange-400 border border-orange-500/30",
 };
 
 const emptyForm: PlayerForm = { name: "", shortName: "", position: "GK", clubTeam: "ONE", value: "" };
@@ -203,12 +204,12 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [pointsSaving, setPointsSaving] = useState(false);
   const [pointsMsg, setPointsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [processSelectedIds, setProcessSelectedIds] = useState<Set<string>>(new Set());
 
   // Admin matches
   const [adminMatches, setAdminMatches] = useState<AdminMatch[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [viewingMatchPerfs, setViewingMatchPerfs] = useState<AdminMatch | null>(null);
   const [matchFilterTeam, setMatchFilterTeam] = useState("");
   const [matchFilterStatus, setMatchFilterStatus] = useState("");
   const [editingMatch, setEditingMatch] = useState<AdminMatch | null>(null);
@@ -217,9 +218,10 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [editMatchError, setEditMatchError] = useState("");
   const [matchMenuId, setMatchMenuId] = useState<string | null>(null);
   const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
-  const [editPerfsMode, setEditPerfsMode] = useState(false);
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
+  const [bulkDeletingMatches, setBulkDeletingMatches] = useState(false);
+  const [confirmBulkMatches, setConfirmBulkMatches] = useState(false);
   const [editPerfsData, setEditPerfsData] = useState<Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }>>({});
-  const [savingPerfs, setSavingPerfs] = useState(false);
 
   async function loadPlayers() {
     setLoadingPlayers(true);
@@ -263,7 +265,13 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   async function loadAdminMatches() {
     setLoadingMatches(true);
     const res = await fetch("/api/admin/matches");
-    if (res.ok) setAdminMatches(await res.json());
+    if (res.ok) {
+      const matches = await res.json();
+      setAdminMatches(matches);
+      // Auto-select alle te-verwerken wedstrijden
+      const toProcessIds = matches.filter((m: AdminMatch) => m.status === "APPROVED" || m.status === "CORRECTION").map((m: AdminMatch) => m.id);
+      setProcessSelectedIds(new Set(toProcessIds));
+    }
     setLoadingMatches(false);
   }
 
@@ -364,16 +372,34 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
   async function processPoints() {
     setProcessing(true); setPointsMsg(null);
-    const res = await fetch("/api/admin/process-points", { method: "POST" });
+    const body = processSelectedIds.size > 0 ? JSON.stringify({ matchIds: Array.from(processSelectedIds) }) : undefined;
+    const res = await fetch("/api/admin/process-points", {
+      method: "POST",
+      ...(body ? { headers: { "Content-Type": "application/json" }, body } : {}),
+    });
     const data = await res.json(); setProcessing(false);
     if (!res.ok) { setPointsMsg({ type: "err", text: data.error || "Verwerking mislukt" }); }
-    else { setPointsMsg({ type: "ok", text: `${data.processed} wedstrijden verwerkt, ${data.playersUpdated} spelers bijgewerkt` }); }
+    else {
+      setProcessSelectedIds(new Set());
+      const parts = [];
+      if (data.processed > 0) parts.push(`${data.processed} wedstrijden verwerkt`);
+      if (data.reversed > 0) parts.push(`${data.reversed} correcties teruggedraaid`);
+      if (parts.length === 0) parts.push("Niets te verwerken");
+      parts.push(`${data.playersUpdated} spelers bijgewerkt`);
+      setPointsMsg({ type: "ok", text: parts.join(", ") });
+      await loadAdminMatches();
+    }
   }
 
   async function approveMatch(id: string, status: "APPROVED" | "REJECTED") {
     setApprovingId(id);
     await fetch(`/api/admin/matches/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
     setApprovingId(null); await loadAdminMatches();
+  }
+
+  async function cancelCorrection(id: string) {
+    await fetch(`/api/admin/matches/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "PROCESSED" }) });
+    await loadAdminMatches();
   }
 
   async function saveRole() {
@@ -392,16 +418,25 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
   function openEditMatch(m: AdminMatch) {
     setEditMatchForm({ name: m.name, matchDate: m.matchDate.slice(0, 16), goalsScored: m.goalsScored, goalsConceded: m.goalsConceded, homeAway: m.homeAway });
+    const data: Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }> = {};
+    for (const p of m.performances) {
+      data[p.playerId] = { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
+    }
+    setEditPerfsData(data);
     setEditMatchError(""); setEditingMatch(m);
   }
 
-  async function saveEditMatch() {
+  async function saveAll() {
     if (!editingMatch) return;
     setEditMatchSaving(true); setEditMatchError("");
     const res = await fetch(`/api/admin/matches/${editingMatch.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editMatchForm.name, matchDate: editMatchForm.matchDate, goalsScored: Number(editMatchForm.goalsScored), goalsConceded: Number(editMatchForm.goalsConceded), homeAway: editMatchForm.homeAway }) });
-    const data = await res.json(); setEditMatchSaving(false);
-    if (!res.ok) { setEditMatchError(data.error || "Opslaan mislukt"); return; }
-    setEditingMatch(null); await loadAdminMatches();
+    const data = await res.json();
+    if (!res.ok) { setEditMatchSaving(false); setEditMatchError(data.error || "Opslaan mislukt"); return; }
+    const performances = Object.entries(editPerfsData).map(([playerId, d]) => ({ playerId, ...d }));
+    if (performances.length > 0) {
+      await fetch(`/api/admin/matches/${editingMatch.id}/performances`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ performances }) });
+    }
+    setEditMatchSaving(false); setEditingMatch(null); await loadAdminMatches();
   }
 
   async function deleteMatch(id: string) {
@@ -411,26 +446,21 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     if (res.ok) await loadAdminMatches();
   }
 
-  function openPerfsEdit(m: AdminMatch) {
-    const data: Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }> = {};
-    for (const p of m.performances) {
-      data[p.playerId] = { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
-    }
-    setEditPerfsData(data);
-    setEditPerfsMode(true);
+  function toggleMatchSelection(id: string) {
+    setSelectedMatchIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   }
 
-  async function savePerfs() {
-    if (!viewingMatchPerfs) return;
-    setSavingPerfs(true);
-    const performances = Object.entries(editPerfsData).map(([playerId, d]) => ({ playerId, ...d }));
-    const res = await fetch(`/api/admin/matches/${viewingMatchPerfs.id}/performances`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ performances }),
-    });
-    setSavingPerfs(false);
-    if (res.ok) { setEditPerfsMode(false); await loadAdminMatches(); }
+  function toggleAllMatchSelection() {
+    setSelectedMatchIds(selectedMatchIds.size === filteredMatches.length ? new Set() : new Set(filteredMatches.map((m) => m.id)));
   }
+
+  async function bulkDeleteMatches() {
+    setBulkDeletingMatches(true);
+    await Promise.all([...selectedMatchIds].map((id) => fetch(`/api/admin/matches/${id}`, { method: "DELETE" })));
+    setSelectedMatchIds(new Set()); setConfirmBulkMatches(false); setBulkDeletingMatches(false);
+    await loadAdminMatches();
+  }
+
 
   function updatePerfField(playerId: string, field: string, value: boolean | number) {
     setEditPerfsData((prev) => ({ ...prev, [playerId]: { ...prev[playerId], [field]: value } }));
@@ -725,11 +755,31 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 <option value="APPROVED">Goedgekeurd</option>
                 <option value="REJECTED">Afgekeurd</option>
                 <option value="PROCESSED">Verwerkt</option>
+                <option value="CORRECTION">Correctie</option>
               </select>
               {(matchFilterTeam || matchFilterStatus) && (
                 <button onClick={() => { setMatchFilterTeam(""); setMatchFilterStatus(""); }} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Wis filters</button>
               )}
             </div>
+            {/* Bulk actiebalk */}
+            {selectedMatchIds.size > 0 && (
+              <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 mb-3">
+                <span className="text-sm text-slate-300 flex-1">{selectedMatchIds.size} geselecteerd</span>
+                {confirmBulkMatches ? (
+                  <>
+                    <span className="text-sm text-red-400">Zeker weten?</span>
+                    <button onClick={bulkDeleteMatches} disabled={bulkDeletingMatches} className={BTN_DANGER + " disabled:opacity-50"}>{bulkDeletingMatches ? "Verwijderen..." : "Ja, verwijder"}</button>
+                    <button onClick={() => setConfirmBulkMatches(false)} className={BTN_SECONDARY}>Annuleer</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setConfirmBulkMatches(true)} className={BTN_DANGER}>Verwijder geselecteerde</button>
+                    <button onClick={() => setSelectedMatchIds(new Set())} className={BTN_SECONDARY}>Deselecteer</button>
+                  </>
+                )}
+              </div>
+            )}
+
             {loadingMatches ? (
               <p className="text-slate-500 text-sm py-4">Laden...</p>
             ) : filteredMatches.length === 0 ? (
@@ -739,13 +789,16 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 {/* Mobiel: kaartjes */}
                 <div className="md:hidden space-y-2">
                   {filteredMatches.map((m) => (
-                    <div key={m.id} className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                    <div key={m.id} className={`bg-slate-800/50 rounded-xl p-3 border transition-colors ${selectedMatchIds.has(m.id) ? "border-cyan-500/50 bg-cyan-500/5" : "border-slate-700"}`}>
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="min-w-0">
-                          <p className="font-medium text-white text-sm truncate">{m.name}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            {TEAM_LABEL[m.clubTeam]} · {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} · {m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}
-                          </p>
+                        <div className="flex items-start gap-2 min-w-0">
+                          <input type="checkbox" checked={selectedMatchIds.has(m.id)} onChange={() => toggleMatchSelection(m.id)} className="mt-0.5 accent-cyan-500 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-white text-sm truncate">{m.name}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {TEAM_LABEL[m.clubTeam]} · {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} · {m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}
+                            </p>
+                          </div>
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
@@ -756,14 +809,18 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                       <div className="relative">
                         <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
                         {matchMenuId === m.id && (
-                          <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[170px] overflow-hidden">
-                            <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>
-                            <button onClick={() => { setViewingMatchPerfs(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
-                            <div className="border-t border-slate-700" />
-                            {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
-                            {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
-                            <div className="border-t border-slate-700" />
-                            <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                          <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
+                            {m.status === "CORRECTION" ? (
+                              <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
+                            ) : (
+                              <>
+                                {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
+                                {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
+                                {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                                <div className="border-t border-slate-700" />
+                                <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -775,6 +832,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-800">
+                        <th className="pb-2 w-8"><input type="checkbox" checked={filteredMatches.length > 0 && selectedMatchIds.size === filteredMatches.length} onChange={toggleAllMatchSelection} className="accent-cyan-500" /></th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Elftal</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Tegenstander</th>
@@ -786,7 +844,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                     </thead>
                     <tbody>
                       {filteredMatches.map((m) => (
-                        <tr key={m.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+                        <tr key={m.id} className={`border-b border-slate-800/60 ${selectedMatchIds.has(m.id) ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}>
+                          <td className="py-2"><input type="checkbox" checked={selectedMatchIds.has(m.id)} onChange={() => toggleMatchSelection(m.id)} className="accent-cyan-500" /></td>
                           <td className="py-2 text-slate-400 text-xs whitespace-nowrap">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
                           <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
                           <td className="py-2 font-medium text-white">{m.name}</td>
@@ -799,14 +858,18 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             <div className="relative inline-block">
                               <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
                               {matchMenuId === m.id && (
-                                <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[170px] overflow-hidden">
-                                  <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>
-                                  <button onClick={() => { setViewingMatchPerfs(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
-                                  <div className="border-t border-slate-700" />
-                                  {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors">Goedkeuren</button>}
-                                  {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors">Afkeuren</button>}
-                                  <div className="border-t border-slate-700" />
-                                  <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                                <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[180px] overflow-hidden">
+                                  {m.status === "CORRECTION" ? (
+                                    <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>
+                                  ) : (
+                                    <>
+                                      {m.status !== "PROCESSED" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
+                                      {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors">Goedkeuren</button>}
+                                      {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors">Afkeuren</button>}
+                                      <div className="border-t border-slate-700" />
+                                      <button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button>
+                                    </>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -818,13 +881,55 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 </div>
               </>
             )}
-            <div className="mt-5 pt-4 border-t border-slate-800 flex items-center gap-4 flex-wrap">
-              <button onClick={processPoints} disabled={processing} className={BTN_PRIMARY}>
-                {processing ? "Verwerken..." : "Verwerk goedgekeurde wedstrijden"}
-              </button>
-              {pointsMsg && (
-                <p className={`text-sm ${pointsMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>{pointsMsg.text}</p>
-              )}
+            {/* Te verwerken panel */}
+            <div className="mt-5 pt-5 border-t border-slate-800">
+              <p className="text-sm font-semibold text-slate-400 mb-3">Te verwerken bij volgende update</p>
+              {(() => {
+                const toProcess = adminMatches.filter(m => m.status === "APPROVED" || m.status === "CORRECTION");
+                if (toProcess.length === 0) {
+                  return <p className="text-slate-600 text-sm mb-4">Geen wedstrijden klaarstaan voor verwerking.</p>;
+                }
+                const allSelected = toProcess.every(m => processSelectedIds.has(m.id));
+                return (
+                  <div className="space-y-1.5 mb-4">
+                    {/* Selecteer alles */}
+                    <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer mb-1 select-none">
+                      <input
+                        type="checkbox"
+                        className="accent-cyan-500"
+                        checked={allSelected}
+                        onChange={() => setProcessSelectedIds(allSelected ? new Set() : new Set(toProcess.map(m => m.id)))}
+                      />
+                      Alles selecteren
+                    </label>
+                    {toProcess.map(m => (
+                      <label key={m.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 border text-sm cursor-pointer select-none transition-colors ${processSelectedIds.has(m.id) ? (m.status === "CORRECTION" ? "bg-orange-900/30 border-orange-500/50" : "bg-green-900/30 border-green-500/50") : "bg-slate-800/40 border-slate-700"}`}>
+                        <input
+                          type="checkbox"
+                          className={m.status === "CORRECTION" ? "accent-orange-500" : "accent-green-500"}
+                          checked={processSelectedIds.has(m.id)}
+                          onChange={() => setProcessSelectedIds(prev => { const next = new Set(prev); next.has(m.id) ? next.delete(m.id) : next.add(m.id); return next; })}
+                        />
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
+                        <span className="font-medium text-white truncate">{m.name}</span>
+                        <span className="text-slate-500 shrink-0">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</span>
+                        <span className="text-slate-600 shrink-0">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</span>
+                        <span className={`ml-auto text-xs shrink-0 ${m.status === "CORRECTION" ? "text-orange-400" : "text-green-400"}`}>
+                          {m.status === "CORRECTION" ? "punten terugdraaien" : "punten toevoegen"}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })()}
+              <div className="flex items-center gap-4 flex-wrap">
+                <button onClick={processPoints} disabled={processing || processSelectedIds.size === 0} className={BTN_PRIMARY + " disabled:opacity-40"}>
+                  {processing ? "Verwerken..." : processSelectedIds.size > 0 ? `Verwerk ${processSelectedIds.size} geselecteerde` : "Selecteer wedstrijden"}
+                </button>
+                {pointsMsg && (
+                  <p className={`text-sm ${pointsMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>{pointsMsg.text}</p>
+                )}
+              </div>
             </div>
           </section>
         )}
@@ -1077,13 +1182,26 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         </div>
       )}
 
-      {/* Modal: wedstrijd bewerken */}
+      {/* Backdrop: sluit dropdown menu bij klik buiten */}
+      {matchMenuId && (
+        <div className="fixed inset-0 z-40" onClick={() => setMatchMenuId(null)} />
+      )}
+
+      {/* Modal: wedstrijd bewerken (details + prestaties gecombineerd) */}
       {editingMatch && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-white mb-1">Wedstrijd bewerken</h3>
-            <p className="text-sm text-slate-500 mb-4">{TEAM_LABEL[editingMatch.clubTeam] ?? editingMatch.clubTeam}</p>
-            <div className="space-y-4">
+          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto overflow-x-hidden">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-white">Wedstrijd bewerken</h3>
+                <p className="text-sm text-slate-500">{TEAM_LABEL[editingMatch.clubTeam] ?? editingMatch.clubTeam}</p>
+              </div>
+              <button onClick={() => setEditingMatch(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
+            </div>
+
+            {/* Wedstrijd details */}
+            <div className="space-y-4 mb-6">
               <div>
                 <label className={LABEL}>Tegenstander</label>
                 <input type="text" value={editMatchForm.name} onChange={(e) => setEditMatchForm({ ...editMatchForm, name: e.target.value })} className={INPUT} />
@@ -1112,100 +1230,56 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
               </div>
               {editMatchError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{editMatchError}</p>}
             </div>
+
+            {/* Spelersbijdragen */}
+            <div className="border-t border-slate-700 pt-5">
+              <p className="text-sm font-semibold text-slate-400 mb-3">Spelersbijdragen</p>
+              {editingMatch.performances.length === 0 ? (
+                <p className="text-slate-500 text-sm mb-4">Nog geen prestaties ingevoerd.</p>
+              ) : (
+                <div className="overflow-x-auto -mx-6 px-6">
+                  <table className="w-full text-sm min-w-[520px]">
+                    <thead>
+                      <tr className="text-left text-slate-500 border-b border-slate-800">
+                        <th className="pb-2 font-semibold">Speler</th>
+                        <th className="pb-2 font-semibold text-center">Mee</th>
+                        <th className="pb-2 font-semibold text-center">Goals</th>
+                        <th className="pb-2 font-semibold text-center">Pen.</th>
+                        <th className="pb-2 font-semibold text-center">Ass.</th>
+                        <th className="pb-2 font-semibold text-center">E.G.</th>
+                        <th className="pb-2 font-semibold text-center">Geel</th>
+                        <th className="pb-2 font-semibold text-center">Rood</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editingMatch.performances.map((p) => {
+                        const ed = editPerfsData[p.playerId] ?? { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
+                        return (
+                          <tr key={p.playerId} className={`border-b border-slate-800/60 ${!ed.played ? "opacity-40" : ""}`}>
+                            <td className="py-1.5 font-medium text-white">
+                              {p.player.name}
+                              <span className="text-slate-500 text-xs ml-1">{POSITION_LABEL[p.player.position] ?? p.player.position}</span>
+                            </td>
+                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.played} onChange={(e) => updatePerfField(p.playerId, "played", e.target.checked)} className="accent-cyan-500" /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.goals} min={0} onChange={(e) => updatePerfField(p.playerId, "goals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.penaltyGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "penaltyGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.assists} min={0} onChange={(e) => updatePerfField(p.playerId, "assists", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.ownGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "ownGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                            <td className="py-1.5 text-center"><input type="number" value={ed.yellowCards} min={0} max={2} onChange={(e) => updatePerfField(p.playerId, "yellowCards", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
+                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-red-500" /></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setEditingMatch(null)} className={BTN_SECONDARY}>Annuleer</button>
-              <button onClick={saveEditMatch} disabled={editMatchSaving} className={BTN_PRIMARY}>{editMatchSaving ? "Opslaan..." : "Opslaan"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Backdrop: sluit dropdown menu bij klik buiten */}
-      {matchMenuId && (
-        <div className="fixed inset-0 z-40" onClick={() => setMatchMenuId(null)} />
-      )}
-
-      {/* Modal: wedstrijdprestaties bekijken / bewerken */}
-      {viewingMatchPerfs && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-white">{viewingMatchPerfs.name}</h3>
-                <p className="text-sm text-slate-500">
-                  {TEAM_LABEL[viewingMatchPerfs.clubTeam] ?? viewingMatchPerfs.clubTeam} ·{" "}
-                  {viewingMatchPerfs.homeAway === "HOME" ? "Thuis" : viewingMatchPerfs.homeAway === "AWAY" ? "Uit" : "Neutraal"} ·{" "}
-                  {viewingMatchPerfs.goalsScored}–{viewingMatchPerfs.goalsConceded}
-                </p>
-              </div>
-              <button onClick={() => { setViewingMatchPerfs(null); setEditPerfsMode(false); }} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
-            </div>
-            {viewingMatchPerfs.performances.length === 0 ? (
-              <p className="text-slate-500 text-sm">Nog geen prestaties ingevoerd.</p>
-            ) : (
-              <div className="overflow-x-auto -mx-6 px-6">
-                <table className="w-full text-sm min-w-[520px]">
-                  <thead>
-                    <tr className="text-left text-slate-500 border-b border-slate-800">
-                      <th className="pb-2 font-semibold">Speler</th>
-                      <th className="pb-2 font-semibold text-center">Mee</th>
-                      <th className="pb-2 font-semibold text-center">Goals</th>
-                      <th className="pb-2 font-semibold text-center">Pen.</th>
-                      <th className="pb-2 font-semibold text-center">Ass.</th>
-                      <th className="pb-2 font-semibold text-center">E.G.</th>
-                      <th className="pb-2 font-semibold text-center">Geel</th>
-                      <th className="pb-2 font-semibold text-center">Rood</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {viewingMatchPerfs.performances.map((p) => {
-                      const ed = editPerfsData[p.playerId] ?? { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
-                      return (
-                        <tr key={p.playerId} className={`border-b border-slate-800/60 ${!( editPerfsMode ? ed.played : p.played) ? "opacity-40" : ""}`}>
-                          <td className="py-1.5 font-medium text-white">
-                            {p.player.name}
-                            <span className="text-slate-500 text-xs ml-1">{POSITION_LABEL[p.player.position] ?? p.player.position}</span>
-                          </td>
-                          {editPerfsMode ? (
-                            <>
-                              <td className="py-1.5 text-center"><input type="checkbox" checked={ed.played} onChange={(e) => updatePerfField(p.playerId, "played", e.target.checked)} className="accent-cyan-500" /></td>
-                              <td className="py-1.5 text-center"><input type="number" value={ed.goals} min={0} onChange={(e) => updatePerfField(p.playerId, "goals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                              <td className="py-1.5 text-center"><input type="number" value={ed.penaltyGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "penaltyGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                              <td className="py-1.5 text-center"><input type="number" value={ed.assists} min={0} onChange={(e) => updatePerfField(p.playerId, "assists", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                              <td className="py-1.5 text-center"><input type="number" value={ed.ownGoals} min={0} onChange={(e) => updatePerfField(p.playerId, "ownGoals", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                              <td className="py-1.5 text-center"><input type="number" value={ed.yellowCards} min={0} max={2} onChange={(e) => updatePerfField(p.playerId, "yellowCards", Number(e.target.value))} className="w-10 bg-slate-700 text-white text-center rounded px-1 py-0.5 text-xs" /></td>
-                              <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-red-500" /></td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="py-1.5 text-center text-cyan-400">{p.played ? "✓" : "–"}</td>
-                              <td className="py-1.5 text-center text-slate-300">{p.goals}</td>
-                              <td className="py-1.5 text-center text-slate-300">{p.penaltyGoals}</td>
-                              <td className="py-1.5 text-center text-slate-300">{p.assists}</td>
-                              <td className="py-1.5 text-center text-slate-300">{p.ownGoals}</td>
-                              <td className="py-1.5 text-center">{p.yellowCards > 0 ? `🟡×${p.yellowCards}` : <span className="text-slate-600">–</span>}</td>
-                              <td className="py-1.5 text-center">{p.redCard ? "🔴" : <span className="text-slate-600">–</span>}</td>
-                            </>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="flex justify-between mt-5">
-              {editPerfsMode ? (
-                <>
-                  <button onClick={() => setEditPerfsMode(false)} className={BTN_SECONDARY}>Annuleer</button>
-                  <button onClick={savePerfs} disabled={savingPerfs} className={BTN_PRIMARY}>{savingPerfs ? "Opslaan..." : "Opslaan"}</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => openPerfsEdit(viewingMatchPerfs)} className={BTN_SECONDARY}>Bewerken</button>
-                  <button onClick={() => setViewingMatchPerfs(null)} className={BTN_SECONDARY}>Sluiten</button>
-                </>
-              )}
+              <button onClick={saveAll} disabled={editMatchSaving} className={BTN_PRIMARY}>{editMatchSaving ? "Opslaan..." : "Opslaan"}</button>
             </div>
           </div>
         </div>

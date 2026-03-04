@@ -19,6 +19,16 @@ export async function PATCH(
   if (!match) {
     return NextResponse.json({ error: "Wedstrijd niet gevonden" }, { status: 404 });
   }
+
+  // CORRECTION: only allow cancelling (reverting to PROCESSED)
+  if (match.status === "CORRECTION") {
+    if (status !== "PROCESSED") {
+      return NextResponse.json({ error: "Correctie-wedstrijden kunnen alleen worden geannuleerd" }, { status: 400 });
+    }
+    const updated = await prisma.match.update({ where: { id: matchId }, data: { status: "PROCESSED" } });
+    return NextResponse.json(updated);
+  }
+
   if (match.status === "PROCESSED") {
     return NextResponse.json({ error: "Verwerkte wedstrijden kunnen niet meer worden gewijzigd" }, { status: 400 });
   }
@@ -55,8 +65,15 @@ export async function DELETE(
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
 
+  // PROCESSED match: soft-delete → CORRECTION (punten moeten teruggedraaid worden)
+  if (match.status === "PROCESSED") {
+    await prisma.match.update({ where: { id: matchId }, data: { status: "CORRECTION" } });
+    return NextResponse.json({ ok: true, correction: true });
+  }
+
+  // Overige statussen: hard delete
   await prisma.matchPerformance.deleteMany({ where: { matchId } });
   await prisma.match.delete({ where: { id: matchId } });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, correction: false });
 }
