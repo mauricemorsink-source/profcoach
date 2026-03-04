@@ -98,6 +98,15 @@ const POSITION_LABEL: Record<string, string> = {
   GK: "Keeper", DEF: "Verdediger", MID: "Middenvelder", ATT: "Aanvaller",
 };
 
+const POSITION_SHORT: Record<string, string> = {
+  GK: "GK", DEF: "VER", MID: "MID", ATT: "AAN",
+};
+
+const TAB_LABELS: Record<string, string> = {
+  instellingen: "Spelinstellingen", puntensysteem: "Puntensysteem",
+  wedstrijden: "Wedstrijden", spelers: "Spelersbeheer", gebruikers: "Gebruikers",
+};
+
 const TEAM_LABEL: Record<string, string> = {
   ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
   FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
@@ -151,6 +160,8 @@ const BTN_SMALL = "px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:b
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("instellingen");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [infoModal, setInfoModal] = useState<User | null>(null);
 
   // Players
   const [players, setPlayers] = useState<Player[]>([]);
@@ -183,8 +194,7 @@ export default function AdminPage() {
   // Users
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [viewingTeam, setViewingTeam] = useState<User | null>(null);
-  const [roleModal, setRoleModal] = useState<User | null>(null);
+const [roleModal, setRoleModal] = useState<User | null>(null);
   const [roleForm, setRoleForm] = useState<{ role: string; managedTeam: string; isParticipant: boolean; name: string; email: string }>({ role: "USER", managedTeam: "ONE", isParticipant: true, name: "", email: "" });
   const [roleSaving, setRoleSaving] = useState(false);
   const [roleError, setRoleError] = useState("");
@@ -267,6 +277,8 @@ export default function AdminPage() {
     if (filterPosition && p.position !== filterPosition) return false;
     return true;
   });
+
+  const filteredMatches = adminMatches.filter((m) => !matchFilterTeam || m.clubTeam === matchFilterTeam);
 
   function openAdd() { setForm(emptyForm); setFormError(""); setEditingPlayer(null); setModal("add"); }
 
@@ -391,16 +403,32 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex flex-col md:flex-row" style={{ background: "#060b14" }}>
-      {/* Mobile tab bar */}
-      <div className="md:hidden flex overflow-x-auto bg-slate-900 border-b border-slate-800 px-2 gap-1 shrink-0">
-        {TAB_SECTIONS.map((section) => section.tabs.map((tab) => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 px-3 py-3 text-sm font-medium transition-colors whitespace-nowrap border-b-2 -mb-px ${
-              activeTab === tab.id ? "text-cyan-400 border-cyan-500" : "text-slate-400 border-transparent hover:text-white"
-            }`}>
-            {tab.label}
+      {/* Mobile top bar + hamburger dropdown */}
+      <div className="md:hidden relative shrink-0 z-30">
+        <div className="flex items-center justify-between bg-slate-900 border-b border-slate-800 px-4 py-3">
+          <span className="text-sm font-semibold text-white">{TAB_LABELS[activeTab]}</span>
+          <button onClick={() => setMobileMenuOpen((v) => !v)}
+            className="p-1 text-slate-400 hover:text-white transition-colors text-xl leading-none w-8 h-8 flex items-center justify-center">
+            {mobileMenuOpen ? "✕" : "☰"}
           </button>
-        )))}
+        </div>
+        {mobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-slate-900 border-b border-slate-800 shadow-2xl">
+            {TAB_SECTIONS.map((section) => (
+              <div key={section.heading} className="px-4 py-2 border-b border-slate-800 last:border-b-0">
+                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest pt-1 mb-1">{section.heading}</p>
+                {section.tabs.map((tab) => (
+                  <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false); }}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-0.5 ${
+                      activeTab === tab.id ? "bg-cyan-500/20 text-cyan-400" : "text-slate-300 hover:bg-slate-800"
+                    }`}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Desktop sidebar */}
@@ -585,20 +613,19 @@ export default function AdminPage() {
                             <input type="checkbox" checked={selectedIds.has(player.id)} onChange={() => toggleSelect(player.id)} className="rounded accent-cyan-500" />
                           </td>
                           <td className="py-2 font-medium text-white">{player.name}</td>
-                          <td className="py-2 text-slate-400">{POSITION_LABEL[player.position]}</td>
+                          <td className="py-2 text-slate-400">{POSITION_SHORT[player.position]}</td>
                           <td className="py-2 text-slate-400">{TEAM_LABEL[player.clubTeam]}</td>
                           <td className="py-2 text-slate-400">€{player.value}</td>
                           <td className="py-2 text-right">
-                            <div className="flex justify-end gap-1.5">
-                              <button onClick={() => openEdit(player)} className="px-3 py-1 text-xs bg-blue-900/40 text-blue-400 rounded hover:bg-blue-900/60 font-medium border border-blue-500/30 transition-colors">Bewerken</button>
+                            <div className="flex justify-end gap-2 items-center">
+                              <button onClick={() => openEdit(player)} className="text-xs text-slate-500 hover:text-blue-400 transition-colors px-1">✎</button>
                               {confirmDeleteId === player.id ? (
                                 <span className="flex items-center gap-1">
-                                  <span className="text-xs text-slate-500">Zeker?</span>
-                                  <button onClick={() => deletePlayer(player.id)} disabled={deletingId === player.id} className={BTN_DANGER + " disabled:opacity-50"}>{deletingId === player.id ? "..." : "Ja"}</button>
-                                  <button onClick={() => setConfirmDeleteId(null)} className={BTN_SMALL}>Nee</button>
+                                  <button onClick={() => deletePlayer(player.id)} disabled={deletingId === player.id} className="text-xs text-red-400 hover:text-red-300 transition-colors">{deletingId === player.id ? "..." : "Ja"}</button>
+                                  <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Nee</button>
                                 </span>
                               ) : (
-                                <button onClick={() => setConfirmDeleteId(player.id)} className={BTN_DANGER}>Verwijderen</button>
+                                <button onClick={() => setConfirmDeleteId(player.id)} className="text-xs text-slate-700 hover:text-red-400 transition-colors px-1">✕</button>
                               )}
                             </div>
                           </td>
@@ -658,53 +685,88 @@ export default function AdminPage() {
             </div>
             {loadingMatches ? (
               <p className="text-slate-500 text-sm py-4">Laden...</p>
-            ) : adminMatches.length === 0 ? (
+            ) : filteredMatches.length === 0 ? (
               <p className="text-slate-500 text-sm py-4">Geen wedstrijden gevonden.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-slate-500 border-b border-slate-800">
-                      <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
-                      <th className="pb-2 font-semibold whitespace-nowrap">Elftal</th>
-                      <th className="pb-2 font-semibold whitespace-nowrap">Tegenstander</th>
-                      <th className="pb-2 font-semibold whitespace-nowrap">T/U</th>
-                      <th className="pb-2 font-semibold whitespace-nowrap">Score</th>
-                      <th className="pb-2 font-semibold whitespace-nowrap">Status</th>
-                      <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {adminMatches.filter((m) => !matchFilterTeam || m.clubTeam === matchFilterTeam).map((m) => (
-                      <tr key={m.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
-                        <td className="py-2 text-slate-400 text-xs whitespace-nowrap">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
-                        <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
-                        <td className="py-2 font-medium text-white">{m.name}</td>
-                        <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
-                        <td className="py-2 text-slate-400 whitespace-nowrap">{m.goalsScored}–{m.goalsConceded}</td>
-                        <td className="py-2 whitespace-nowrap">
+              <>
+                {/* Mobiel: kaartjes */}
+                <div className="md:hidden space-y-2">
+                  {filteredMatches.map((m) => (
+                    <div key={m.id} className="bg-slate-800/50 rounded-xl p-3 border border-slate-700">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-white text-sm truncate">{m.name}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {TEAM_LABEL[m.clubTeam]} · {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} · {m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className="flex justify-end gap-1 flex-wrap">
-                            <button onClick={() => openEditMatch(m)} className={BTN_SMALL}>Bewerken</button>
-                            <button onClick={() => setViewingMatchPerfs(m)} className={BTN_SMALL}>Prestaties</button>
-                            {m.status === "PENDING" && (
-                              <>
-                                <button onClick={() => approveMatch(m.id, "APPROVED")} disabled={approvingId === m.id} className="px-2 py-1 text-xs bg-green-900/40 text-green-400 rounded hover:bg-green-900/60 font-medium border border-green-500/30 disabled:opacity-50 transition-colors">OK</button>
-                                <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
-                              </>
-                            )}
-                            {m.status === "APPROVED" && (
-                              <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
-                            )}
-                          </div>
-                        </td>
+                          <span className="text-sm font-bold text-slate-300">{m.goalsScored}–{m.goalsConceded}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        <button onClick={() => openEditMatch(m)} className={BTN_SMALL}>Bewerken</button>
+                        <button onClick={() => setViewingMatchPerfs(m)} className={BTN_SMALL}>Prestaties</button>
+                        {m.status === "PENDING" && (
+                          <>
+                            <button onClick={() => approveMatch(m.id, "APPROVED")} disabled={approvingId === m.id} className="px-2 py-1 text-xs bg-green-900/40 text-green-400 rounded hover:bg-green-900/60 font-medium border border-green-500/30 disabled:opacity-50 transition-colors">Goedkeuren</button>
+                            <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afkeuren</button>
+                          </>
+                        )}
+                        {m.status === "APPROVED" && (
+                          <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afkeuren</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop: tabel */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-slate-500 border-b border-slate-800">
+                        <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">Elftal</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">Tegenstander</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">T/U</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">Score</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">Status</th>
+                        <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredMatches.map((m) => (
+                        <tr key={m.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+                          <td className="py-2 text-slate-400 text-xs whitespace-nowrap">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
+                          <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
+                          <td className="py-2 font-medium text-white">{m.name}</td>
+                          <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
+                          <td className="py-2 text-slate-400 whitespace-nowrap">{m.goalsScored}–{m.goalsConceded}</td>
+                          <td className="py-2 whitespace-nowrap">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
+                          </td>
+                          <td className="py-2 text-right">
+                            <div className="flex justify-end gap-1 flex-wrap">
+                              <button onClick={() => openEditMatch(m)} className={BTN_SMALL}>Bewerken</button>
+                              <button onClick={() => setViewingMatchPerfs(m)} className={BTN_SMALL}>Prestaties</button>
+                              {m.status === "PENDING" && (
+                                <>
+                                  <button onClick={() => approveMatch(m.id, "APPROVED")} disabled={approvingId === m.id} className="px-2 py-1 text-xs bg-green-900/40 text-green-400 rounded hover:bg-green-900/60 font-medium border border-green-500/30 disabled:opacity-50 transition-colors">OK</button>
+                                  <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
+                                </>
+                              )}
+                              {m.status === "APPROVED" && (
+                                <button onClick={() => approveMatch(m.id, "REJECTED")} disabled={approvingId === m.id} className={BTN_DANGER + " disabled:opacity-50"}>Afk.</button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
             <div className="mt-5 pt-4 border-t border-slate-800 flex items-center gap-4 flex-wrap">
               <button onClick={processPoints} disabled={processing} className={BTN_PRIMARY}>
@@ -788,9 +850,7 @@ export default function AdminPage() {
                   <thead>
                     <tr className="text-left text-slate-500 border-b border-slate-800">
                       <th className="pb-2 font-semibold whitespace-nowrap">Naam</th>
-                      <th className="pb-2 font-semibold whitespace-nowrap">E-mail</th>
                       <th className="pb-2 font-semibold whitespace-nowrap">Rol</th>
-                      <th className="pb-2 font-semibold whitespace-nowrap text-center">Meedoet</th>
                       <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
                     </tr>
                   </thead>
@@ -798,7 +858,6 @@ export default function AdminPage() {
                     {users.map((user) => (
                       <tr key={user.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
                         <td className="py-2 font-medium text-white whitespace-nowrap">{user.name ?? <span className="text-slate-500 italic">Geen naam</span>}</td>
-                        <td className="py-2 text-slate-400 text-xs">{user.email}</td>
                         <td className="py-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
@@ -813,19 +872,10 @@ export default function AdminPage() {
                             {user.managedTeam && <span className="text-xs text-slate-500">{TEAM_LABEL[user.managedTeam] ?? user.managedTeam}</span>}
                           </div>
                         </td>
-                        <td className="py-2 text-center">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${user.isParticipant ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"}`}>
-                            {user.isParticipant ? "Ja" : "Nee"}
-                          </span>
-                        </td>
                         <td className="py-2 text-right">
                           <div className="flex justify-end gap-1.5">
                             <button onClick={() => openRoleModal(user)} className="px-3 py-1 text-xs bg-blue-900/40 text-blue-400 rounded hover:bg-blue-900/60 font-medium border border-blue-500/30 transition-colors">Bewerken</button>
-                            {user.teamEntries.length > 0 ? (
-                              <button onClick={() => setViewingTeam(user)} className="px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors">Team</button>
-                            ) : (
-                              <span className="text-xs text-slate-600 py-1">Geen team</span>
-                            )}
+                            <button onClick={() => setInfoModal(user)} className={BTN_SMALL}>Info</button>
                           </div>
                         </td>
                       </tr>
@@ -882,42 +932,47 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Modal: team bekijken */}
-      {viewingTeam && (
+      {/* Modal: gebruiker info */}
+      {infoModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-lg p-6">
+          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">{viewingTeam.name ?? viewingTeam.email}</h3>
-                <p className="text-sm text-slate-500">{viewingTeam.email}</p>
+                <h3 className="text-lg font-bold text-white">{infoModal.name ?? infoModal.email}</h3>
+                <p className="text-sm text-slate-500">{infoModal.email}</p>
               </div>
-              <button onClick={() => setViewingTeam(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
+              <button onClick={() => setInfoModal(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
             </div>
-            {viewingTeam.teamEntries.length === 0 ? <p className="text-slate-500 text-sm">Geen team ingevuld.</p> : (() => {
-              const entry = viewingTeam.teamEntries[0];
+            <div className="mb-5">
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Tussenstand</p>
+              <span className={`text-sm px-3 py-1 rounded-full font-medium border ${infoModal.isParticipant ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"}`}>
+                {infoModal.isParticipant ? "Doet mee" : "Doet niet mee"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Fantasy team</p>
+            {infoModal.teamEntries.length === 0 ? <p className="text-slate-500 text-sm">Geen team ingevuld.</p> : (() => {
+              const entry = infoModal.teamEntries[0];
               return (
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
                     {entry.formation && <span className="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded-full text-sm font-semibold border border-cyan-500/30">{entry.formation.code}</span>}
-                    {entry.locked && <span className="bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-xs font-medium border border-slate-700">Vergrendeld</span>}
+                    {entry.locked && <span className="bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-xs font-medium border border-slate-700">Ingediend</span>}
                     <span className="text-sm text-slate-500">{entry.players.length} spelers</span>
                   </div>
                   {entry.players.length === 0 ? <p className="text-slate-500 text-sm">Nog geen spelers geselecteerd.</p> : (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-left text-slate-500 border-b border-slate-800">
-                          <th className="pb-2 font-semibold w-8">#</th>
                           <th className="pb-2 font-semibold">Naam</th>
-                          <th className="pb-2 font-semibold">Positie</th>
+                          <th className="pb-2 font-semibold">Pos.</th>
                           <th className="pb-2 font-semibold">Elftal</th>
                         </tr>
                       </thead>
                       <tbody>
                         {entry.players.map((tp) => (
                           <tr key={tp.slotIndex} className="border-b border-slate-800/60">
-                            <td className="py-1.5 text-slate-600">{tp.slotIndex + 1}</td>
                             <td className="py-1.5 font-medium text-white">{tp.player.name}</td>
-                            <td className="py-1.5 text-slate-400">{POSITION_LABEL[tp.player.position] ?? tp.player.position}</td>
+                            <td className="py-1.5 text-slate-400">{POSITION_SHORT[tp.player.position] ?? tp.player.position}</td>
                             <td className="py-1.5 text-slate-400">{TEAM_LABEL[tp.player.clubTeam] ?? tp.player.clubTeam}</td>
                           </tr>
                         ))}
@@ -928,7 +983,7 @@ export default function AdminPage() {
               );
             })()}
             <div className="flex justify-end mt-6">
-              <button onClick={() => setViewingTeam(null)} className={BTN_SECONDARY}>Sluiten</button>
+              <button onClick={() => setInfoModal(null)} className={BTN_SECONDARY}>Sluiten</button>
             </div>
           </div>
         </div>

@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +22,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name: `${firstName.trim()} ${lastName.trim()}`.trim(), email, password }),
     });
 
     const data = await res.json();
@@ -44,9 +45,15 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className={LABEL}>Naam <span className="text-cyan-500">*</span></label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className={INPUT} placeholder="Jouw naam" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL}>Voornaam <span className="text-cyan-500">*</span></label>
+              <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required className={INPUT} placeholder="Voornaam" />
+            </div>
+            <div>
+              <label className={LABEL}>Achternaam <span className="text-cyan-500">*</span></label>
+              <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required className={INPUT} placeholder="Achternaam" />
+            </div>
           </div>
           <div>
             <label className={LABEL}>E-mailadres <span className="text-cyan-500">*</span></label>
