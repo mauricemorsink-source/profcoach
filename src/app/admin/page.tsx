@@ -161,8 +161,6 @@ const BTN_SMALL = "px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:b
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("instellingen");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [infoModal, setInfoModal] = useState<User | null>(null);
-
   // Players
   const [players, setPlayers] = useState<Player[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
@@ -212,6 +210,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [viewingMatchPerfs, setViewingMatchPerfs] = useState<AdminMatch | null>(null);
   const [matchFilterTeam, setMatchFilterTeam] = useState("");
+  const [matchFilterStatus, setMatchFilterStatus] = useState("");
   const [editingMatch, setEditingMatch] = useState<AdminMatch | null>(null);
   const [editMatchForm, setEditMatchForm] = useState({ name: "", matchDate: "", goalsScored: 0, goalsConceded: 0, homeAway: "HOME" });
   const [editMatchSaving, setEditMatchSaving] = useState(false);
@@ -278,7 +277,10 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     return true;
   });
 
-  const filteredMatches = adminMatches.filter((m) => !matchFilterTeam || m.clubTeam === matchFilterTeam);
+  const filteredMatches = adminMatches.filter((m) =>
+    (!matchFilterTeam || m.clubTeam === matchFilterTeam) &&
+    (!matchFilterStatus || m.status === matchFilterStatus)
+  );
 
   function openAdd() { setForm(emptyForm); setFormError(""); setEditingPlayer(null); setModal("add"); }
 
@@ -469,7 +471,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                     <label className={LABEL}>Deadline (team invullen tot)</label>
                     <input type="datetime-local" value={settingsForm.deadline ?? ""}
                       onChange={(e) => setSettingsForm({ ...settingsForm, deadline: e.target.value || null })}
-                      className={INPUT} />
+                      className={INPUT + " max-w-xs"} />
                     {settingsForm.deadline && (
                       <button onClick={() => setSettingsForm({ ...settingsForm, deadline: null })} className="text-xs text-slate-500 hover:text-slate-300 mt-1 transition-colors">Deadline verwijderen</button>
                     )}
@@ -679,8 +681,16 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 <option value="">Alle elftallen</option>
                 {TEAMS.map((t) => <option key={t} value={t}>{TEAM_LABEL[t]}</option>)}
               </select>
-              {matchFilterTeam && (
-                <button onClick={() => setMatchFilterTeam("")} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Wis filter</button>
+              <select value={matchFilterStatus} onChange={(e) => setMatchFilterStatus(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40">
+                <option value="">Alle statussen</option>
+                <option value="PENDING">Ingediend</option>
+                <option value="APPROVED">Goedgekeurd</option>
+                <option value="REJECTED">Afgekeurd</option>
+                <option value="PROCESSED">Verwerkt</option>
+              </select>
+              {(matchFilterTeam || matchFilterStatus) && (
+                <button onClick={() => { setMatchFilterTeam(""); setMatchFilterStatus(""); }} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Wis filters</button>
               )}
             </div>
             {loadingMatches ? (
@@ -703,6 +713,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
                           <span className="text-sm font-bold text-slate-300">{m.goalsScored}–{m.goalsConceded}</span>
+                          <span className="text-xs text-slate-500">{m.performances.filter(p => p.played).length} spelers</span>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -742,7 +753,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
                           <td className="py-2 font-medium text-white">{m.name}</td>
                           <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
-                          <td className="py-2 text-slate-400 whitespace-nowrap">{m.goalsScored}–{m.goalsConceded}</td>
+                          <td className="py-2 text-slate-400 whitespace-nowrap">{m.goalsScored}–{m.goalsConceded}<span className="text-xs text-slate-600 ml-1.5">({m.performances.filter(p => p.played).length})</span></td>
                           <td className="py-2 whitespace-nowrap">
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
                           </td>
@@ -811,7 +822,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                               ) : (
                                 <input type="number" value={cfg[field] ?? ""}
                                   onChange={(e) => updatePointsCell(cfg.id, field, e.target.value)}
-                                  className="w-16 bg-slate-800 border border-slate-700 text-white rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
+                                  className="w-10 sm:w-14 bg-slate-800 border border-slate-700 text-white rounded px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
                               )}
                             </td>
                           ))}
@@ -873,10 +884,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           </div>
                         </td>
                         <td className="py-2 text-right">
-                          <div className="flex justify-end gap-1.5">
-                            <button onClick={() => openRoleModal(user)} className="px-3 py-1 text-xs bg-blue-900/40 text-blue-400 rounded hover:bg-blue-900/60 font-medium border border-blue-500/30 transition-colors">Bewerken</button>
-                            <button onClick={() => setInfoModal(user)} className={BTN_SMALL}>Info</button>
-                          </div>
+                          <button onClick={() => openRoleModal(user)} className={BTN_SMALL}>Details</button>
                         </td>
                       </tr>
                     ))}
@@ -932,77 +940,67 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         </div>
       )}
 
-      {/* Modal: gebruiker info */}
-      {infoModal && (
+      {/* Modal: gebruiker details + bewerken */}
+      {roleModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">{infoModal.name ?? infoModal.email}</h3>
-                <p className="text-sm text-slate-500">{infoModal.email}</p>
+                <h3 className="text-lg font-bold text-white">{roleModal.name ?? roleModal.email}</h3>
+                <p className="text-sm text-slate-500">{roleModal.email}</p>
               </div>
-              <button onClick={() => setInfoModal(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
+              <button onClick={() => setRoleModal(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
             </div>
-            <div className="mb-5">
-              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Tussenstand</p>
-              <span className={`text-sm px-3 py-1 rounded-full font-medium border ${infoModal.isParticipant ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"}`}>
-                {infoModal.isParticipant ? "Doet mee" : "Doet niet mee"}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Fantasy team</p>
-            {infoModal.teamEntries.length === 0 ? <p className="text-slate-500 text-sm">Geen team ingevuld.</p> : (() => {
-              const entry = infoModal.teamEntries[0];
-              return (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    {entry.formation && <span className="bg-cyan-900/40 text-cyan-400 px-3 py-1 rounded-full text-sm font-semibold border border-cyan-500/30">{entry.formation.code}</span>}
-                    {entry.locked && <span className="bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-xs font-medium border border-slate-700">Ingediend</span>}
-                    <span className="text-sm text-slate-500">{entry.players.length} spelers</span>
-                  </div>
-                  {entry.players.length === 0 ? <p className="text-slate-500 text-sm">Nog geen spelers geselecteerd.</p> : (
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-slate-500 border-b border-slate-800">
-                          <th className="pb-2 font-semibold">Naam</th>
-                          <th className="pb-2 font-semibold">Pos.</th>
-                          <th className="pb-2 font-semibold">Elftal</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {entry.players.map((tp) => (
-                          <tr key={tp.slotIndex} className="border-b border-slate-800/60">
-                            <td className="py-1.5 font-medium text-white">{tp.player.name}</td>
-                            <td className="py-1.5 text-slate-400">{POSITION_SHORT[tp.player.position] ?? tp.player.position}</td>
-                            <td className="py-1.5 text-slate-400">{TEAM_LABEL[tp.player.clubTeam] ?? tp.player.clubTeam}</td>
+            {/* Team info (read-only) */}
+            <div className="mb-5 pb-5 border-b border-slate-800">
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Fantasy team</p>
+              {roleModal.teamEntries.length === 0 ? (
+                <p className="text-slate-500 text-sm">Geen team ingevuld.</p>
+              ) : (() => {
+                const entry = roleModal.teamEntries[0];
+                return (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      {entry.formation && <span className="bg-cyan-900/40 text-cyan-400 px-2 py-0.5 rounded-full text-xs font-semibold border border-cyan-500/30">{entry.formation.code}</span>}
+                      {entry.locked && <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full text-xs font-medium border border-slate-700">Ingediend</span>}
+                      <span className="text-xs text-slate-500">{entry.players.length} spelers</span>
+                    </div>
+                    {entry.players.length > 0 && (
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-left text-slate-600 border-b border-slate-800">
+                            <th className="pb-1 font-semibold">Naam</th>
+                            <th className="pb-1 font-semibold">Pos.</th>
+                            <th className="pb-1 font-semibold">Elftal</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              );
-            })()}
-            <div className="flex justify-end mt-6">
-              <button onClick={() => setInfoModal(null)} className={BTN_SECONDARY}>Sluiten</button>
+                        </thead>
+                        <tbody>
+                          {entry.players.map((tp) => (
+                            <tr key={tp.slotIndex} className="border-b border-slate-800/40">
+                              <td className="py-1 text-slate-300">{tp.player.name}</td>
+                              <td className="py-1 text-slate-500">{POSITION_SHORT[tp.player.position] ?? tp.player.position}</td>
+                              <td className="py-1 text-slate-500">{TEAM_LABEL[tp.player.clubTeam] ?? tp.player.clubTeam}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: gebruiker bewerken */}
-      {roleModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-sm p-6">
-            <h3 className="text-lg font-bold text-white mb-1">Gebruiker bewerken</h3>
-            <p className="text-sm text-slate-500 mb-4">{roleModal.email}</p>
-            <div className="space-y-4">
-              <div>
-                <label className={LABEL}>Naam</label>
-                <input type="text" value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} className={INPUT} placeholder="Voornaam Achternaam" />
-              </div>
-              <div>
-                <label className={LABEL}>E-mailadres</label>
-                <input type="email" value={roleForm.email} onChange={(e) => setRoleForm({ ...roleForm, email: e.target.value })} className={INPUT} />
+            {/* Edit form */}
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Instellingen</p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL}>Naam</label>
+                  <input type="text" value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} className={INPUT} placeholder="Voornaam Achternaam" />
+                </div>
+                <div>
+                  <label className={LABEL}>E-mailadres</label>
+                  <input type="email" value={roleForm.email} onChange={(e) => setRoleForm({ ...roleForm, email: e.target.value })} className={INPUT} />
+                </div>
               </div>
               <div>
                 <label className={LABEL}>Rol</label>
