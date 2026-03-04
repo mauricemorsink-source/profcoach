@@ -11,7 +11,7 @@ export function buildSlots(formation: Formation): SlotDef[] {
     slots.push({
       slotIndex: slots.length,
       position: "DEF",
-      label: `DEF ${i + 1}`,
+      label: `VER ${i + 1}`,
     });
   }
 

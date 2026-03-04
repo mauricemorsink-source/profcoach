@@ -2,14 +2,13 @@
 
 import type { SlotDef, Player } from "./types";
 
-// Compacte labels voor het veld — Dames wordt getoond als VR1
 const PITCH_CLUB_LABEL: Record<string, string> = {
   ONE:   "Rietmolen 1",
   TWO:   "Rietmolen 2",
   THREE: "Rietmolen 3",
   FOUR:  "Rietmolen 4",
   FIVE:  "Rietmolen 5",
-  DAMES: "VR1",
+  DAMES: "Rietmolen VR1",
 };
 
 // Splits "Voornaam Achternaam" in twee regels

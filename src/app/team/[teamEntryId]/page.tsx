@@ -7,7 +7,7 @@ import type { Player } from "@/components/team/types";
 
 const CLUB_LABEL: Record<string, string> = {
   ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
-  FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen Dames",
+  FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
 
 export default async function ShareTeamPage({

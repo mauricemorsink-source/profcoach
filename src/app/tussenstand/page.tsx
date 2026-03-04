@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import DeelnemersTable from "@/components/tussenstand/DeelnemersTable";
 
 const TEAM_LABEL: Record<string, string> = {
   ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
   FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
+
 
 
 function Delta({ value }: { value: number }) {
@@ -144,32 +146,7 @@ export default async function TussenstandPage({
 
         {/* Tab: Deelnemers */}
         {activeTab === "deelnemers" && (
-          <div className="bg-slate-900 neon-border rounded-2xl overflow-hidden">
-            {deelnemers.length === 0 ? (
-              <p className="text-slate-500 text-sm p-6">Nog geen punten verwerkt.</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-500 border-b border-slate-800 bg-slate-800/50">
-                    <th className="px-4 py-3 font-semibold w-10">#</th>
-                    <th className="px-4 py-3 font-semibold">Deelnemer</th>
-                    <th className="px-4 py-3 font-semibold text-right">Punten</th>
-                    <th className="px-4 py-3 font-semibold text-right">+/-</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {deelnemers.map((d, i) => (
-                    <tr key={d.userId} className={`border-b border-slate-800/60 ${i === 0 ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}>
-                      <td className="px-4 py-3 text-slate-500 font-medium">{i + 1}</td>
-                      <td className="px-4 py-3 font-semibold text-white">{d.userName}</td>
-                      <td className="px-4 py-3 text-right font-bold text-cyan-400">{d.totalPoints}</td>
-                      <td className="px-4 py-3 text-right"><Delta value={d.delta} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+          <DeelnemersTable deelnemers={deelnemers} />
         )}
 
         {/* Tab: Statistieken */}

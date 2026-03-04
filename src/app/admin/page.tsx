@@ -712,7 +712,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
-                          <span className="text-sm font-bold text-slate-300">{m.goalsScored}–{m.goalsConceded}</span>
+                          <span className="text-sm font-bold text-slate-300">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}</span>
                           <span className="text-xs text-slate-500">{m.performances.filter(p => p.played).length} spelers</span>
                         </div>
                       </div>
@@ -753,7 +753,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
                           <td className="py-2 font-medium text-white">{m.name}</td>
                           <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
-                          <td className="py-2 text-slate-400 whitespace-nowrap">{m.goalsScored}–{m.goalsConceded}<span className="text-xs text-slate-600 ml-1.5">({m.performances.filter(p => p.played).length})</span></td>
+                          <td className="py-2 text-slate-400 whitespace-nowrap">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}<span className="text-xs text-slate-600 ml-1.5">({m.performances.filter(p => p.played).length})</span></td>
                           <td className="py-2 whitespace-nowrap">
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
                           </td>
