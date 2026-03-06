@@ -99,7 +99,7 @@ export function calculateMatchPoints(
 
     deltaMap.set(perf.playerId, {
       points: pts,
-      goals: perf.goals,
+      goals: perf.goals + perf.penaltyGoals,
       penaltyGoals: perf.penaltyGoals,
       assists: perf.assists,
       ownGoals: perf.ownGoals,

@@ -176,7 +176,7 @@ function PerfRow({
       <td className="px-3 py-2.5"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => onChange("penaltyGoals", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
       <td className="px-3 py-2.5"><input type="number" min="0" value={p.assists} onChange={(e) => onChange("assists", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
       <td className="px-3 py-2.5"><input type="number" min="0" value={p.ownGoals} onChange={(e) => onChange("ownGoals", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
-      <td className="px-3 py-2.5 text-center"><input type="checkbox" checked={p.yellowCards > 0} onChange={(e) => onChange("yellowCards", e.target.checked ? 1 : 0)} disabled={!p.played || locked} className="accent-amber-400 w-4 h-4 cursor-pointer" /></td>
+      <td className="px-3 py-2.5"><input type="number" min="0" max="2" value={p.yellowCards} onChange={(e) => onChange("yellowCards", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
       <td className="px-3 py-2.5 text-center"><input type="checkbox" checked={p.redCard} onChange={(e) => onChange("redCard", e.target.checked)} disabled={!p.played || locked} className="accent-red-400 w-4 h-4 cursor-pointer" /></td>
       <td className="px-3 py-2.5 text-center">
         {p.isGuest && onRemove && !locked && (
@@ -754,7 +754,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                 <td className="px-2 py-2"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => updateAddPerf(p.playerId, "penaltyGoals", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
                                 <td className="px-2 py-2"><input type="number" min="0" value={p.assists} onChange={(e) => updateAddPerf(p.playerId, "assists", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
                                 <td className="px-2 py-2"><input type="number" min="0" value={p.ownGoals} onChange={(e) => updateAddPerf(p.playerId, "ownGoals", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2 text-center"><input type="checkbox" checked={p.yellowCards > 0} onChange={(e) => updateAddPerf(p.playerId, "yellowCards", e.target.checked ? 1 : 0)} disabled={!p.played} className="accent-amber-400 w-4 h-4 cursor-pointer" /></td>
+                                <td className="px-2 py-2"><input type="number" min="0" max="2" value={p.yellowCards} onChange={(e) => updateAddPerf(p.playerId, "yellowCards", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
                                 <td className="px-2 py-2 text-center"><input type="checkbox" checked={p.redCard} onChange={(e) => updateAddPerf(p.playerId, "redCard", e.target.checked)} disabled={!p.played} className="accent-red-400 w-4 h-4 cursor-pointer" /></td>
                                 <td className="px-2 py-2 text-center">
                                   {p.isGuest && (
