@@ -466,44 +466,51 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-slate-500 border-b border-slate-700/50 bg-slate-800/50">
-                      <th className="px-4 py-3 font-medium">Datum</th>
-                      <th className="px-4 py-3 font-medium">Tegenstander</th>
-                      <th className="px-4 py-3 font-medium">T/U</th>
-                      <th className="px-4 py-3 font-medium">Score</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium text-right">Acties</th>
+                      <th className="px-3 py-3 font-medium text-xs sm:text-sm sm:px-4">Datum</th>
+                      <th className="px-3 py-3 font-medium text-xs sm:text-sm sm:px-4">Tegenstander</th>
+                      <th className="hidden sm:table-cell px-4 py-3 font-medium">T/U</th>
+                      <th className="px-3 py-3 font-medium text-xs sm:text-sm sm:px-4">Score</th>
+                      <th className="px-3 py-3 font-medium text-xs sm:text-sm sm:px-4">Status</th>
+                      <th className="px-3 py-3 font-medium text-right text-xs sm:text-sm sm:px-4">Acties</th>
                     </tr>
                   </thead>
                   <tbody>
                     {matches.map((m) => (
                       <tr key={m.id} className="border-b border-slate-800 hover:bg-slate-800/40 transition-colors">
-                        <td className="px-4 py-3 text-slate-400">
-                          {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                        <td className="px-3 py-3 text-slate-400 text-xs sm:px-4 whitespace-nowrap">
+                          <span className="hidden sm:inline">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}</span>
+                          <span className="sm:hidden">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</span>
                         </td>
-                        <td className="px-4 py-3 font-medium text-white">{m.name}</td>
-                        <td className="px-4 py-3 text-slate-400 text-xs">
+                        <td className="px-3 py-3 sm:px-4">
+                          <div className="font-medium text-white text-sm">{m.name}</div>
+                          <div className="text-xs text-slate-500 sm:hidden">
+                            {m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}
+                          </div>
+                        </td>
+                        <td className="hidden sm:table-cell px-4 py-3 text-slate-400 text-xs">
                           {m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}
                         </td>
-                        <td className="px-4 py-3 text-slate-300 font-mono">
+                        <td className="px-3 py-3 sm:px-4 text-slate-300 font-mono text-xs sm:text-sm whitespace-nowrap">
                           {m.homeAway === "AWAY" ? m.goalsConceded : m.goalsScored}
                           {" – "}
                           {m.homeAway === "AWAY" ? m.goalsScored : m.goalsConceded}
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>
+                        <td className="px-3 py-3 sm:px-4">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${STATUS_STYLE[m.status]}`}>
                             {STATUS_LABEL[m.status]}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-3 py-3 sm:px-4 text-right">
                           <button
                             onClick={() => openPerformances(m.id)}
-                            className={`px-3 py-1 text-xs rounded font-medium transition-colors ${
+                            className={`px-2 py-1 sm:px-3 text-xs rounded font-medium transition-colors whitespace-nowrap ${
                               m.status === "PENDING"
                                 ? "bg-cyan-900/50 text-cyan-400 hover:bg-cyan-800/50 border border-cyan-500/30"
                                 : "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-600"
                             }`}
                           >
-                            {m.status === "PENDING" ? "Prestaties invullen" : "Bekijken"}
+                            <span className="sm:hidden">{m.status === "PENDING" ? "Invullen" : "Bekijken"}</span>
+                            <span className="hidden sm:inline">{m.status === "PENDING" ? "Prestaties invullen" : "Bekijken"}</span>
                           </button>
                         </td>
                       </tr>
