@@ -22,17 +22,28 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, rememberMe }),
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, rememberMe }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Er is een fout opgetreden"); setLoading(false); return; }
+      let data: { error?: string } = {};
+      try { data = await res.json(); } catch { /* non-JSON body */ }
 
-    router.push(redirect);
-    router.refresh();
+      if (!res.ok) {
+        setError(data.error || "Er is een fout opgetreden");
+        setLoading(false);
+        return;
+      }
+
+      router.push(redirect);
+      router.refresh();
+    } catch {
+      setError("Netwerkfout. Controleer je verbinding en probeer opnieuw.");
+      setLoading(false);
+    }
   }
 
   const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";

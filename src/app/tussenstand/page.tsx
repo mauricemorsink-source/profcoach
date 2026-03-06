@@ -160,14 +160,14 @@ export default async function TussenstandPage({
               ) : (
                 <ol className="space-y-2">
                   {topScorers.map((p, i) => (
-                    <li key={p.playerId} className="flex items-center gap-3">
-                      <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
-                      <div className="flex-1">
-                        <span className="font-medium text-white">{p.playerName}</span>
-                        <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                    <li key={p.playerId} className="flex items-center gap-2">
+                      <span className="text-slate-600 w-5 text-right text-sm shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white truncate">{p.playerName}</div>
+                        <div className="text-slate-500 text-xs">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</div>
                       </div>
-                      <span className="font-bold text-cyan-400 w-8 text-right">{p.goals}</span>
-                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
+                      <span className="font-bold text-cyan-400 w-7 text-right shrink-0">{p.goals}</span>
+                      <span className="w-10 text-right shrink-0"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>
@@ -182,14 +182,14 @@ export default async function TussenstandPage({
               ) : (
                 <ol className="space-y-2">
                   {topAssists.map((p, i) => (
-                    <li key={p.playerId} className="flex items-center gap-3">
-                      <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
-                      <div className="flex-1">
-                        <span className="font-medium text-white">{p.playerName}</span>
-                        <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                    <li key={p.playerId} className="flex items-center gap-2">
+                      <span className="text-slate-600 w-5 text-right text-sm shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white truncate">{p.playerName}</div>
+                        <div className="text-slate-500 text-xs">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</div>
                       </div>
-                      <span className="font-bold text-cyan-400 w-8 text-right">{p.assists}</span>
-                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
+                      <span className="font-bold text-cyan-400 w-7 text-right shrink-0">{p.assists}</span>
+                      <span className="w-10 text-right shrink-0"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>
@@ -204,14 +204,14 @@ export default async function TussenstandPage({
               ) : (
                 <ol className="space-y-2">
                   {topPoints.map((p, i) => (
-                    <li key={p.playerId} className="flex items-center gap-3">
-                      <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
-                      <div className="flex-1">
-                        <span className="font-medium text-white">{p.playerName}</span>
-                        <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                    <li key={p.playerId} className="flex items-center gap-2">
+                      <span className="text-slate-600 w-5 text-right text-sm shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white truncate">{p.playerName}</div>
+                        <div className="text-slate-500 text-xs">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</div>
                       </div>
-                      <span className="font-bold text-cyan-400 w-8 text-right">{p.totalPoints}</span>
-                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
+                      <span className="font-bold text-cyan-400 w-7 text-right shrink-0">{p.totalPoints}</span>
+                      <span className="w-10 text-right shrink-0"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>
@@ -226,11 +226,11 @@ export default async function TussenstandPage({
               ) : (
                 <ol className="space-y-2">
                   {topCleanSheets.map((p, i) => (
-                    <li key={p.playerId} className="flex items-center gap-3">
-                      <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
-                      <span className="flex-1 font-medium text-white">{p.playerName}</span>
-                      <span className="font-bold text-cyan-400 w-8 text-right">{p.cleanSheets}</span>
-                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
+                    <li key={p.playerId} className="flex items-center gap-2">
+                      <span className="text-slate-600 w-5 text-right text-sm shrink-0">{i + 1}</span>
+                      <span className="flex-1 min-w-0 font-medium text-white truncate">{p.playerName}</span>
+                      <span className="font-bold text-cyan-400 w-7 text-right shrink-0">{p.cleanSheets}</span>
+                      <span className="w-10 text-right shrink-0"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>
