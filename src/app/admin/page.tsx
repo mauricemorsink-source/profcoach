@@ -805,8 +805,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             onChange={toggleSelectAll} className="rounded accent-cyan-500" />
                         </th>
                         <th className="pb-2 font-semibold">Naam</th>
-                        <th className="pb-2 font-semibold">Positie</th>
-                        <th className="pb-2 font-semibold">Elftal</th>
+                        <th className="pb-2 font-semibold">Pos</th>
+                        <th className="pb-2 font-semibold hidden sm:table-cell">Elftal</th>
                         <th className="pb-2 font-semibold">Waarde</th>
                         <th className="pb-2 font-semibold text-right">Acties</th>
                       </tr>
@@ -817,9 +817,12 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           <td className="py-2 pr-3">
                             <input type="checkbox" checked={selectedIds.has(player.id)} onChange={() => toggleSelect(player.id)} className="rounded accent-cyan-500" />
                           </td>
-                          <td className="py-2 font-medium text-white">{player.name}</td>
+                          <td className="py-2">
+                            <div className="font-medium text-white">{player.name}</div>
+                            <div className="text-xs text-slate-500 sm:hidden">{TEAM_LABEL[player.clubTeam]}</div>
+                          </td>
                           <td className="py-2 text-slate-400">{POSITION_SHORT[player.position]}</td>
-                          <td className="py-2 text-slate-400">{TEAM_LABEL[player.clubTeam]}</td>
+                          <td className="py-2 text-slate-400 hidden sm:table-cell">{TEAM_LABEL[player.clubTeam]}</td>
                           <td className="py-2 text-slate-400">€{player.value}</td>
                           <td className="py-2 text-right">
                             <button onClick={() => openPlayerStats(player)} className={BTN_SMALL}>Details</button>

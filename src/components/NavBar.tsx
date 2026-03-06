@@ -34,6 +34,13 @@ export default async function NavBar() {
         {/* Spacer op mobile */}
         <div className="flex-1 sm:hidden" />
 
+        {/* Mobile: directe Mijn Team link */}
+        {session && (session.isParticipant ?? true) && (
+          <Link href="/play" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 whitespace-nowrap transition-colors">
+            Mijn team
+          </Link>
+        )}
+
         {/* Desktop: secundaire navigatie */}
         <div className="hidden sm:flex items-center gap-1 shrink-0">
           {session?.role === "ADMIN" && (
