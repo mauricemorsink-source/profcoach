@@ -136,22 +136,33 @@ model PointsConfig {
   updatedAt DateTime @updatedAt
 }
 
+model PublishMoment {
+  id          String    @id @default(cuid())
+  label       String
+  scheduledAt DateTime
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  matches     Match[]
+}
+
 model Match {
-  id            String             @id @default(cuid())
-  seasonId      String
-  clubTeam      ClubTeamCode
-  name          String
-  homeAway      HomeAway           @default(HOME)
-  matchDate     DateTime
-  goalsScored   Int                @default(0)
-  goalsConceded Int                @default(0)
-  status        MatchStatus        @default(PENDING)
-  processedAt   DateTime?
-  createdAt     DateTime           @default(now())
-  createdById   String?
-  season        Season             @relation(fields: [seasonId], references: [id])
-  createdBy     User?              @relation(fields: [createdById], references: [id])
-  performances  MatchPerformance[]
+  id              String             @id @default(cuid())
+  seasonId        String
+  clubTeam        ClubTeamCode
+  name            String
+  homeAway        HomeAway           @default(HOME)
+  matchDate       DateTime
+  goalsScored     Int                @default(0)
+  goalsConceded   Int                @default(0)
+  status          MatchStatus        @default(PENDING)
+  processedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  createdById     String?
+  publishMomentId String?
+  season          Season             @relation(fields: [seasonId], references: [id])
+  createdBy       User?              @relation(fields: [createdById], references: [id])
+  publishMoment   PublishMoment?     @relation(fields: [publishMomentId], references: [id], onDelete: SetNull)
+  performances    MatchPerformance[]
 }
 
 model MatchPerformance {
@@ -175,8 +186,11 @@ model PlayerSeasonStats {
   id            String   @id @default(cuid())
   playerId      String
   seasonId      String
-  totalPoints   Int      @default(0)
-  prevPoints    Int      @default(0)
+  totalPoints     Int      @default(0)
+  prevPoints      Int      @default(0)
+  prevGoals       Int      @default(0)
+  prevAssists     Int      @default(0)
+  prevCleanSheets Int      @default(0)
   goals         Int      @default(0)
   penaltyGoals  Int      @default(0)
   assists       Int      @default(0)

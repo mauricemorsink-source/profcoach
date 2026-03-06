@@ -10,7 +10,7 @@ const TEAM_LABEL: Record<string, string> = {
 
 
 function Delta({ value }: { value: number }) {
-  if (value === 0) return <span className="text-slate-600 text-xs">–</span>;
+  if (!value || !isFinite(value)) return null;
   return (
     <span className={`text-xs font-semibold ${value > 0 ? "text-emerald-400" : "text-red-400"}`}>
       {value > 0 ? `+${value}` : value}
@@ -33,10 +33,10 @@ export default async function TussenstandPage({
     userId: string; userName: string; totalPoints: number; prevPoints: number; delta: number;
   }[] = [];
 
-  let topScorers: { playerId: string; playerName: string; position: string; clubTeam: string; goals: number }[] = [];
-  let topAssists: { playerId: string; playerName: string; position: string; clubTeam: string; assists: number }[] = [];
+  let topScorers: { playerId: string; playerName: string; position: string; clubTeam: string; goals: number; delta: number }[] = [];
+  let topAssists: { playerId: string; playerName: string; position: string; clubTeam: string; assists: number; delta: number }[] = [];
   let topPoints: { playerId: string; playerName: string; position: string; clubTeam: string; totalPoints: number; delta: number }[] = [];
-  let topCleanSheets: { playerId: string; playerName: string; cleanSheets: number }[] = [];
+  let topCleanSheets: { playerId: string; playerName: string; cleanSheets: number; delta: number }[] = [];
 
   if (season) {
     const allStats = await prisma.playerSeasonStats.findMany({
@@ -75,7 +75,7 @@ export default async function TussenstandPage({
             }
           }
         }
-        return { userId: te.user!.id, userName: te.user!.name ?? te.user!.email, totalPoints, prevPoints, delta: totalPoints - prevPoints };
+        return { userId: te.user!.id, userName: te.user!.name ?? te.user!.email, totalPoints, prevPoints, delta: isFinite(totalPoints - prevPoints) ? totalPoints - prevPoints : 0 };
       })
       .sort((a, b) => b.totalPoints - a.totalPoints);
 
@@ -83,25 +83,25 @@ export default async function TussenstandPage({
       .filter((s) => s.goals > 0)
       .sort((a, b) => b.goals - a.goals)
       .slice(0, 10)
-      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, position: s.player.position, clubTeam: s.player.clubTeam, goals: s.goals }));
+      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, position: s.player.position, clubTeam: s.player.clubTeam, goals: s.goals, delta: s.goals - (s.prevGoals ?? 0) }));
 
     topAssists = allStats
       .filter((s) => s.assists > 0)
       .sort((a, b) => b.assists - a.assists)
       .slice(0, 10)
-      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, position: s.player.position, clubTeam: s.player.clubTeam, assists: s.assists }));
+      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, position: s.player.position, clubTeam: s.player.clubTeam, assists: s.assists, delta: s.assists - (s.prevAssists ?? 0) }));
 
     topPoints = allStats
       .filter((s) => s.totalPoints > 0)
       .sort((a, b) => b.totalPoints - a.totalPoints)
       .slice(0, 10)
-      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, position: s.player.position, clubTeam: s.player.clubTeam, totalPoints: s.totalPoints, delta: s.totalPoints - s.prevPoints }));
+      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, position: s.player.position, clubTeam: s.player.clubTeam, totalPoints: s.totalPoints, delta: s.totalPoints - (s.prevPoints ?? 0) }));
 
     topCleanSheets = allStats
       .filter((s) => s.player.position === "GK" && s.cleanSheets > 0)
       .sort((a, b) => b.cleanSheets - a.cleanSheets)
       .slice(0, 10)
-      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, cleanSheets: s.cleanSheets }));
+      .map((s) => ({ playerId: s.playerId, playerName: s.player.name, cleanSheets: s.cleanSheets, delta: s.cleanSheets - (s.prevCleanSheets ?? 0) }));
   }
 
   const updatedAt = settings?.standingsUpdatedAt
@@ -166,7 +166,8 @@ export default async function TussenstandPage({
                         <span className="font-medium text-white">{p.playerName}</span>
                         <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
                       </div>
-                      <span className="font-bold text-cyan-400">{p.goals}</span>
+                      <span className="font-bold text-cyan-400 w-8 text-right">{p.goals}</span>
+                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>
@@ -187,7 +188,8 @@ export default async function TussenstandPage({
                         <span className="font-medium text-white">{p.playerName}</span>
                         <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
                       </div>
-                      <span className="font-bold text-cyan-400">{p.assists}</span>
+                      <span className="font-bold text-cyan-400 w-8 text-right">{p.assists}</span>
+                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>
@@ -208,10 +210,8 @@ export default async function TussenstandPage({
                         <span className="font-medium text-white">{p.playerName}</span>
                         <span className="text-slate-500 text-xs ml-2">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
                       </div>
-                      <div className="text-right">
-                        <span className="font-bold text-cyan-400">{p.totalPoints}</span>
-                        <span className="ml-2"><Delta value={p.delta} /></span>
-                      </div>
+                      <span className="font-bold text-cyan-400 w-8 text-right">{p.totalPoints}</span>
+                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>
@@ -229,7 +229,8 @@ export default async function TussenstandPage({
                     <li key={p.playerId} className="flex items-center gap-3">
                       <span className="text-slate-600 w-5 text-right text-sm">{i + 1}</span>
                       <span className="flex-1 font-medium text-white">{p.playerName}</span>
-                      <span className="font-bold text-cyan-400">{p.cleanSheets}</span>
+                      <span className="font-bold text-cyan-400 w-8 text-right">{p.cleanSheets}</span>
+                      <span className="w-12 text-right"><Delta value={p.delta} /></span>
                     </li>
                   ))}
                 </ol>

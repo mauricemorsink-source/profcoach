@@ -68,6 +68,42 @@ type PointsConfig = {
   attPoints: number | null;
 };
 
+type PlayerStatPerf = {
+  matchId: string;
+  matchName: string;
+  matchDate: string;
+  clubTeam: string;
+  homeAway: string;
+  goalsScored: number;
+  goalsConceded: number;
+  played: boolean;
+  goals: number;
+  penaltyGoals: number;
+  assists: number;
+  ownGoals: number;
+  yellowCards: number;
+  redCard: boolean;
+  cleanSheet: boolean;
+  won: boolean;
+  drew: boolean;
+  points: number;
+  breakdown: Record<string, number>;
+};
+
+type PlayerStats = {
+  player: Player;
+  seasonStats: { totalPoints: number; goals: number; assists: number; yellowCards: number; redCards: number; cleanSheets: number; wins: number; draws: number; matchesPlayed: number } | null;
+  performances: PlayerStatPerf[];
+};
+
+type PublishMoment = {
+  id: string;
+  label: string;
+  scheduledAt: string;
+  publishedAt: string | null;
+  matches: { id: string; status: string }[];
+};
+
 type AdminMatch = {
   id: string;
   name: string;
@@ -77,6 +113,8 @@ type AdminMatch = {
   goalsScored: number;
   goalsConceded: number;
   status: "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED" | "CORRECTION";
+  publishMomentId: string | null;
+  publishMoment: { id: string; label: string; scheduledAt: string; publishedAt: string | null } | null;
   createdBy: { name: string | null; email: string } | null;
   performances: {
     playerId: string;
@@ -213,13 +251,27 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [matchFilterTeam, setMatchFilterTeam] = useState("");
   const [matchFilterStatus, setMatchFilterStatus] = useState("");
   const [editingMatch, setEditingMatch] = useState<AdminMatch | null>(null);
-  const [editMatchForm, setEditMatchForm] = useState({ name: "", matchDate: "", goalsScored: 0, goalsConceded: 0, homeAway: "HOME" });
+  const [editMatchForm, setEditMatchForm] = useState({ name: "", matchDate: "", thuisGoals: 0, uitGoals: 0, homeAway: "HOME" });
   const [editMatchSaving, setEditMatchSaving] = useState(false);
   const [editMatchError, setEditMatchError] = useState("");
   const [matchMenuId, setMatchMenuId] = useState<string | null>(null);
   const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
   const [revertingMatchId, setRevertingMatchId] = useState<string | null>(null);
   const [editPerfsData, setEditPerfsData] = useState<Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }>>({});
+
+  // Publish moments
+  const [publishMoments, setPublishMoments] = useState<PublishMoment[]>([]);
+  const [newMomentModal, setNewMomentModal] = useState(false);
+  const [newMomentForm, setNewMomentForm] = useState({ label: "", scheduledAt: "" });
+  const [newMomentSaving, setNewMomentSaving] = useState(false);
+  const [publishingMomentId, setPublishingMomentId] = useState<string | null>(null);
+  const [deletingMomentId, setDeletingMomentId] = useState<string | null>(null);
+  const [assignMomentMatchId, setAssignMomentMatchId] = useState<string | null>(null);
+
+  // Player stats
+  const [playerStatsModal, setPlayerStatsModal] = useState<Player | null>(null);
+  const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
+  const [loadingPlayerStats, setLoadingPlayerStats] = useState(false);
 
   async function loadPlayers() {
     setLoadingPlayers(true);
@@ -266,14 +318,77 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     if (res.ok) {
       const matches = await res.json();
       setAdminMatches(matches);
-      // Voeg nieuwe te-verwerken wedstrijden toe aan selectie, maar verwijder geen bestaande keuzes
-      const toProcessIds: string[] = matches
-        .filter((m: AdminMatch) => m.status === "APPROVED" || m.status === "CORRECTION")
-        .map((m: AdminMatch) => m.id);
-      // Altijd alle te-verwerken wedstrijden selecteren; gebruiker kan deselecteren
-      setProcessSelectedIds(new Set(toProcessIds));
     }
     setLoadingMatches(false);
+  }
+
+  function selectAllApproved() {
+    const toProcess = adminMatches.filter((m) => m.status === "APPROVED" || m.status === "CORRECTION");
+    setProcessSelectedIds(new Set(toProcess.map((m) => m.id)));
+  }
+
+  async function loadPublishMoments() {
+    const res = await fetch("/api/admin/publish-moments");
+    if (res.ok) setPublishMoments(await res.json());
+  }
+
+  async function createMoment() {
+    if (!newMomentForm.label || !newMomentForm.scheduledAt) return;
+    setNewMomentSaving(true);
+    const res = await fetch("/api/admin/publish-moments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newMomentForm),
+    });
+    setNewMomentSaving(false);
+    if (res.ok) {
+      setNewMomentModal(false);
+      setNewMomentForm({ label: "", scheduledAt: "" });
+      await loadPublishMoments();
+    }
+  }
+
+  async function deleteMoment(id: string) {
+    setDeletingMomentId(id);
+    const res = await fetch(`/api/admin/publish-moments/${id}`, { method: "DELETE" });
+    setDeletingMomentId(null);
+    if (res.ok) {
+      await loadPublishMoments();
+      await loadAdminMatches();
+    }
+  }
+
+  async function publishMoment(id: string) {
+    setPublishingMomentId(id); setPointsMsg(null);
+    const res = await fetch(`/api/admin/publish-moments/${id}/publish`, { method: "POST" });
+    const data = await res.json();
+    setPublishingMomentId(null);
+    if (!res.ok) { setPointsMsg({ type: "err", text: data.error || "Publiceren mislukt" }); }
+    else {
+      setPointsMsg({ type: "ok", text: `Moment gepubliceerd: ${data.processed} wedstrijd${data.processed !== 1 ? "en" : ""} verwerkt, ${data.playersUpdated} spelers bijgewerkt` });
+      await loadPublishMoments();
+      await loadAdminMatches();
+    }
+  }
+
+  async function assignToMoment(matchId: string, momentId: string | null) {
+    setAssignMomentMatchId(null);
+    await fetch(`/api/admin/matches/${matchId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publishMomentId: momentId }),
+    });
+    await loadAdminMatches();
+    await loadPublishMoments();
+  }
+
+  async function openPlayerStats(player: Player) {
+    setPlayerStatsModal(player);
+    setPlayerStats(null);
+    setLoadingPlayerStats(true);
+    const res = await fetch(`/api/admin/players/${player.id}/stats`);
+    if (res.ok) setPlayerStats(await res.json());
+    setLoadingPlayerStats(false);
   }
 
   useEffect(() => { loadPlayers(); loadSettings(); }, []);
@@ -281,7 +396,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   useEffect(() => {
     if (activeTab === "gebruikers" && users.length === 0) loadUsers();
     if (activeTab === "puntensysteem" && pointsConfig.length === 0) loadPointsConfig();
-    if (activeTab === "wedstrijden") loadAdminMatches();
+    if (activeTab === "wedstrijden") { loadAdminMatches(); loadPublishMoments(); }
   }, [activeTab]);
 
   const filteredPlayers = players.filter((p) => {
@@ -291,10 +406,15 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     return true;
   });
 
-  const filteredMatches = adminMatches.filter((m) =>
-    (!matchFilterTeam || m.clubTeam === matchFilterTeam) &&
-    (!matchFilterStatus || m.status === matchFilterStatus)
-  );
+  const STATUS_SORT_ORDER: Record<string, number> = { APPROVED: 0, CORRECTION: 1, PENDING: 2, REJECTED: 3, PROCESSED: 4 };
+  const filteredMatches = adminMatches
+    .filter((m) => (!matchFilterTeam || m.clubTeam === matchFilterTeam) && (!matchFilterStatus || m.status === matchFilterStatus))
+    .sort((a, b) => {
+      const ao = STATUS_SORT_ORDER[a.status] ?? 5;
+      const bo = STATUS_SORT_ORDER[b.status] ?? 5;
+      if (ao !== bo) return ao - bo;
+      return new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime();
+    });
 
   const editMatchReadOnly = !!editingMatch && (editingMatch.status === "PROCESSED" || editingMatch.status === "CORRECTION");
 
@@ -431,7 +551,9 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   }
 
   function openEditMatch(m: AdminMatch) {
-    setEditMatchForm({ name: m.name, matchDate: m.matchDate.slice(0, 16), goalsScored: m.goalsScored, goalsConceded: m.goalsConceded, homeAway: m.homeAway });
+    const thuisGoals = m.homeAway === "HOME" ? m.goalsScored : m.goalsConceded;
+    const uitGoals   = m.homeAway === "HOME" ? m.goalsConceded : m.goalsScored;
+    setEditMatchForm({ name: m.name, matchDate: m.matchDate.slice(0, 16), thuisGoals, uitGoals, homeAway: m.homeAway });
     const data: Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }> = {};
     for (const p of m.performances) {
       data[p.playerId] = { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
@@ -443,7 +565,10 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   async function saveAll() {
     if (!editingMatch) return;
     setEditMatchSaving(true); setEditMatchError("");
-    const res = await fetch(`/api/admin/matches/${editingMatch.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editMatchForm.name, matchDate: editMatchForm.matchDate, goalsScored: Number(editMatchForm.goalsScored), goalsConceded: Number(editMatchForm.goalsConceded), homeAway: editMatchForm.homeAway }) });
+    const homeAway = editMatchForm.homeAway;
+    const goalsScored   = homeAway === "HOME" ? Number(editMatchForm.thuisGoals) : Number(editMatchForm.uitGoals);
+    const goalsConceded = homeAway === "HOME" ? Number(editMatchForm.uitGoals)   : Number(editMatchForm.thuisGoals);
+    const res = await fetch(`/api/admin/matches/${editingMatch.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editMatchForm.name, matchDate: editMatchForm.matchDate, goalsScored, goalsConceded, homeAway }) });
     const data = await res.json();
     if (!res.ok) { setEditMatchSaving(false); setEditMatchError(data.error || "Opslaan mislukt"); return; }
     const performances = Object.entries(editPerfsData).map(([playerId, d]) => ({ playerId, ...d }));
@@ -530,7 +655,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         ))}
       </aside>
 
-      <main className="flex-1 p-4 md:p-6 max-w-4xl overflow-y-auto">
+      <main className={`flex-1 p-4 md:p-6 overflow-y-auto ${activeTab === "wedstrijden" ? "" : "max-w-4xl"}`}>
 
         {/* Tab: Spelinstellingen */}
         {activeTab === "instellingen" && (
@@ -696,17 +821,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           <td className="py-2 text-slate-400">{TEAM_LABEL[player.clubTeam]}</td>
                           <td className="py-2 text-slate-400">€{player.value}</td>
                           <td className="py-2 text-right">
-                            <div className="flex justify-end gap-2 items-center">
-                              <button onClick={() => openEdit(player)} className="text-xs text-slate-500 hover:text-blue-400 transition-colors px-1">✎</button>
-                              {confirmDeleteId === player.id ? (
-                                <span className="flex items-center gap-1">
-                                  <button onClick={() => deletePlayer(player.id)} disabled={deletingId === player.id} className="text-xs text-red-400 hover:text-red-300 transition-colors">{deletingId === player.id ? "..." : "Ja"}</button>
-                                  <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Nee</button>
-                                </span>
-                              ) : (
-                                <button onClick={() => setConfirmDeleteId(player.id)} className="text-xs text-slate-700 hover:text-red-400 transition-colors px-1">✕</button>
-                              )}
-                            </div>
+                            <button onClick={() => openPlayerStats(player)} className={BTN_SMALL}>Details</button>
                           </td>
                         </tr>
                       ))}
@@ -747,11 +862,34 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
         {/* Tab: Wedstrijden */}
         {activeTab === "wedstrijden" && (
-          <section className="bg-slate-900 neon-border rounded-2xl p-6">
+          <div className="flex gap-4 items-start">
+
+            {/* Links: wedstrijdenoverzicht */}
+            <section className="bg-slate-900 neon-border rounded-2xl p-6 flex-1 min-w-0">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-white">Wedstrijden</h2>
-              <button onClick={loadAdminMatches} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Vernieuwen</button>
+              <button onClick={() => { loadAdminMatches(); loadPublishMoments(); }} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Vernieuwen</button>
             </div>
+
+            {/* Wachtrij banner */}
+            {(() => {
+              const waiting = adminMatches.filter((m) => m.status === "APPROVED" || m.status === "CORRECTION");
+              if (waiting.length === 0) return null;
+              const oldest = waiting.reduce((a, b) => new Date(a.matchDate) < new Date(b.matchDate) ? a : b);
+              const days = Math.floor((Date.now() - new Date(oldest.matchDate).getTime()) / 86400000);
+              const urgent = days >= 7;
+              return (
+                <div className={`flex items-center gap-3 rounded-xl px-4 py-3 mb-4 border text-sm flex-wrap ${urgent ? "bg-amber-900/20 border-amber-500/30 text-amber-300" : "bg-cyan-900/20 border-cyan-500/30 text-cyan-300"}`}>
+                  <span className="flex-1">
+                    <span className="font-semibold">{waiting.length} wedstrijd{waiting.length !== 1 ? "en" : ""}</span> wacht{waiting.length === 1 ? "" : "en"} op verwerking
+                    {urgent && <span className="ml-2 text-amber-400 font-medium">· oudste al {days} dagen geleden gespeeld</span>}
+                  </span>
+                  <button onClick={selectAllApproved} className="px-3 py-1 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors">
+                    Selecteer alle ({waiting.length})
+                  </button>
+                </div>
+              );
+            })()}
             {/* Filters */}
             <div className="flex flex-wrap gap-2 mb-4">
               <select value={matchFilterTeam} onChange={(e) => setMatchFilterTeam(e.target.value)}
@@ -815,6 +953,11 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                               </div>
                               <div className="flex flex-col items-end gap-1 shrink-0">
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
+                                {(m.status === "APPROVED" || m.status === "CORRECTION") && (() => {
+                                  const days = Math.floor((Date.now() - new Date(m.matchDate).getTime()) / 86400000);
+                                  if (days < 3) return null;
+                                  return <span className={`text-xs ${days >= 7 ? "text-amber-400" : "text-slate-500"}`}>{days} dagen geleden</span>;
+                                })()}
                                 <span className="text-sm font-bold text-slate-300">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}</span>
                               </div>
                             </div>
@@ -824,11 +967,24 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                           <div className="relative inline-block">
                             <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
                             {matchMenuId === m.id && (
-                              <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[200px] overflow-hidden">
+                              <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden">
                                 {m.status !== "PROCESSED" && m.status !== "CORRECTION" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
                                 <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
                                 {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
                                 {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                                {m.status === "APPROVED" && publishMoments.filter(p => !p.publishedAt).length > 0 && (
+                                  <div className="border-t border-slate-700">
+                                    <p className="px-4 pt-2.5 pb-1 text-xs text-slate-500 font-semibold uppercase tracking-wide">Inplannen bij</p>
+                                    {m.publishMomentId
+                                      ? <button onClick={() => { assignToMoment(m.id, null); setMatchMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors">Verwijder uit wachtrij</button>
+                                      : publishMoments.filter(p => !p.publishedAt).map(pm => (
+                                          <button key={pm.id} onClick={() => { assignToMoment(m.id, pm.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-slate-700 transition-colors">
+                                            {pm.label}
+                                          </button>
+                                        ))
+                                    }
+                                  </div>
+                                )}
                                 {m.status === "PROCESSED" && <button onClick={() => { revertMatch(m.id); }} disabled={revertingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors disabled:opacity-50">{revertingMatchId === m.id ? "Bezig..." : "Terugdraaien"}</button>}
                                 {m.status === "CORRECTION" && <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>}
                                 {m.status !== "PROCESSED" && <><div className="border-t border-slate-700" /><button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button></>}
@@ -841,7 +997,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   })}
                 </div>
                 {/* Desktop: tabel */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden md:block">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-800">
@@ -852,9 +1008,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             onChange={toggleAllProcessSelect} className="accent-cyan-500" />
                         </th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
-                        <th className="pb-2 font-semibold whitespace-nowrap">Elftal</th>
-                        <th className="pb-2 font-semibold whitespace-nowrap">Tegenstander</th>
-                        <th className="pb-2 font-semibold whitespace-nowrap">T/U</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">Thuisploeg</th>
+                        <th className="pb-2 font-semibold whitespace-nowrap">Uitploeg</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Uitslag</th>
                         <th className="pb-2 font-semibold whitespace-nowrap">Status</th>
                         <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
@@ -869,20 +1024,44 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                               {isProcessable && <input type="checkbox" checked={processSelectedIds.has(m.id)} onChange={() => toggleProcessSelect(m.id)} className="accent-cyan-500" />}
                             </td>
                             <td className="py-2 text-slate-400 text-xs whitespace-nowrap">{new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</td>
-                            <td className="py-2 text-slate-400 whitespace-nowrap">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam}</td>
-                            <td className="py-2 font-medium text-white">{m.name}</td>
-                            <td className="py-2 text-slate-500 text-xs whitespace-nowrap">{m.homeAway === "HOME" ? "Thuis" : m.homeAway === "AWAY" ? "Uit" : "Neutraal"}</td>
+                            <td className="py-2 text-slate-400 whitespace-nowrap">{m.homeAway === "AWAY" ? m.name : (TEAM_LABEL[m.clubTeam] ?? m.clubTeam)}</td>
+                            <td className="py-2 font-medium text-white whitespace-nowrap">{m.homeAway === "HOME" ? m.name : (TEAM_LABEL[m.clubTeam] ?? m.clubTeam)}</td>
                             <td className="py-2 text-slate-400 whitespace-nowrap">{m.homeAway === "AWAY" ? `${m.goalsConceded}–${m.goalsScored}` : `${m.goalsScored}–${m.goalsConceded}`}<span className="text-xs text-slate-600 ml-1.5">({m.performances.filter(p => p.played).length})</span></td>
-                            <td className="py-2 whitespace-nowrap"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span></td>
+                            <td className="py-2 whitespace-nowrap">
+                              <div className="flex flex-col gap-0.5">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium w-fit ${STATUS_STYLE[m.status]}`}>{STATUS_LABEL[m.status]}</span>
+                                {m.publishMoment && !m.publishMoment.publishedAt && (
+                                  <span className="text-xs text-cyan-400 truncate max-w-[140px]">📅 {m.publishMoment.label}</span>
+                                )}
+                                {(m.status === "APPROVED" || m.status === "CORRECTION") && !m.publishMomentId && (() => {
+                                  const days = Math.floor((Date.now() - new Date(m.matchDate).getTime()) / 86400000);
+                                  if (days < 3) return null;
+                                  return <span className={`text-xs ${days >= 7 ? "text-amber-400" : "text-slate-500"}`}>{days}d</span>;
+                                })()}
+                              </div>
+                            </td>
                             <td className="py-2 text-right">
                               <div className="relative inline-block">
                                 <button onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)} className={BTN_SMALL}>Acties ▾</button>
                                 {matchMenuId === m.id && (
-                                  <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[200px] overflow-hidden">
+                                  <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden">
                                     {m.status !== "PROCESSED" && m.status !== "CORRECTION" && <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Bewerken</button>}
                                     <button onClick={() => { openEditMatch(m); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">Prestaties</button>
                                     {m.status === "PENDING" && <button onClick={() => { approveMatch(m.id, "APPROVED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Goedkeuren</button>}
                                     {(m.status === "PENDING" || m.status === "APPROVED") && <button onClick={() => { approveMatch(m.id, "REJECTED"); setMatchMenuId(null); }} disabled={approvingId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-amber-400 hover:bg-slate-700 transition-colors disabled:opacity-50">Afkeuren</button>}
+                                    {m.status === "APPROVED" && publishMoments.filter(p => !p.publishedAt).length > 0 && (
+                                      <div className="border-t border-slate-700">
+                                        <p className="px-4 pt-2.5 pb-1 text-xs text-slate-500 font-semibold uppercase tracking-wide">Inplannen bij</p>
+                                        {m.publishMomentId
+                                          ? <button onClick={() => { assignToMoment(m.id, null); setMatchMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 transition-colors">Verwijder uit wachtrij</button>
+                                          : publishMoments.filter(p => !p.publishedAt).map(pm => (
+                                              <button key={pm.id} onClick={() => { assignToMoment(m.id, pm.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-slate-700 transition-colors">
+                                                {pm.label}
+                                              </button>
+                                            ))
+                                        }
+                                      </div>
+                                    )}
                                     {m.status === "PROCESSED" && <button onClick={() => { revertMatch(m.id); }} disabled={revertingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors disabled:opacity-50">{revertingMatchId === m.id ? "Bezig..." : "Terugdraaien"}</button>}
                                     {m.status === "CORRECTION" && <button onClick={() => { cancelCorrection(m.id); setMatchMenuId(null); }} className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors">Annuleer correctie</button>}
                                     {m.status !== "PROCESSED" && <><div className="border-t border-slate-700" /><button onClick={() => deleteMatch(m.id)} disabled={deletingMatchId === m.id} className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/30 transition-colors disabled:opacity-50">Verwijderen</button></>}
@@ -898,7 +1077,78 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 </div>
               </>
             )}
-          </section>
+            </section>
+
+            {/* Rechts: Publicatieplanning (desktop only) */}
+            <aside className="hidden lg:flex flex-col gap-3 w-72 shrink-0">
+              <div className="bg-slate-900 neon-border rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-white">Publicatieplanning</h2>
+                  <button onClick={() => { setNewMomentForm({ label: "", scheduledAt: "" }); setNewMomentModal(true); }} className="px-2.5 py-1 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors">+ Nieuw</button>
+                </div>
+                {publishMoments.length === 0 ? (
+                  <p className="text-slate-500 text-xs">Nog geen momenten aangemaakt.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {publishMoments.map((pm) => {
+                      const approvedInMoment = adminMatches.filter((m) => m.publishMomentId === pm.id && m.status === "APPROVED");
+                      const allInMoment = adminMatches.filter((m) => m.publishMomentId === pm.id);
+                      const isPast = new Date(pm.scheduledAt) <= new Date();
+                      return (
+                        <div key={pm.id} className={`rounded-xl border p-3 ${pm.publishedAt ? "border-blue-500/20 bg-blue-900/10" : isPast ? "border-amber-500/30 bg-amber-900/10" : "border-slate-700 bg-slate-800/50"}`}>
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className="font-semibold text-white text-sm leading-tight">{pm.label}</span>
+                            {pm.publishedAt
+                              ? <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-900/40 text-blue-400 border border-blue-500/30 shrink-0">Klaar</span>
+                              : isPast
+                              ? <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-900/40 text-amber-400 border border-amber-500/30 shrink-0">Wacht</span>
+                              : <span className="text-xs px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 shrink-0">Gepland</span>
+                            }
+                          </div>
+                          <p className="text-xs text-slate-500 mb-2">
+                            {new Date(pm.scheduledAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}
+                          </p>
+                          <p className="text-xs text-slate-400 mb-2">
+                            {allInMoment.length} wedstrijd{allInMoment.length !== 1 ? "en" : ""}
+                            {approvedInMoment.length > 0 && <span className="text-green-400 ml-1">· {approvedInMoment.length} klaar</span>}
+                          </p>
+                          {allInMoment.length > 0 && (
+                            <div className="space-y-0.5 mb-2">
+                              {allInMoment.map((m) => (
+                                <div key={m.id} className="flex items-center gap-1.5">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.status === "APPROVED" ? "bg-green-400" : m.status === "PENDING" ? "bg-amber-400" : "bg-slate-600"}`} />
+                                  <span className="text-xs text-slate-400 truncate">{TEAM_LABEL[m.clubTeam] ?? m.clubTeam} vs {m.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {!pm.publishedAt && (
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => publishMoment(pm.id)}
+                                disabled={publishingMomentId === pm.id || approvedInMoment.length === 0}
+                                className="flex-1 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors disabled:opacity-40"
+                              >
+                                {publishingMomentId === pm.id ? "..." : `Publiceer (${approvedInMoment.length})`}
+                              </button>
+                              <button
+                                onClick={() => deleteMoment(pm.id)}
+                                disabled={deletingMomentId === pm.id}
+                                className="px-2.5 py-1.5 text-xs bg-red-900/30 text-red-400 rounded-lg hover:bg-red-900/50 transition-colors border border-red-500/20"
+                              >
+                                {deletingMomentId === pm.id ? "..." : "✕"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </aside>
+
+          </div>
         )}
 
         {/* Tab: Puntensysteem */}
@@ -923,7 +1173,10 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                       </tr>
                     </thead>
                     <tbody>
-                      {pointsConfig.map((cfg) => (
+                      {[...pointsConfig].sort((a, b) => {
+                        const ORDER = ["goal","penaltyGoal","assist","ownGoal","win","draw","yellowCard","redCard","goalsConceded","cleanSheet"];
+                        return (ORDER.indexOf(a.id) ?? 99) - (ORDER.indexOf(b.id) ?? 99);
+                      }).map((cfg) => (
                         <tr key={cfg.id} className="border-b border-slate-800/60">
                           <td className="py-2 font-medium text-white">{cfg.label}</td>
                           {(["gkPoints", "defPoints", "midPoints", "attPoints"] as const).map((field) => (
@@ -1188,19 +1441,24 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className={LABEL}>Thuis/Uit</label>
-                    <select value={editMatchForm.homeAway} onChange={(e) => setEditMatchForm({ ...editMatchForm, homeAway: e.target.value })} className={SELECT}>
+                    <select value={editMatchForm.homeAway} onChange={(e) => {
+                      const newHA = e.target.value;
+                      // Als thuis↔uit wisselt: swap de goals zodat de stand op het scorebord klopt
+                      const shouldSwap = (editMatchForm.homeAway === "HOME" && newHA === "AWAY") || (editMatchForm.homeAway === "AWAY" && newHA === "HOME");
+                      setEditMatchForm({ ...editMatchForm, homeAway: newHA, ...(shouldSwap ? { thuisGoals: editMatchForm.uitGoals, uitGoals: editMatchForm.thuisGoals } : {}) });
+                    }} className={SELECT}>
                       <option value="HOME">Thuis</option>
                       <option value="AWAY">Uit</option>
                       <option value="NEUTRAL">Neutraal</option>
                     </select>
                   </div>
                   <div>
-                    <label className={LABEL}>Goals voor</label>
-                    <input type="number" value={editMatchForm.goalsScored} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsScored: Number(e.target.value) })} className={INPUT} min="0" />
+                    <label className={LABEL}>Goals thuisploeg</label>
+                    <input type="number" value={editMatchForm.thuisGoals} onChange={(e) => setEditMatchForm({ ...editMatchForm, thuisGoals: Number(e.target.value) })} className={INPUT} min="0" />
                   </div>
                   <div>
-                    <label className={LABEL}>Goals tegen</label>
-                    <input type="number" value={editMatchForm.goalsConceded} onChange={(e) => setEditMatchForm({ ...editMatchForm, goalsConceded: Number(e.target.value) })} className={INPUT} min="0" />
+                    <label className={LABEL}>Goals uitploeg</label>
+                    <input type="number" value={editMatchForm.uitGoals} onChange={(e) => setEditMatchForm({ ...editMatchForm, uitGoals: Number(e.target.value) })} className={INPUT} min="0" />
                   </div>
                 </div>
                 {editMatchError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{editMatchError}</p>}
@@ -1242,7 +1500,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             <td className="py-1.5 text-center"><input type="number" value={ed.assists} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "assists", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
                             <td className="py-1.5 text-center"><input type="number" value={ed.ownGoals} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "ownGoals", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
                             <td className="py-1.5 text-center"><input type="number" value={ed.yellowCards} min={0} max={2} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "yellowCards", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
-                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} disabled={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-red-500 disabled:opacity-60" /></td>
+                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} disabled={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-cyan-500 disabled:opacity-60" /></td>
                           </tr>
                         );
                       })}
@@ -1262,6 +1520,151 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   <button onClick={saveAll} disabled={editMatchSaving} className={BTN_PRIMARY}>{editMatchSaving ? "Opslaan..." : "Opslaan"}</button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Speler statistieken */}
+      {playerStatsModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-2xl w-full max-w-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex items-start justify-between p-6 border-b border-slate-800 shrink-0">
+              <div>
+                <h3 className="text-lg font-bold text-white">{playerStatsModal.name}</h3>
+                <p className="text-sm text-slate-500">{POSITION_LABEL[playerStatsModal.position]} · {TEAM_LABEL[playerStatsModal.clubTeam]}</p>
+              </div>
+              <button onClick={() => setPlayerStatsModal(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none mt-0.5">×</button>
+            </div>
+
+            <div className="overflow-y-auto p-6 space-y-5">
+              {loadingPlayerStats ? (
+                <p className="text-slate-500 text-sm text-center py-8">Laden...</p>
+              ) : !playerStats ? (
+                <p className="text-slate-500 text-sm text-center py-8">Geen data beschikbaar.</p>
+              ) : (
+                <>
+                  {/* Seizoen totalen */}
+                  {playerStats.seasonStats && (
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Seizoen totaal</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        {[
+                          { label: "Punten", value: playerStats.seasonStats.totalPoints, highlight: true },
+                          { label: "Wedstrijden", value: playerStats.seasonStats.matchesPlayed },
+                          { label: "Goals", value: playerStats.seasonStats.goals },
+                          { label: "Assists", value: playerStats.seasonStats.assists },
+                          { label: "Gewonnen", value: playerStats.seasonStats.wins },
+                          { label: "Gelijkspel", value: playerStats.seasonStats.draws },
+                          { label: "Gele kaarten", value: playerStats.seasonStats.yellowCards },
+                          { label: "Rode kaarten", value: playerStats.seasonStats.redCards },
+                          ...(["GK","DEF"].includes(playerStatsModal.position) ? [{ label: "Clean sheets", value: playerStats.seasonStats.cleanSheets }] : []),
+                        ].map((s) => (
+                          <div key={s.label} className={`rounded-xl p-3 text-center border ${s.highlight ? "bg-cyan-900/20 border-cyan-500/30" : "bg-slate-800/50 border-slate-700"}`}>
+                            <p className={`text-lg font-bold ${s.highlight ? "text-cyan-400" : "text-white"}`}>{s.value}</p>
+                            <p className="text-xs text-slate-500 mt-0.5 leading-tight">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Per wedstrijd */}
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Per verwerkte wedstrijd</p>
+                    {playerStats.performances.length === 0 ? (
+                      <p className="text-slate-500 text-sm">Nog geen verwerkte wedstrijden.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {playerStats.performances.map((p) => (
+                          <div key={p.matchId} className={`rounded-xl border p-3 ${!p.played ? "border-slate-800 opacity-50" : "border-slate-700 bg-slate-800/40"}`}>
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div>
+                                <p className="font-medium text-white text-sm">
+                                  {TEAM_LABEL[p.clubTeam] ?? p.clubTeam} {p.homeAway === "HOME" ? "vs" : "@"} {p.matchName}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {new Date(p.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                                  {" · "}
+                                  {p.homeAway === "AWAY" ? `${p.goalsConceded}–${p.goalsScored}` : `${p.goalsScored}–${p.goalsConceded}`}
+                                  {" · "}
+                                  {p.played ? (p.won ? "Gewonnen" : p.drew ? "Gelijkspel" : "Verloren") : "Niet gespeeld"}
+                                </p>
+                              </div>
+                              <span className={`text-lg font-black shrink-0 ${p.points > 0 ? "text-cyan-400" : p.points < 0 ? "text-red-400" : "text-slate-500"}`}>
+                                {p.points > 0 ? "+" : ""}{p.points}
+                              </span>
+                            </div>
+                            {p.played && Object.keys(p.breakdown).length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {Object.entries(p.breakdown).map(([label, pts]) => (
+                                  <span key={label} className={`text-xs px-2 py-0.5 rounded-full border font-medium ${pts > 0 ? "bg-green-900/20 border-green-500/20 text-green-400" : "bg-red-900/20 border-red-500/20 text-red-400"}`}>
+                                    {label}: {pts > 0 ? "+" : ""}{pts}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-800 shrink-0 flex items-center gap-3">
+              <button onClick={() => setPlayerStatsModal(null)} className={BTN_SECONDARY}>Sluiten</button>
+              <button onClick={() => { const p = playerStatsModal; setPlayerStatsModal(null); openEdit(p!); }} className={BTN_PRIMARY}>Bewerken</button>
+              <div className="ml-auto">
+                {confirmDeleteId === playerStatsModal.id ? (
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm text-red-400">Zeker weten?</span>
+                    <button onClick={() => { deletePlayer(playerStatsModal.id); setPlayerStatsModal(null); }} disabled={deletingId === playerStatsModal.id} className="text-sm text-red-400 hover:text-red-300 transition-colors">{deletingId === playerStatsModal.id ? "..." : "Ja"}</button>
+                    <button onClick={() => setConfirmDeleteId(null)} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Nee</button>
+                  </span>
+                ) : (
+                  <button onClick={() => setConfirmDeleteId(playerStatsModal.id)} className={BTN_DANGER}>Verwijderen</button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Nieuw publicatiemoment */}
+      {newMomentModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-2xl p-6 w-full max-w-md border border-slate-700 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-white">Nieuw publicatiemoment</h3>
+              <button onClick={() => setNewMomentModal(false)} className="text-slate-500 hover:text-slate-300 text-xl leading-none">×</button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className={LABEL}>Naam / omschrijving</label>
+                <input
+                  type="text"
+                  value={newMomentForm.label}
+                  onChange={(e) => setNewMomentForm({ ...newMomentForm, label: e.target.value })}
+                  placeholder="bijv. Update speelronde 3"
+                  className={INPUT}
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Datum en tijd</label>
+                <input
+                  type="datetime-local"
+                  value={newMomentForm.scheduledAt}
+                  onChange={(e) => setNewMomentForm({ ...newMomentForm, scheduledAt: e.target.value })}
+                  className={INPUT}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button onClick={() => setNewMomentModal(false)} className={BTN_SECONDARY}>Annuleer</button>
+              <button onClick={createMoment} disabled={newMomentSaving || !newMomentForm.label || !newMomentForm.scheduledAt} className={BTN_PRIMARY}>
+                {newMomentSaving ? "Aanmaken..." : "Aanmaken"}
+              </button>
             </div>
           </div>
         </div>

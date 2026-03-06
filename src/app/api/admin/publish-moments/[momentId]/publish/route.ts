@@ -3,21 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { calculateMatchPoints, buildConfigMap } from "@/lib/points";
 
-export async function POST(req: Request) {
+export async function POST(
+  _req: Request,
+  { params }: { params: Promise<{ momentId: string }> }
+) {
   const session = await getSession();
   if (!session || session.role !== "ADMIN") {
     return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
   }
 
-  // Optional: only process specific match IDs
-  let selectedIds: string[] | null = null;
-  try {
-    const body = await req.json();
-    if (Array.isArray(body?.matchIds) && body.matchIds.length > 0) {
-      selectedIds = body.matchIds as string[];
-    }
-  } catch {
-    // No body or invalid JSON → process all
+  const { momentId } = await params;
+
+  const moment = await prisma.publishMoment.findUnique({ where: { id: momentId } });
+  if (!moment) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
+  if (moment.publishedAt) {
+    return NextResponse.json({ error: "Dit moment is al gepubliceerd" }, { status: 400 });
   }
 
   const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
@@ -37,74 +37,44 @@ export async function POST(req: Request) {
     const configs = await prisma.pointsConfig.findMany();
     const configMap = buildConfigMap(configs);
 
-    const approvedWhere = selectedIds
-      ? { status: "APPROVED" as const, seasonId: season.id, id: { in: selectedIds } }
-      : { status: "APPROVED" as const, seasonId: season.id };
-
-    const correctionWhere = selectedIds
-      ? { status: "CORRECTION" as const, seasonId: season.id, id: { in: selectedIds } }
-      : { status: "CORRECTION" as const, seasonId: season.id };
-
     const approvedMatches = await prisma.match.findMany({
-      where: approvedWhere,
+      where: { publishMomentId: momentId, status: "APPROVED", seasonId: season.id },
       include: { performances: { include: { player: { select: { position: true } } } } },
     });
 
-    const correctionMatches = await prisma.match.findMany({
-      where: correctionWhere,
-      include: { performances: { include: { player: { select: { position: true } } } } },
-    });
-
-    if (approvedMatches.length === 0 && correctionMatches.length === 0) {
+    if (approvedMatches.length === 0) {
       await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
-      return NextResponse.json({ processed: 0, reversed: 0, playersUpdated: 0 });
+      // Still mark moment as published even if no matches to process
+      await prisma.publishMoment.update({ where: { id: momentId }, data: { publishedAt: new Date() } });
+      return NextResponse.json({ processed: 0, playersUpdated: 0 });
     }
 
     type Delta = ReturnType<typeof calculateMatchPoints> extends Map<string, infer V> ? V : never;
     const totalDeltas = new Map<string, Delta>();
 
-    function mergeDelta(playerId: string, delta: Delta, factor: 1 | -1) {
+    function mergeDelta(playerId: string, delta: Delta) {
       const existing = totalDeltas.get(playerId);
       if (existing) {
-        existing.points        += delta.points        * factor;
-        existing.goals         += delta.goals         * factor;
-        existing.penaltyGoals  += delta.penaltyGoals  * factor;
-        existing.assists       += delta.assists       * factor;
-        existing.ownGoals      += delta.ownGoals      * factor;
-        existing.yellowCards   += delta.yellowCards   * factor;
-        existing.redCards      += delta.redCards      * factor;
-        existing.cleanSheets   += delta.cleanSheets   * factor;
-        existing.goalsConceded += delta.goalsConceded * factor;
-        existing.wins          += delta.wins          * factor;
-        existing.draws         += delta.draws         * factor;
-        existing.matchesPlayed += delta.matchesPlayed * factor;
+        existing.points        += delta.points;
+        existing.goals         += delta.goals;
+        existing.penaltyGoals  += delta.penaltyGoals;
+        existing.assists       += delta.assists;
+        existing.ownGoals      += delta.ownGoals;
+        existing.yellowCards   += delta.yellowCards;
+        existing.redCards      += delta.redCards;
+        existing.cleanSheets   += delta.cleanSheets;
+        existing.goalsConceded += delta.goalsConceded;
+        existing.wins          += delta.wins;
+        existing.draws         += delta.draws;
+        existing.matchesPlayed += delta.matchesPlayed;
       } else {
-        totalDeltas.set(playerId, {
-          points:        delta.points        * factor,
-          goals:         delta.goals         * factor,
-          penaltyGoals:  delta.penaltyGoals  * factor,
-          assists:       delta.assists       * factor,
-          ownGoals:      delta.ownGoals      * factor,
-          yellowCards:   delta.yellowCards   * factor,
-          redCards:      delta.redCards      * factor,
-          cleanSheets:   delta.cleanSheets   * factor,
-          goalsConceded: delta.goalsConceded * factor,
-          wins:          delta.wins          * factor,
-          draws:         delta.draws         * factor,
-          matchesPlayed: delta.matchesPlayed * factor,
-        });
+        totalDeltas.set(playerId, { ...delta });
       }
     }
 
     for (const match of approvedMatches) {
       for (const [playerId, delta] of calculateMatchPoints(match, configMap)) {
-        mergeDelta(playerId, delta, 1);
-      }
-    }
-
-    for (const match of correctionMatches) {
-      for (const [playerId, delta] of calculateMatchPoints(match, configMap)) {
-        mergeDelta(playerId, delta, -1);
+        mergeDelta(playerId, delta);
       }
     }
 
@@ -140,7 +110,6 @@ export async function POST(req: Request) {
           wins: delta.wins, draws: delta.draws, matchesPlayed: delta.matchesPlayed,
         },
         update: {
-          // prevPoints is al correct gezet via de raw update hierboven
           prevGoals:       current?.goals       ?? 0,
           prevAssists:     current?.assists     ?? 0,
           prevCleanSheets: current?.cleanSheets ?? 0,
@@ -160,33 +129,27 @@ export async function POST(req: Request) {
       });
     }
 
-    // APPROVED → PROCESSED
-    if (approvedMatches.length > 0) {
-      await prisma.match.updateMany({
-        where: { id: { in: approvedMatches.map((m) => m.id) } },
-        data: { status: "PROCESSED", processedAt: new Date() },
-      });
-    }
+    // Wedstrijden op PROCESSED zetten
+    await prisma.match.updateMany({
+      where: { id: { in: approvedMatches.map((m) => m.id) } },
+      data: { status: "PROCESSED", processedAt: new Date() },
+    });
 
-    // CORRECTION → hard delete
-    for (const match of correctionMatches) {
-      await prisma.matchPerformance.deleteMany({ where: { matchId: match.id } });
-      await prisma.match.delete({ where: { id: match.id } });
-    }
+    // Moment als gepubliceerd markeren
+    await prisma.publishMoment.update({
+      where: { id: momentId },
+      data: { publishedAt: new Date() },
+    });
 
     await prisma.gameSettings.update({
       where: { id: "singleton" },
       data: { standingsUpdatedAt: new Date(), isProcessing: false },
     });
 
-    return NextResponse.json({
-      processed: approvedMatches.length,
-      reversed: correctionMatches.length,
-      playersUpdated: totalDeltas.size,
-    });
+    return NextResponse.json({ processed: approvedMatches.length, playersUpdated: totalDeltas.size });
   } catch (error) {
     await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
-    console.error("process-points error:", error);
+    console.error("publish-moment error:", error);
     return NextResponse.json({ error: "Er is een fout opgetreden" }, { status: 500 });
   }
 }

@@ -10,7 +10,7 @@ export type MatchWithPerformances = Match & {
 
 type ConfigMap = Record<string, PointsConfig>;
 
-function getPoints(configMap: ConfigMap, actionId: string, position: string): number {
+export function getPoints(configMap: ConfigMap, actionId: string, position: string): number {
   const cfg = configMap[actionId];
   if (!cfg) return 0;
   switch (position) {
@@ -22,7 +22,7 @@ function getPoints(configMap: ConfigMap, actionId: string, position: string): nu
   }
 }
 
-function isApplicable(configMap: ConfigMap, actionId: string, position: string): boolean {
+export function isApplicable(configMap: ConfigMap, actionId: string, position: string): boolean {
   const cfg = configMap[actionId];
   if (!cfg) return false;
   switch (position) {

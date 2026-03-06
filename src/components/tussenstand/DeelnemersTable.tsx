@@ -11,7 +11,7 @@ type Deelnemer = {
 };
 
 function Delta({ value }: { value: number }) {
-  if (value === 0) return <span className="text-slate-600 text-xs">–</span>;
+  if (!value || !isFinite(value)) return null;
   return (
     <span className={`text-xs font-semibold ${value > 0 ? "text-emerald-400" : "text-red-400"}`}>
       {value > 0 ? `+${value}` : value}

@@ -13,7 +13,7 @@ export async function PATCH(
 
   const { matchId } = await params;
   const body = await req.json();
-  const { status, name, matchDate, goalsScored, goalsConceded, homeAway } = body;
+  const { status, name, matchDate, goalsScored, goalsConceded, homeAway, publishMomentId } = body;
 
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) {
@@ -46,6 +46,7 @@ export async function PATCH(
       ...(goalsScored !== undefined && { goalsScored: Number(goalsScored) }),
       ...(goalsConceded !== undefined && { goalsConceded: Number(goalsConceded) }),
       ...(homeAway !== undefined && { homeAway }),
+      ...("publishMomentId" in body && { publishMomentId: publishMomentId ?? null }),
     },
   });
 
