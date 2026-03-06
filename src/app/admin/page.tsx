@@ -235,6 +235,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [roleForm, setRoleForm] = useState<{ role: string; managedTeam: string; isParticipant: boolean; name: string; email: string }>({ role: "USER", managedTeam: "ONE", isParticipant: true, name: "", email: "" });
   const [roleSaving, setRoleSaving] = useState(false);
   const [roleError, setRoleError] = useState("");
+  const [linkGenerating, setLinkGenerating] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
 
   // Points config
   const [pointsConfig, setPointsConfig] = useState<PointsConfig[]>([]);
@@ -548,7 +550,15 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
   function openRoleModal(user: User) {
     setRoleForm({ role: user.role, managedTeam: user.managedTeam ?? "ONE", isParticipant: user.isParticipant ?? true, name: user.name ?? "", email: user.email });
-    setRoleError(""); setRoleModal(user);
+    setRoleError(""); setGeneratedLink(null); setRoleModal(user);
+  }
+
+  async function generateLoginLink(userId: string) {
+    setLinkGenerating(true); setGeneratedLink(null);
+    const res = await fetch(`/api/admin/users/${userId}/login-link`, { method: "POST" });
+    const data = await res.json();
+    setLinkGenerating(false);
+    if (res.ok) setGeneratedLink(data.link);
   }
 
   function openEditMatch(m: AdminMatch) {
@@ -1435,6 +1445,38 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
               </label>
               {roleError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{roleError}</p>}
             </div>
+
+            {/* Aanmeldlink */}
+            <div className="mt-5 pt-5 border-t border-slate-800">
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Aanmeldlink</p>
+              <p className="text-xs text-slate-500 mb-3">Genereer een eenmalige link (24 uur geldig). Stuur via WhatsApp. Gebruiker wordt gedwongen een wachtwoord in te stellen.</p>
+              <button
+                onClick={() => generateLoginLink(roleModal!.id)}
+                disabled={linkGenerating}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 text-sm font-semibold rounded-lg transition-colors"
+              >
+                {linkGenerating ? "Genereren..." : "Aanmeldlink genereren"}
+              </button>
+              {generatedLink && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      readOnly
+                      value={generatedLink}
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-cyan-400 font-mono focus:outline-none"
+                    />
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(generatedLink); }}
+                      className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+                    >
+                      Kopieer
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">Link is 24 uur geldig en kan maar één keer gebruikt worden.</p>
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setRoleModal(null)} className={BTN_SECONDARY}>Annuleer</button>
               <button onClick={saveRole} disabled={roleSaving} className={BTN_PRIMARY}>{roleSaving ? "Opslaan..." : "Opslaan"}</button>

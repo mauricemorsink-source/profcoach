@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \":*)",
+      "Bash(gh run list --limit 3)",
+      "Bash(curl -X POST \"https://api.vercel.com/v1/integrations/deploy/prj_oHihMrjWbRF1LtdIuZta2w3vTRbc/QZ3eBqEQAD\")",
+      "Bash(curl -sX POST \"https://api.vercel.com/v1/integrations/deploy/prj_oHihMrjWbRF1LtdIuZta2w3vTRbc/QZ3eBqEQAD\")",
+      "Bash(npx vercel env ls)"
+    ]
+  }
+}

@@ -1,12 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls -la /c/Users/mauri/profcoach/.env*)",
-      "Bash(npm install bcryptjs jose)",
-      "Bash(npm install -D @types/bcryptjs)",
-      "Bash(npx prisma db push)",
-      "Bash(npx prisma generate)",
-      "Bash(npx tsx prisma/seed.ts)"
+      "Bash(git -C /c/Users/mauri/profcoach status)",
+      "Bash(git -C /c/Users/mauri/profcoach diff --stat)",
+      "Bash(git -C /c/Users/mauri/profcoach log --oneline -3)",
+      "Bash(npm run build)",
+      "Read(//c/Users/mauri/.claude/projects/c--Users-mauri-profcoach/memory/**)"
+    ],
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "C:\\Users\\mauri\\profcoach\\src\\app\\api\\admin\\matches\\[matchId]"
     ]
   }
 }
