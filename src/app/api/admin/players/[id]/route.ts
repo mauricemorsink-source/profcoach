@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 const validPositions = ["GK", "DEF", "MID", "ATT"];
 const validTeams = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
@@ -8,6 +9,11 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
   const { id } = await params;
   const body = await req.json();
   const { name, shortName, position, clubTeam, value } = body;
@@ -65,6 +71,11 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
   const { id } = await params;
   try {
     await prisma.player.update({

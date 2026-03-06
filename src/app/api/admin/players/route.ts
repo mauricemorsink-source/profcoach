@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 const validPositions = ["GK", "DEF", "MID", "ATT"];
 const validTeams = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
 
 export async function GET() {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
   const players = await prisma.player.findMany({
     where: { active: true },
     orderBy: [{ clubTeam: "asc" }, { position: "asc" }, { name: "asc" }],
@@ -13,6 +19,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
   const body = await req.json();
   const { name, shortName, position, clubTeam, value } = body;
 
@@ -62,6 +72,11 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { ids } = body as { ids: string[] };
 

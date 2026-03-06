@@ -30,7 +30,7 @@ export async function GET(
     formation: team.formation,
     captainSlot: team.captainSlot,
     captainEnabled: settings?.captainEnabled ?? false,
-    userName: team.user?.name ?? team.user?.email ?? "Anoniem",
+    userName: team.user?.name ?? "Anoniem",
     players: team.players.map((tp) => ({
       slotIndex: tp.slotIndex,
       player: tp.player,

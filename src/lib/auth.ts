@@ -4,8 +4,13 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
 const COOKIE_NAME = "profcoach_session";
+
+const authSecretValue = process.env.AUTH_SECRET ?? process.env.JWT_SECRET;
+if (!authSecretValue && process.env.NODE_ENV === "production") {
+  throw new Error("AUTH_SECRET environment variable is not set");
+}
 const SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "profcoach-fallback-secret"
+  authSecretValue ?? "profcoach-fallback-secret"
 );
 
 export type SessionPayload = {

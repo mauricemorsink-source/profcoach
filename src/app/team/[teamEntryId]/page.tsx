@@ -46,7 +46,7 @@ export default async function ShareTeamPage({
   }
 
   const totalValue = team.players.reduce((sum, tp) => sum + tp.player.value, 0);
-  const userName = team.user?.name ?? team.user?.email ?? "Anoniem";
+  const userName = team.user?.name ?? "Anoniem";
 
   return (
     <div

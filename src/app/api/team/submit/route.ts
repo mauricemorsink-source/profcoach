@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 const teamInclude = {
   formation: true,
@@ -17,6 +18,15 @@ export async function POST(req: Request) {
     include: teamInclude,
   });
   if (!team) return NextResponse.json({ error: "Team niet gevonden" }, { status: 404 });
+
+  // Eigenaarscontrole: als het team al aan een gebruiker is gekoppeld, moet die ingelogd zijn
+  if (team.userId !== null) {
+    const session = await getSession();
+    if (!session || session.userId !== team.userId) {
+      return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+    }
+  }
+
   if (team.locked) return NextResponse.json({ team, alreadyLocked: true });
 
   // Controleer deadline
