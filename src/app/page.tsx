@@ -58,13 +58,9 @@ export default async function HomePage() {
       />
 
       <div className="relative z-10 text-center mb-10">
-        <div className="flex justify-center mb-4">
-          <Image src="/file-removebg-preview.png" alt="ProfCoach" width={80} height={80} className="object-contain drop-shadow-[0_0_20px_rgba(34,211,238,0.4)]" />
+        <div className="flex justify-center mb-6">
+          <Image src="/file-removebg-preview.png" alt="ProfCoach" width={220} height={220} className="object-contain drop-shadow-[0_0_40px_rgba(34,211,238,0.6)]" />
         </div>
-        <h1 className="text-6xl font-black text-white tracking-tight mb-3"
-          style={{ textShadow: "0 0 40px rgba(34,211,238,0.4), 0 0 80px rgba(34,211,238,0.1)" }}>
-          ProfCoach
-        </h1>
         <p className="text-slate-400 text-lg">
           Stel jouw droomteam samen en strijd om de beste opstelling
         </p>
