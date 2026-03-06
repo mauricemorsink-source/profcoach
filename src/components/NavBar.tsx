@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getSession } from "@/lib/auth";
 import MobileMenu from "./MobileMenu";
 
@@ -10,8 +11,9 @@ export default async function NavBar() {
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
 
         {/* Logo */}
-        <Link href="/" className="font-black text-lg tracking-tight shrink-0 mr-1 text-white" style={{ textShadow: "0 0 20px rgba(34,211,238,0.5)" }}>
-          ProfCoach
+        <Link href="/" className="shrink-0 mr-1 flex items-center gap-2">
+          <Image src="/file-removebg-preview.png" alt="ProfCoach" width={32} height={32} className="object-contain" />
+          <span className="font-black text-lg tracking-tight text-white" style={{ textShadow: "0 0 20px rgba(34,211,238,0.5)" }}>ProfCoach</span>
         </Link>
 
         {/* Desktop: primaire navigatie */}

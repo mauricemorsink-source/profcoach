@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import CountdownTimer from "@/components/CountdownTimer";
@@ -57,6 +58,9 @@ export default async function HomePage() {
       />
 
       <div className="relative z-10 text-center mb-10">
+        <div className="flex justify-center mb-4">
+          <Image src="/file-removebg-preview.png" alt="ProfCoach" width={80} height={80} className="object-contain drop-shadow-[0_0_20px_rgba(34,211,238,0.4)]" />
+        </div>
         <h1 className="text-6xl font-black text-white tracking-tight mb-3"
           style={{ textShadow: "0 0 40px rgba(34,211,238,0.4), 0 0 80px rgba(34,211,238,0.1)" }}>
           ProfCoach
