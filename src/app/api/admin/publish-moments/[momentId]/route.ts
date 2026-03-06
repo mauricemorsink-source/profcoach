@@ -14,11 +14,8 @@ export async function DELETE(
   const { momentId } = await params;
   const moment = await prisma.publishMoment.findUnique({ where: { id: momentId } });
   if (!moment) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
-  if (moment.publishedAt) {
-    return NextResponse.json({ error: "Gepubliceerde momenten kunnen niet worden verwijderd" }, { status: 400 });
-  }
 
-  // Unassign all matches first
+  // Unassign all matches first (matches blijven PROCESSED, link wordt alleen verwijderd)
   await prisma.match.updateMany({
     where: { publishMomentId: momentId },
     data: { publishMomentId: null },
