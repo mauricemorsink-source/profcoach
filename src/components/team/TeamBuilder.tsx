@@ -390,7 +390,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
       {/* Player picker modal */}
       {showPickerModal && activeSlot && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col">
+          <div className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl min-h-[55dvh] max-h-[85dvh] flex flex-col">
             {/* Modal header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
               <div>
