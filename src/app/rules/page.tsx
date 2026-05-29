@@ -41,6 +41,9 @@ export default async function RulesPage() {
                 [&_hr]:border-slate-700 [&_hr]:my-6
                 [&_blockquote]:border-l-4 [&_blockquote]:border-cyan-500/40 [&_blockquote]:pl-4 [&_blockquote]:text-slate-400 [&_blockquote]:italic
                 [&_code]:bg-slate-800 [&_code]:text-cyan-300 [&_code]:px-1 [&_code]:rounded [&_code]:text-sm
+                [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_table]:border-collapse
+                [&_th]:border [&_th]:border-slate-700 [&_th]:px-3 [&_th]:py-2 [&_th]:text-white [&_th]:font-semibold [&_th]:bg-slate-800 [&_th]:whitespace-nowrap
+                [&_td]:border [&_td]:border-slate-700/60 [&_td]:px-3 [&_td]:py-2 [&_td]:text-slate-300
               "
               dangerouslySetInnerHTML={{ __html: rulesHtml }}
             />

@@ -21,7 +21,12 @@ export default function CountdownTimer({ deadline }: { deadline: string }) {
     return () => clearInterval(id);
   }, [deadline]);
 
-  if (!timeLeft) return null;
+  if (!timeLeft) return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 px-4 py-3 text-center">
+      <p className="text-xs font-medium uppercase tracking-wide text-amber-400">Transfermarkt gesloten</p>
+      <p className="text-slate-500 text-xs mt-1">Inschrijven is niet meer mogelijk.</p>
+    </div>
+  );
 
   const { days, hours, minutes, seconds } = timeLeft;
 

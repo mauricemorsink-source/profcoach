@@ -37,6 +37,8 @@ interface TeamBuilderProps {
   formations: Formation[];
   season: Season;
   budget: number;
+  readOnly?: boolean;
+  deadline?: Date | null;
 }
 
 const DRAFT_KEY = "profcoach_draft_id";
@@ -51,7 +53,7 @@ const POS_ORDER = ["GK", "DEF", "MID", "ATT"];
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
 const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700 disabled:opacity-50";
 
-export default function TeamBuilder({ formations, season, budget }: TeamBuilderProps) {
+export default function TeamBuilder({ formations, season, budget, readOnly = false, deadline }: TeamBuilderProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [teamEntryId, setTeamEntryId] = useState<string | null>(null);
   const [formationId, setFormationId] = useState<string>(formations[0]?.id ?? "");
@@ -66,6 +68,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
   const [captainEnabled, setCaptainEnabled] = useState(false);
   const [captainSlot, setCaptainSlot] = useState<number | null>(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -126,7 +129,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
   }
 
   function handleSlotClick(slotIndex: number) {
-    if (locked) return;
+    if (locked || readOnly) return;
     setSelectedSlot(slotIndex);
     setPlayerSearch("");
     setShowPickerModal(true);
@@ -157,29 +160,43 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
     setSelectedSlot(null);
   }
 
+  function showToast(message: string, type: "success" | "error") {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }
+
   async function handleSave() {
     if (!teamEntryId) return;
     setSaving(true);
-    await fetch("/api/team/save", {
+    const res = await fetch("/api/team/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ teamEntryId, formationId, slots: slotValues, captainSlot }),
     });
     setSaving(false);
+    if (!res.ok) showToast("Opslaan mislukt. Probeer het opnieuw.", "error");
+    return res.ok;
   }
 
   async function handleSubmit() {
     if (!teamEntryId || !validation.allValid) return;
     setSaving(true);
-    await handleSave();
+    const saved = await handleSave();
+    if (!saved) return;
     const res = await fetch("/api/team/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ teamEntryId }),
     });
+    if (!res.ok) {
+      showToast("Indienen mislukt. Probeer het opnieuw.", "error");
+      setSaving(false);
+      return;
+    }
     const data = await res.json();
     setLocked(data.team.locked);
     setSaving(false);
+    showToast("Team succesvol ingediend!", "success");
   }
 
   async function handleUnlock() {
@@ -252,7 +269,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
         <select
           value={formationId}
           onChange={(e) => handleFormationChange(e.target.value)}
-          disabled={locked}
+          disabled={locked || readOnly}
           className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
         >
           {formations.map((f) => (
@@ -279,8 +296,18 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
         </div>
       </div>
 
+      {/* Deadline verstreken banner */}
+      {readOnly && (
+        <div className="mb-5 bg-amber-900/20 border border-amber-500/30 rounded-2xl px-5 py-4">
+          <p className="text-amber-400 font-bold text-sm">Transfermarkt gesloten</p>
+          <p className="text-slate-400 text-xs mt-0.5">
+            De deadline was {deadline ? deadline.toLocaleString("nl-NL") : "verstreken"}. Je kunt je team alleen nog bekijken.
+          </p>
+        </div>
+      )}
+
       {/* Regels checklist */}
-      {!locked && (
+      {!locked && !readOnly && (
         <div className={`mb-5 rounded-2xl border p-4 transition-colors ${
           validation.allValid
             ? "bg-green-900/15 border-green-500/30"
@@ -309,13 +336,15 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
             <p className="text-green-400 font-bold text-sm">Team ingediend</p>
             <p className="text-slate-400 text-xs mt-0.5">Je team is opgeslagen. Je kunt het hieronder nog bekijken.</p>
           </div>
-          <button
-            onClick={handleUnlock}
-            disabled={unlocking}
-            className={BTN_SECONDARY + " shrink-0"}
-          >
-            {unlocking ? "Bezig..." : "Terugtrekken"}
-          </button>
+          {!readOnly && (
+            <button
+              onClick={handleUnlock}
+              disabled={unlocking}
+              className={BTN_SECONDARY + " shrink-0"}
+            >
+              {unlocking ? "Bezig..." : "Terugtrekken"}
+            </button>
+          )}
         </div>
       )}
 
@@ -331,7 +360,7 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
       />
 
       {/* Aanvoerder selectie */}
-      {captainEnabled && !locked && selectedPlayers.length > 0 && (
+      {captainEnabled && !locked && !readOnly && selectedPlayers.length > 0 && (
         <div className="mt-4 bg-slate-900 neon-border rounded-2xl p-4">
           <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Aanvoerder kiezen</p>
           <div className="flex flex-wrap gap-2">
@@ -362,35 +391,48 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
       )}
 
       {/* Knoppen */}
-      <div className="flex gap-3 mt-4 flex-wrap">
-        <button
-          onClick={handleSave}
-          disabled={locked || saving || !teamEntryId}
-          className={BTN_SECONDARY}
-        >
-          {saving ? "Bezig..." : "Opslaan"}
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={locked || saving || !validation.allValid}
-          className={BTN_PRIMARY}
-        >
-          {saving ? "Bezig..." : "Team indienen"}
-        </button>
-        {teamEntryId && (
+      {!readOnly && (
+        <div className="flex gap-3 mt-4 flex-wrap">
           <button
-            onClick={handleShareCopy}
-            className={BTN_SECONDARY + " ml-auto"}
+            onClick={handleSave}
+            disabled={locked || saving || !teamEntryId}
+            className={BTN_SECONDARY}
           >
-            {copyFeedback ? "Link gekopieerd!" : "Delen"}
+            {saving ? "Bezig..." : "Opslaan"}
           </button>
-        )}
-      </div>
+          <button
+            onClick={handleSubmit}
+            disabled={locked || saving || !validation.allValid}
+            className={BTN_PRIMARY}
+          >
+            {saving ? "Bezig..." : "Team indienen"}
+          </button>
+          {teamEntryId && (
+            <button
+              onClick={handleShareCopy}
+              className={BTN_SECONDARY + " ml-auto"}
+            >
+              {copyFeedback ? "Link gekopieerd!" : "Delen"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Toast melding */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-5 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all ${
+          toast.type === "success"
+            ? "bg-green-700 text-white border border-green-500/40"
+            : "bg-red-800 text-white border border-red-500/40"
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
       {/* Player picker modal */}
       {showPickerModal && activeSlot && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl min-h-[55dvh] max-h-[85dvh] flex flex-col">
+          <div className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85dvh] flex flex-col">
             {/* Modal header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
               <div>
@@ -431,6 +473,11 @@ export default function TeamBuilder({ formations, season, budget }: TeamBuilderP
 
             {/* Spelerslijst */}
             <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-1.5">
+              {playerSearch.trim() !== "" && (
+                <p className="text-xs text-slate-500 pb-1">
+                  {modalPlayers.length === 0 ? "Geen spelers gevonden" : `${modalPlayers.length} speler${modalPlayers.length !== 1 ? "s" : ""} gevonden`}
+                </p>
+              )}
               {modalPlayers.length === 0 ? (
                 <p className="text-slate-500 text-sm text-center py-8">Geen spelers gevonden.</p>
               ) : (

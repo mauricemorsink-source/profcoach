@@ -194,8 +194,8 @@ const LABEL = "block text-sm font-medium text-slate-400 mb-1";
 const SELECT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
 const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700";
-const BTN_DANGER = "px-3 py-1 text-xs bg-red-900/40 text-red-400 rounded hover:bg-red-900/60 font-medium border border-red-500/30 transition-colors";
-const BTN_SMALL = "px-3 py-1 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors";
+const BTN_DANGER = "px-3 py-1.5 text-xs bg-red-900/40 text-red-400 rounded hover:bg-red-900/60 font-medium border border-red-500/30 transition-colors";
+const BTN_SMALL = "px-3 py-1.5 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("instellingen");
@@ -207,6 +207,7 @@ export default function AdminPage() {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [form, setForm] = useState<PlayerForm>(emptyForm);
   const [formError, setFormError] = useState("");
+  const [formTouched, setFormTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -421,11 +422,11 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
   const editMatchReadOnly = !!editingMatch && (editingMatch.status === "PROCESSED" || editingMatch.status === "CORRECTION");
 
-  function openAdd() { setForm(emptyForm); setFormError(""); setEditingPlayer(null); setModal("add"); }
+  function openAdd() { setForm(emptyForm); setFormError(""); setFormTouched(false); setEditingPlayer(null); setModal("add"); }
 
   function openEdit(player: Player) {
     setForm({ name: player.name, shortName: player.shortName ?? "", position: player.position, clubTeam: player.clubTeam, value: player.value.toString() });
-    setFormError(""); setEditingPlayer(player); setModal("edit");
+    setFormError(""); setFormTouched(false); setEditingPlayer(player); setModal("edit");
   }
 
   async function savePlayer() {
@@ -573,6 +574,12 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     setEditMatchError(""); setEditingMatch(m);
   }
 
+  function closeEditMatch() {
+    const id = editingMatch?.id;
+    setEditingMatch(null);
+    if (id) setTimeout(() => document.getElementById(`match-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  }
+
   async function saveAll() {
     if (!editingMatch) return;
     setEditMatchSaving(true); setEditMatchError("");
@@ -617,9 +624,9 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   }
 
   return (
-    <div className="min-h-[calc(100vh-56px)] flex flex-col md:flex-row" style={{ background: "#060b14" }}>
-      {/* Mobile top bar + hamburger dropdown */}
-      <div className="md:hidden relative shrink-0 z-30">
+    <div className="min-h-[calc(100vh-56px)] flex flex-col lg:flex-row" style={{ background: "#060b14" }}>
+      {/* Mobile/tablet top bar + hamburger dropdown */}
+      <div className="lg:hidden relative shrink-0 z-30">
         <div className="flex items-center justify-between bg-slate-900 border-b border-slate-800 px-4 py-3">
           <span className="text-sm font-semibold text-white">{TAB_LABELS[activeTab]}</span>
           <button onClick={() => setMobileMenuOpen((v) => !v)}
@@ -647,7 +654,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
       </div>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-52 shrink-0 bg-slate-900 border-r border-slate-800 p-4 flex-col">
+      <aside className="hidden lg:flex w-52 shrink-0 bg-slate-900 border-r border-slate-800 p-4 flex-col">
         <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide px-2 mb-3">Admin</p>
         {TAB_SECTIONS.map((section, i) => (
           <div key={section.heading} className={i > 0 ? "mt-4" : ""}>
@@ -666,7 +673,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         ))}
       </aside>
 
-      <main className={`flex-1 p-4 md:p-6 overflow-y-auto ${activeTab === "wedstrijden" ? "" : "max-w-4xl"}`}>
+      <main className={`flex-1 p-4 lg:p-6 overflow-y-auto ${activeTab === "wedstrijden" ? "" : "max-w-4xl"}`}>
 
         {/* Tab: Spelinstellingen */}
         {activeTab === "instellingen" && (
@@ -802,7 +809,19 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
               {loadingPlayers ? (
                 <p className="text-slate-500 text-sm py-4">Laden...</p>
               ) : filteredPlayers.length === 0 ? (
-                <p className="text-slate-500 text-sm py-4">Geen spelers gevonden.</p>
+                <div className="py-6 text-center">
+                  {players.length === 0 ? (
+                    <>
+                      <p className="text-slate-500 text-sm mb-3">Nog geen spelers toegevoegd.</p>
+                      <button onClick={openAdd} className={BTN_PRIMARY}>+ Eerste speler toevoegen</button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-slate-500 text-sm mb-2">Geen spelers gevonden voor deze filters.</p>
+                      <button onClick={() => { setFilterName(""); setFilterTeam(""); setFilterPosition(""); }} className={BTN_SMALL}>Filters wissen</button>
+                    </>
+                  )}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -898,7 +917,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                     <span className="font-semibold">{waiting.length} wedstrijd{waiting.length !== 1 ? "en" : ""}</span> wacht{waiting.length === 1 ? "" : "en"} op verwerking
                     {urgent && <span className="ml-2 text-amber-400 font-medium">· oudste al {days} dagen geleden gespeeld</span>}
                   </span>
-                  <button onClick={selectAllApproved} className="px-3 py-1 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors">
+                  <button onClick={selectAllApproved} className="px-3 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors">
                     Selecteer alle ({waiting.length})
                   </button>
                 </div>
@@ -953,7 +972,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   {filteredMatches.map((m) => {
                     const isProcessable = m.status === "APPROVED" || m.status === "CORRECTION";
                     return (
-                      <div key={m.id} className={`bg-slate-800/50 rounded-xl p-3 border transition-colors ${isProcessable && processSelectedIds.has(m.id) ? "border-cyan-500/50 bg-cyan-500/5" : "border-slate-700"}`}>
+                      <div key={m.id} id={`match-${m.id}`} className={`bg-slate-800/50 rounded-xl p-3 border transition-colors ${isProcessable && processSelectedIds.has(m.id) ? "border-cyan-500/50 bg-cyan-500/5" : "border-slate-700"}`}>
                         <div className="flex items-start gap-2 mb-2">
                           {isProcessable
                             ? <input type="checkbox" checked={processSelectedIds.has(m.id)} onChange={() => toggleProcessSelect(m.id)} className="mt-0.5 accent-cyan-500 shrink-0" />
@@ -1033,7 +1052,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                       {filteredMatches.map((m) => {
                         const isProcessable = m.status === "APPROVED" || m.status === "CORRECTION";
                         return (
-                          <tr key={m.id} className={`border-b border-slate-800/60 ${isProcessable && processSelectedIds.has(m.id) ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}>
+                          <tr key={m.id} id={`match-${m.id}`} className={`border-b border-slate-800/60 ${isProcessable && processSelectedIds.has(m.id) ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}>
                             <td className="py-2">
                               {isProcessable && <input type="checkbox" checked={processSelectedIds.has(m.id)} onChange={() => toggleProcessSelect(m.id)} className="accent-cyan-500" />}
                             </td>
@@ -1098,7 +1117,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
               <div className="bg-slate-900 neon-border rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-base font-bold text-white">Publicatieplanning</h2>
-                  <button onClick={() => { setNewMomentForm({ label: "", scheduledAt: "" }); setNewMomentModal(true); }} className="px-2.5 py-1 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors">+ Nieuw</button>
+                  <button onClick={() => { setNewMomentForm({ label: "", scheduledAt: "" }); setNewMomentModal(true); }} className="px-2.5 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors">+ Nieuw</button>
                 </div>
                 {(() => {
                   const pending = publishMoments.filter(pm => !pm.publishedAt);
@@ -1183,7 +1202,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                                     onClick={() => deleteMoment(pm.id)}
                                     disabled={deletingMomentId === pm.id}
                                     title="Verwijderen"
-                                    className="px-2 py-1 text-xs bg-red-900/20 text-red-500 rounded hover:bg-red-900/40 transition-colors border border-red-500/20 shrink-0"
+                                    className="px-2 py-1.5 text-xs bg-red-900/20 text-red-500 rounded hover:bg-red-900/40 transition-colors border border-red-500/20 shrink-0"
                                   >
                                     {deletingMomentId === pm.id ? "..." : "✕"}
                                   </button>
@@ -1217,10 +1236,10 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-800">
                         <th className="pb-2 font-semibold">Actie</th>
-                        <th className="pb-2 font-semibold text-center w-16">GK</th>
-                        <th className="pb-2 font-semibold text-center w-16">DEF</th>
-                        <th className="pb-2 font-semibold text-center w-16">MID</th>
-                        <th className="pb-2 font-semibold text-center w-16">ATT</th>
+                        <th className="pb-2 font-semibold text-center w-12">GK</th>
+                        <th className="pb-2 font-semibold text-center w-12">DEF</th>
+                        <th className="pb-2 font-semibold text-center w-12">MID</th>
+                        <th className="pb-2 font-semibold text-center w-12">ATT</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1320,7 +1339,8 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
             <div className="space-y-4">
               <div>
                 <label className={LABEL}>Naam</label>
-                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={INPUT} placeholder="Voornaam Achternaam" />
+                <input type="text" value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setFormTouched(true); }} className={INPUT + (formTouched && !form.name.trim() ? " border-red-500/60" : "")} placeholder="Voornaam Achternaam" />
+                {formTouched && !form.name.trim() && <p className="text-xs text-red-400 mt-1">Naam is verplicht.</p>}
               </div>
               <div>
                 <label className={LABEL}>Weergavenaam op veld <span className="text-slate-600 font-normal">(optioneel)</span></label>
@@ -1343,13 +1363,14 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
               </div>
               <div>
                 <label className={LABEL}>Waarde</label>
-                <input type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className={INPUT} placeholder="bv. 120" min="1" />
+                <input type="number" value={form.value} onChange={(e) => { setForm({ ...form, value: e.target.value }); setFormTouched(true); }} className={INPUT + (formTouched && (form.value === "" || Number(form.value) <= 0) ? " border-red-500/60" : "")} placeholder="bv. 120" min="1" />
+                {formTouched && (form.value === "" || Number(form.value) <= 0) && <p className="text-xs text-red-400 mt-1">Vul een geldige waarde in (groter dan 0).</p>}
               </div>
               {formError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{formError}</p>}
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={() => setModal(null)} className={BTN_SECONDARY}>Annuleer</button>
-              <button onClick={savePlayer} disabled={saving} className={BTN_PRIMARY}>{saving ? "Opslaan..." : "Opslaan"}</button>
+              <button onClick={savePlayer} disabled={saving || !form.name.trim() || !form.value || Number(form.value) <= 0} className={BTN_PRIMARY}>{saving ? "Opslaan..." : "Opslaan"}</button>
             </div>
           </div>
         </div>
@@ -1500,7 +1521,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 <h3 className="text-lg font-bold text-white">{editMatchReadOnly ? "Prestaties bekijken" : "Wedstrijd bewerken"}</h3>
                 <p className="text-sm text-slate-500">{TEAM_LABEL[editingMatch.clubTeam] ?? editingMatch.clubTeam}</p>
               </div>
-              <button onClick={() => setEditingMatch(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
+              <button onClick={closeEditMatch} className="text-slate-500 hover:text-slate-300 text-xl leading-none transition-colors">×</button>
             </div>
 
             {/* Wedstrijd details: bewerkbaar of readonly */}
@@ -1555,7 +1576,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 <p className="text-slate-500 text-sm mb-4">Nog geen prestaties ingevoerd.</p>
               ) : (
                 <div className="overflow-x-auto -mx-6 px-6">
-                  <table className="w-full text-sm min-w-[520px]">
+                  <table className="w-full text-sm min-w-[420px]">
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-800">
                         <th className="pb-2 font-semibold">Speler</th>
@@ -1596,10 +1617,10 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
             {/* Footer */}
             <div className="flex justify-end gap-3 mt-6">
               {editMatchReadOnly ? (
-                <button onClick={() => setEditingMatch(null)} className={BTN_SECONDARY}>Sluiten</button>
+                <button onClick={closeEditMatch} className={BTN_SECONDARY}>Sluiten</button>
               ) : (
                 <>
-                  <button onClick={() => setEditingMatch(null)} className={BTN_SECONDARY}>Annuleer</button>
+                  <button onClick={closeEditMatch} className={BTN_SECONDARY}>Annuleer</button>
                   <button onClick={saveAll} disabled={editMatchSaving} className={BTN_PRIMARY}>{editMatchSaving ? "Opslaan..." : "Opslaan"}</button>
                 </>
               )}

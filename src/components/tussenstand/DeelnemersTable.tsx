@@ -47,10 +47,10 @@ export default function DeelnemersTable({ deelnemers }: { deelnemers: Deelnemer[
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 border-b border-slate-800 bg-slate-800/50">
-              <th className="px-4 py-3 font-semibold w-10">#</th>
-              <th className="px-4 py-3 font-semibold">Deelnemer</th>
-              <th className="px-4 py-3 font-semibold text-right">Punten</th>
-              <th className="px-4 py-3 font-semibold text-right">+/-</th>
+              <th className="px-2 sm:px-4 py-2.5 sm:py-3 font-semibold w-8 sm:w-10">#</th>
+              <th className="px-2 sm:px-4 py-2.5 sm:py-3 font-semibold">Deelnemer</th>
+              <th className="px-2 sm:px-4 py-2.5 sm:py-3 font-semibold text-right">Punten</th>
+              <th className="px-2 sm:px-4 py-2.5 sm:py-3 font-semibold text-right">+/-</th>
             </tr>
           </thead>
           <tbody>
@@ -62,10 +62,10 @@ export default function DeelnemersTable({ deelnemers }: { deelnemers: Deelnemer[
                   key={d.userId}
                   className={`border-b border-slate-800/60 ${rank === 1 && !query ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}
                 >
-                  <td className="px-4 py-3 text-slate-500 font-medium">{rank}</td>
-                  <td className="px-4 py-3 font-semibold text-white">{d.userName}</td>
-                  <td className="px-4 py-3 text-right font-bold text-cyan-400">{d.totalPoints}</td>
-                  <td className="px-4 py-3 text-right"><Delta value={d.delta} /></td>
+                  <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-slate-500 font-medium text-sm">{rank}</td>
+                  <td className="px-2 sm:px-4 py-2.5 sm:py-3 font-semibold text-white">{d.userName}</td>
+                  <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-right font-bold text-cyan-400">{d.totalPoints}</td>
+                  <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-right"><Delta value={d.delta} /></td>
                 </tr>
               );
             })}

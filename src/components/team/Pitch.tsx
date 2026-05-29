@@ -51,7 +51,7 @@ function SlotCard({
     <div
       onClick={locked ? undefined : onClick}
       className={`
-        relative rounded-xl border-2 text-center px-1.5 py-1.5 sm:px-2 sm:py-2 w-[62px] h-[86px] sm:w-[100px] sm:h-[112px] overflow-hidden transition-all select-none
+        relative rounded-xl border-2 text-center px-1.5 py-2 sm:px-2 sm:py-2 w-[68px] h-[92px] sm:w-[100px] sm:h-[112px] overflow-hidden transition-all select-none
         ${locked
           ? "cursor-default opacity-70 border-white/20 bg-black/30"
           : isActive
@@ -65,24 +65,24 @@ function SlotCard({
       `}
       style={isActive ? { boxShadow: "0 0 16px rgba(34,211,238,0.4)" } : mismatch ? { boxShadow: "0 0 10px rgba(239,68,68,0.35)" } : undefined}
     >
-      <div className="text-[8px] sm:text-[10px] font-bold text-white/50 mb-0.5 flex items-center justify-center gap-0.5">
+      <div className="text-[9px] sm:text-[10px] font-bold text-white/50 mb-0.5 flex items-center justify-center gap-0.5">
         {slot.label}
-        {isCaptain && <span className="text-[8px] sm:text-[9px] text-amber-400 font-black">C</span>}
+        {isCaptain && <span className="text-[9px] sm:text-[9px] text-amber-400 font-black">C</span>}
       </div>
       {player ? (
         <>
-          <div className="text-[9px] sm:text-[11px] font-bold text-white leading-tight">{nameLine1}</div>
+          <div className="text-[10px] sm:text-[11px] font-bold text-white leading-tight">{nameLine1}</div>
           {nameLine2 && (
-            <div className="text-[9px] sm:text-[11px] font-bold text-white leading-tight truncate">{nameLine2}</div>
+            <div className="text-[10px] sm:text-[11px] font-bold text-white leading-tight truncate">{nameLine2}</div>
           )}
-          <div className="text-[8px] sm:text-[10px] text-white/50 mt-0.5 truncate">{PITCH_CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</div>
-          <div className={`text-[9px] sm:text-[11px] font-bold mt-0.5 ${mismatch ? "text-red-400" : "text-cyan-400"}`}>€{player.value}</div>
+          <div className="text-[9px] sm:text-[10px] text-white/50 mt-0.5 truncate">{PITCH_CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</div>
+          <div className={`text-[10px] sm:text-[11px] font-bold mt-0.5 ${mismatch ? "text-red-400" : "text-cyan-400"}`}>€{player.value}</div>
           {mismatch && (
-            <div className="text-[7px] sm:text-[9px] text-red-400 font-semibold leading-none mt-0.5">verkeerde positie</div>
+            <div className="text-[8px] sm:text-[9px] text-red-400 font-semibold leading-none mt-0.5">verkeerde positie</div>
           )}
         </>
       ) : (
-        <div className="text-[8px] sm:text-[10px] text-white/30 italic mt-2">Kies speler</div>
+        <div className="text-[9px] sm:text-[10px] text-white/30 italic mt-2">Kies speler</div>
       )}
       {!locked && !player && (
         <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">

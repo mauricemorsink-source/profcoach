@@ -402,7 +402,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
 
   const INPUT = "w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50";
   const LABEL = "block text-xs font-medium text-slate-400 mb-1";
-  const NUM_INPUT = "w-14 bg-slate-800 border border-slate-600 text-white rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30 disabled:cursor-not-allowed";
+  const NUM_INPUT = "w-10 bg-slate-800 border border-slate-600 text-white rounded px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30 disabled:cursor-not-allowed";
 
   const TH = "px-3 py-3 font-medium sticky top-0 bg-slate-800 z-10";
   const perfTableHeader = (
@@ -716,8 +716,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   ) : (
                     <div>
                       <p className="text-slate-400 text-xs mb-4">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                      <div className="overflow-x-auto -mx-5 px-5">
+                        <table className="w-full text-sm min-w-[400px]">
                           <thead>
                             <tr className="text-left text-slate-500 border-b border-slate-700/50 text-xs">
                               <th className="py-2 font-medium">Speler</th>
