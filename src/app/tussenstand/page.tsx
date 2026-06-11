@@ -75,6 +75,7 @@ export default async function TussenstandPage({
             }
           }
         }
+        totalPoints += te.bonusPoints ?? 0;
         return { userId: te.user!.id, userName: te.user!.name ?? "Anoniem", totalPoints, prevPoints, delta: isFinite(totalPoints - prevPoints) ? totalPoints - prevPoints : 0 };
       })
       .sort((a, b) => b.totalPoints - a.totalPoints);

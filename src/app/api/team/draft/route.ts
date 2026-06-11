@@ -8,6 +8,7 @@ const teamInclude = {
     include: { player: true },
     orderBy: { slotIndex: "asc" as const },
   },
+  prediction: true,
 };
 
 export async function POST(req: Request) {

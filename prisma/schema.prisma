@@ -101,6 +101,8 @@ model Player {
   teamEntryPlayers TeamEntryPlayer[]
   performances     MatchPerformance[]
   seasonStats      PlayerSeasonStats[]
+  predTopScorer    TeamPrediction[]    @relation("PredTopScorer")
+  predAssistKoning TeamPrediction[]    @relation("PredAssistKoning")
 }
 
 model TeamEntry {
@@ -110,11 +112,13 @@ model TeamEntry {
   userId       String?
   locked       Boolean           @default(false)
   captainSlot  Int?
+  bonusPoints  Int               @default(0)
   createdAt    DateTime          @default(now())
   season      Season            @relation(fields: [seasonId], references: [id])
   formation   Formation         @relation(fields: [formationId], references: [id])
   user        User?             @relation(fields: [userId], references: [id])
   players     TeamEntryPlayer[]
+  prediction  TeamPrediction?
 }
 
 model TeamEntryPlayer {
@@ -183,6 +187,18 @@ model MatchPerformance {
   player       Player  @relation(fields: [playerId], references: [id])
 
   @@unique([matchId, playerId])
+}
+
+model TeamPrediction {
+  id               String    @id @default(cuid())
+  teamEntryId      String    @unique
+  topScorerId      String?
+  assistKoningId   String?
+  totalYellowCards Int?
+  createdAt        DateTime  @default(now())
+  teamEntry        TeamEntry @relation(fields: [teamEntryId], references: [id], onDelete: Cascade)
+  topScorer        Player?   @relation("PredTopScorer", fields: [topScorerId], references: [id])
+  assistKoning     Player?   @relation("PredAssistKoning", fields: [assistKoningId], references: [id])
 }
 
 model PlayerSeasonStats {

@@ -69,6 +69,14 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
   const [captainSlot, setCaptainSlot] = useState<number | null>(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showPredictionModal, setShowPredictionModal] = useState(false);
+  const [hasPrediction, setHasPrediction] = useState(false);
+  const [predTopScorerId, setPredTopScorerId] = useState<string | null>(null);
+  const [predAssistKoningId, setPredAssistKoningId] = useState<string | null>(null);
+  const [predYellowCards, setPredYellowCards] = useState<string>("");
+  const [predSearch, setPredSearch] = useState("");
+  const [predActiveField, setPredActiveField] = useState<"topscorer" | "assistkoning" | null>(null);
+  const [predSaving, setPredSaving] = useState(false);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -105,6 +113,7 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
       setLocked(team.locked);
       setCaptainEnabled(draftData.captainEnabled ?? false);
       setCaptainSlot(team.captainSlot ?? null);
+      setHasPrediction(!!team.prediction);
       localStorage.setItem(DRAFT_KEY, team.id);
 
       const restored = Array(11).fill(null);
@@ -196,7 +205,7 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
     const data = await res.json();
     setLocked(data.team.locked);
     setSaving(false);
-    showToast("Team succesvol ingediend!", "success");
+    setShowPredictionModal(true);
   }
 
   async function handleUnlock() {
@@ -211,6 +220,30 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
       setLocked(false);
     }
     setUnlocking(false);
+  }
+
+  async function handleSavePrediction() {
+    if (!teamEntryId) return;
+    setPredSaving(true);
+    const res = await fetch("/api/team/predictions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        teamEntryId,
+        topScorerId: predTopScorerId || null,
+        assistKoningId: predAssistKoningId || null,
+        totalYellowCards: predYellowCards !== "" ? Number(predYellowCards) : null,
+      }),
+    });
+    setPredSaving(false);
+    if (!res.ok) {
+      const d = await res.json();
+      showToast(d.error || "Opslaan mislukt", "error");
+      return;
+    }
+    setHasPrediction(true);
+    setShowPredictionModal(false);
+    showToast("Team en voorspellingen succesvol ingediend!", "success");
   }
 
   async function handleShareCopy() {
@@ -426,6 +459,92 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
             : "bg-red-800 text-white border border-red-500/40"
         }`}>
           {toast.message}
+        </div>
+      )}
+
+      {/* Voorspellingen modal */}
+      {showPredictionModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85dvh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 shrink-0">
+              <div>
+                <p className="text-xs text-slate-500 uppercase tracking-wide">Bonusvraag</p>
+                <h3 className="font-bold text-white">Jouw voorspellingen</h3>
+              </div>
+              <button onClick={() => { setShowPredictionModal(false); showToast("Team ingediend! Voorspellingen overgeslagen.", "success"); }} className="text-slate-500 hover:text-white text-xl leading-none w-8 h-8 flex items-center justify-center transition-colors">×</button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+              <p className="text-slate-400 text-sm">Vul jouw voorspellingen in voor bonuspunten aan het einde van het seizoen. Dit is definitief.</p>
+
+              {/* Topscorer */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Topscorer</label>
+                {predActiveField === "topscorer" ? (
+                  <div className="space-y-1.5">
+                    <input autoFocus type="text" placeholder="Zoek speler..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
+                    <div className="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-slate-800 bg-slate-800/50">
+                      {players.filter(p => !predSearch.trim() || p.name.toLowerCase().includes(predSearch.toLowerCase()) || CLUB_LABEL[p.clubTeam]?.toLowerCase().includes(predSearch.toLowerCase())).slice(0, 30).map(p => (
+                        <button key={p.id} onClick={() => { setPredTopScorerId(p.id); setPredActiveField(null); setPredSearch(""); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors flex items-center justify-between ${predTopScorerId === p.id ? "text-cyan-400" : "text-white"}`}>
+                          <span>{p.name}</span>
+                          <span className="text-slate-500 text-xs">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => { setPredActiveField(null); setPredSearch(""); }} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Annuleer</button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setPredActiveField("topscorer"); setPredSearch(""); }}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${predTopScorerId ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}>
+                    {predTopScorerId ? (players.find(p => p.id === predTopScorerId)?.name ?? "Gekozen") : "Kies een speler..."}
+                  </button>
+                )}
+              </div>
+
+              {/* Assistkoning */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Assistkoning</label>
+                {predActiveField === "assistkoning" ? (
+                  <div className="space-y-1.5">
+                    <input autoFocus type="text" placeholder="Zoek speler..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
+                    <div className="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-slate-800 bg-slate-800/50">
+                      {players.filter(p => !predSearch.trim() || p.name.toLowerCase().includes(predSearch.toLowerCase()) || CLUB_LABEL[p.clubTeam]?.toLowerCase().includes(predSearch.toLowerCase())).slice(0, 30).map(p => (
+                        <button key={p.id} onClick={() => { setPredAssistKoningId(p.id); setPredActiveField(null); setPredSearch(""); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors flex items-center justify-between ${predAssistKoningId === p.id ? "text-cyan-400" : "text-white"}`}>
+                          <span>{p.name}</span>
+                          <span className="text-slate-500 text-xs">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => { setPredActiveField(null); setPredSearch(""); }} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Annuleer</button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setPredActiveField("assistkoning"); setPredSearch(""); }}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${predAssistKoningId ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}>
+                    {predAssistKoningId ? (players.find(p => p.id === predAssistKoningId)?.name ?? "Gekozen") : "Kies een speler..."}
+                  </button>
+                )}
+              </div>
+
+              {/* Gele kaarten */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Totaal gele kaarten (heel seizoen)</label>
+                <input type="number" min="0" value={predYellowCards} onChange={(e) => setPredYellowCards(e.target.value)}
+                  placeholder="bv. 47"
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
+              </div>
+            </div>
+
+            <div className="px-5 pb-5 pt-3 shrink-0 border-t border-slate-800 flex gap-3">
+              <button onClick={() => { setShowPredictionModal(false); showToast("Team ingediend!", "success"); }} className={BTN_SECONDARY}>Overslaan</button>
+              <button onClick={handleSavePrediction} disabled={predSaving || (!predTopScorerId && !predAssistKoningId && predYellowCards === "")} className={BTN_PRIMARY + " flex-1"}>
+                {predSaving ? "Opslaan..." : "Voorspellingen indienen"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

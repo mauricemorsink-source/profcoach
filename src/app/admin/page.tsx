@@ -41,11 +41,19 @@ type TeamPlayer = {
   player: { name: string; position: string; clubTeam: string };
 };
 
+type TeamPrediction = {
+  topScorer: { id: string; name: string } | null;
+  assistKoning: { id: string; name: string } | null;
+  totalYellowCards: number | null;
+};
+
 type TeamEntry = {
   id: string;
   locked: boolean;
+  bonusPoints: number;
   formation: { code: string } | null;
   players: TeamPlayer[];
+  prediction: TeamPrediction | null;
 };
 
 type User = {
@@ -238,6 +246,9 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [roleError, setRoleError] = useState("");
   const [linkGenerating, setLinkGenerating] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [bonusInput, setBonusInput] = useState<string>("0");
+  const [bonusSaving, setBonusSaving] = useState(false);
+  const [bonusMsg, setBonusMsg] = useState<string | null>(null);
 
   // Points config
   const [pointsConfig, setPointsConfig] = useState<PointsConfig[]>([]);
@@ -551,7 +562,23 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
   function openRoleModal(user: User) {
     setRoleForm({ role: user.role, managedTeam: user.managedTeam ?? "ONE", isParticipant: user.isParticipant ?? true, name: user.name ?? "", email: user.email });
+    setBonusInput(String(user.teamEntries[0]?.bonusPoints ?? 0));
+    setBonusMsg(null);
     setRoleError(""); setGeneratedLink(null); setRoleModal(user);
+  }
+
+  async function saveBonus() {
+    if (!roleModal || !roleModal.teamEntries[0]) return;
+    setBonusSaving(true); setBonusMsg(null);
+    const res = await fetch(`/api/admin/team-entries/${roleModal.teamEntries[0].id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bonusPoints: Number(bonusInput) || 0 }),
+    });
+    setBonusSaving(false);
+    if (!res.ok) { setBonusMsg("Opslaan mislukt"); return; }
+    setBonusMsg("Opgeslagen");
+    await loadUsers();
   }
 
   async function generateLoginLink(userId: string) {
@@ -1425,6 +1452,45 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                 );
               })()}
             </div>
+            {/* Voorspellingen + bonuspunten */}
+            {roleModal.teamEntries.length > 0 && (() => {
+              const entry = roleModal.teamEntries[0];
+              const pred = entry.prediction;
+              return (
+                <div className="mb-5 pb-5 border-b border-slate-800">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Voorspellingen</p>
+                  {pred ? (
+                    <div className="space-y-1.5 mb-4">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Topscorer</span>
+                        <span className="text-white font-medium">{pred.topScorer?.name ?? <span className="text-slate-600 italic">Niet ingevuld</span>}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Assistkoning</span>
+                        <span className="text-white font-medium">{pred.assistKoning?.name ?? <span className="text-slate-600 italic">Niet ingevuld</span>}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-slate-500">Gele kaarten</span>
+                        <span className="text-white font-medium">{pred.totalYellowCards ?? <span className="text-slate-600 italic">Niet ingevuld</span>}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-600 text-sm mb-4 italic">Nog geen voorspellingen ingediend.</p>
+                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Bonuspunten</label>
+                    <div className="flex gap-2 items-center">
+                      <input type="number" value={bonusInput} onChange={(e) => { setBonusInput(e.target.value); setBonusMsg(null); }} min="0"
+                        className="w-24 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
+                      <button onClick={saveBonus} disabled={bonusSaving} className={BTN_PRIMARY}>{bonusSaving ? "..." : "Opslaan"}</button>
+                      {bonusMsg && <span className={`text-xs ${bonusMsg === "Opgeslagen" ? "text-green-400" : "text-red-400"}`}>{bonusMsg}</span>}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1">Niet zichtbaar voor deelnemers. Telt mee in de tussenstand.</p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Edit form */}
             <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Instellingen</p>
             <div className="space-y-3">

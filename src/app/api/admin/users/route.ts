@@ -28,6 +28,13 @@ export async function GET() {
             include: { player: true },
             orderBy: { slotIndex: "asc" },
           },
+          prediction: {
+            select: {
+              totalYellowCards: true,
+              topScorer: { select: { id: true, name: true } },
+              assistKoning: { select: { id: true, name: true } },
+            },
+          },
         },
         take: 1,
       },
