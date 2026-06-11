@@ -122,6 +122,12 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
       }
       setSlotValues(restored);
       setLoading(false);
+
+      // Als team al ingediend is maar nog geen voorspelling ingevuld: modal direct tonen
+      // (niet in readOnly mode want dan is de deadline verstreken)
+      if (team.locked && !team.prediction && !readOnly) {
+        setShowPredictionModal(true);
+      }
     }
     init();
   }, []);
@@ -364,20 +370,32 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
 
       {/* Team ingediend banner */}
       {locked && (
-        <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+        <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <p className="text-green-400 font-bold text-sm">Team ingediend</p>
-            <p className="text-slate-400 text-xs mt-0.5">Je team is opgeslagen. Je kunt het hieronder nog bekijken.</p>
+            <p className="text-slate-400 text-xs mt-0.5">
+              {hasPrediction ? "Voorspellingen ingediend." : "Vul hieronder ook je bonusvoorspellingen in."}
+            </p>
           </div>
-          {!readOnly && (
-            <button
-              onClick={handleUnlock}
-              disabled={unlocking}
-              className={BTN_SECONDARY + " shrink-0"}
-            >
-              {unlocking ? "Bezig..." : "Terugtrekken"}
-            </button>
-          )}
+          <div className="flex gap-2 shrink-0 flex-wrap">
+            {!hasPrediction && !readOnly && (
+              <button
+                onClick={() => setShowPredictionModal(true)}
+                className={BTN_PRIMARY + " shrink-0"}
+              >
+                Voorspellingen invullen
+              </button>
+            )}
+            {!readOnly && (
+              <button
+                onClick={handleUnlock}
+                disabled={unlocking}
+                className={BTN_SECONDARY + " shrink-0"}
+              >
+                {unlocking ? "Bezig..." : "Terugtrekken"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
