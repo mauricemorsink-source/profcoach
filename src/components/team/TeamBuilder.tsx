@@ -43,6 +43,7 @@ interface TeamBuilderProps {
 }
 
 const DRAFT_KEY = "profcoach_draft_id";
+const predKey = (id: string, field: string) => `profcoach_pred_${id}_${field}`;
 
 const POSITION_LABEL: Record<string, string> = {
   GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
@@ -134,10 +135,31 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
         restored[tp.slotIndex] = tp.playerId;
       }
       setSlotValues(restored);
+
+      // Herstel lokaal opgeslagen voorspellingen (als nog niet ingediend)
+      if (!team.prediction) {
+        const id = team.id;
+        const ts = localStorage.getItem(predKey(id, "topscorer"));
+        const ak = localStorage.getItem(predKey(id, "assistkoning"));
+        const yc = localStorage.getItem(predKey(id, "yellowcards"));
+        const tg = localStorage.getItem(predKey(id, "totalgoals"));
+        if (ts) setPredTopScorerId(ts);
+        if (ak) setPredAssistKoningId(ak);
+        if (yc) setPredYellowCards(yc);
+        if (tg) setPredTotalGoals(tg);
+      }
+
+      // Herstel laatste stap (niet als al ingediend)
+      if (!team.locked && !readOnly) {
+        const savedStep = localStorage.getItem(predKey(team.id, "step"));
+        if (savedStep === "2" || savedStep === "3" || savedStep === "4") {
+          setStep(Number(savedStep) as 2 | 3 | 4);
+        }
+      }
+
       setLoading(false);
 
       // Als team al ingediend is maar nog geen voorspelling ingevuld: modal direct tonen
-      // (niet in readOnly mode want dan is de deadline verstreken)
       if (team.locked && !team.prediction && !readOnly) {
         setShowPredictionModal(true);
       }
@@ -206,6 +228,36 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
     return res.ok;
   }
 
+  // Sla voorspellingen + stap lokaal op bij elke wijziging
+  useEffect(() => {
+    if (!teamEntryId || hasPrediction) return;
+    if (predTopScorerId) localStorage.setItem(predKey(teamEntryId, "topscorer"), predTopScorerId);
+    else localStorage.removeItem(predKey(teamEntryId, "topscorer"));
+  }, [predTopScorerId, teamEntryId, hasPrediction]);
+
+  useEffect(() => {
+    if (!teamEntryId || hasPrediction) return;
+    if (predAssistKoningId) localStorage.setItem(predKey(teamEntryId, "assistkoning"), predAssistKoningId);
+    else localStorage.removeItem(predKey(teamEntryId, "assistkoning"));
+  }, [predAssistKoningId, teamEntryId, hasPrediction]);
+
+  useEffect(() => {
+    if (!teamEntryId || hasPrediction) return;
+    if (predYellowCards !== "") localStorage.setItem(predKey(teamEntryId, "yellowcards"), predYellowCards);
+    else localStorage.removeItem(predKey(teamEntryId, "yellowcards"));
+  }, [predYellowCards, teamEntryId, hasPrediction]);
+
+  useEffect(() => {
+    if (!teamEntryId || hasPrediction) return;
+    if (predTotalGoals !== "") localStorage.setItem(predKey(teamEntryId, "totalgoals"), predTotalGoals);
+    else localStorage.removeItem(predKey(teamEntryId, "totalgoals"));
+  }, [predTotalGoals, teamEntryId, hasPrediction]);
+
+  useEffect(() => {
+    if (!teamEntryId || locked) return;
+    localStorage.setItem(predKey(teamEntryId, "step"), String(step));
+  }, [step, teamEntryId, locked]);
+
   function goNext() {
     if (step === 1) setStep(captainEnabled ? 2 : 3);
     else if (step === 2) setStep(3);
@@ -252,6 +304,13 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
       if (predRes.ok) setHasPrediction(true);
     }
 
+    // Lokale opslag opruimen na definitief indienen
+    if (teamEntryId) {
+      ["topscorer", "assistkoning", "yellowcards", "totalgoals", "step"].forEach(k =>
+        localStorage.removeItem(predKey(teamEntryId, k))
+      );
+    }
+
     setSaving(false);
     showToast("Team succesvol ingediend!", "success");
   }
@@ -266,6 +325,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
     });
     if (res.ok) {
       setLocked(false);
+      setStep(1);
     }
     setUnlocking(false);
   }
