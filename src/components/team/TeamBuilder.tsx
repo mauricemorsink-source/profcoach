@@ -91,14 +91,14 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   );
 
   const validation = useMemo(
-    () => validateTeam(slotValues, playersById, formation, budget, captainEnabled, captainSlot),
-    [slotValues, playersById, formation, budget, captainEnabled, captainSlot]
+    () => validateTeam(slotValues, playersById, formation, budget, captainEnabled, captainSlot, slots),
+    [slotValues, playersById, formation, budget, captainEnabled, captainSlot, slots]
   );
 
   // Team geldig zonder captain-check (voor stap 1 → 2 navigatie)
   const teamValid = useMemo(
-    () => validateTeam(slotValues, playersById, formation, budget, false, null).allValid,
-    [slotValues, playersById, formation, budget]
+    () => validateTeam(slotValues, playersById, formation, budget, false, null, slots).allValid,
+    [slotValues, playersById, formation, budget, slots]
   );
 
   useEffect(() => {
@@ -444,7 +444,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
           {!locked && !readOnly && step === 1 && (
             <div className={`mb-5 rounded-2xl border p-4 transition-colors ${teamValid ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/20"}`}>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
-                {validateTeam(slotValues, playersById, formation, budget, false, null).rules.map((rule) => (
+                {validateTeam(slotValues, playersById, formation, budget, false, null, slots).rules.map((rule) => (
                   <div key={rule.key} className="flex items-center gap-1.5 text-xs">
                     <span className={rule.met ? "text-green-400" : "text-red-400"}>{rule.met ? "✓" : "✗"}</span>
                     <span className="text-slate-400 truncate">{rule.label}:</span>
@@ -474,32 +474,36 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
       {/* ── STAP 2: Aanvoerder kiezen ── */}
       {!locked && !readOnly && step === 2 && captainEnabled && (
         <>
-          {/* Mini pitch read-only */}
-          <Pitch slots={slots} selectedSlot={null} playersById={playersById} slotValues={slotValues}
-            onSlotClick={() => {}} locked captainSlot={captainSlot} />
-
-          <div className="mt-4 bg-slate-900 neon-border rounded-2xl p-5">
+          <div className="bg-slate-900 neon-border rounded-2xl p-5">
             <p className="text-base font-bold text-white mb-1">Kies je aanvoerder</p>
-            <p className="text-slate-400 text-sm mb-4">
+            <p className="text-slate-400 text-sm mb-5">
               Kies je aanvoerder van jouw team en maak kans op extra punten gedurende het seizoen: jouw aanvoerder ontvangt dit seizoen voor iedere overwinning <span className="text-amber-400 font-bold">{captainBonusPerWin} extra punten</span>!
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-2">
               {selectedPlayers.map(({ slot, playerId }) => {
                 const player = playersById[playerId];
                 if (!player) return null;
                 const isCaptain = captainSlot === slot.slotIndex;
                 return (
                   <button key={playerId} onClick={() => setCaptainSlot(isCaptain ? null : slot.slotIndex)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-colors ${
-                      isCaptain ? "bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold" : "bg-slate-800 border-slate-700 text-slate-300 hover:border-amber-500/40 hover:text-amber-400"
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-colors ${
+                      isCaptain
+                        ? "bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold"
+                        : "bg-slate-800 border-slate-700 text-slate-300 hover:border-amber-500/40 hover:text-amber-400"
                     }`}>
-                    {isCaptain && <span className="text-xs font-black">C</span>}
-                    <span>{player.shortName ?? player.name}</span>
+                    <div className="flex items-center gap-3">
+                      {isCaptain
+                        ? <span className="w-6 h-6 rounded-full bg-amber-500/30 flex items-center justify-center text-xs font-black text-amber-400">C</span>
+                        : <span className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-500">C</span>
+                      }
+                      <span>{player.name}</span>
+                    </div>
+                    <span className="text-xs text-slate-500">{POSITION_LABEL[player.position] ?? player.position}</span>
                   </button>
                 );
               })}
             </div>
-            {captainSlot === null && <p className="text-xs text-amber-400/70 mt-3">Nog geen aanvoerder gekozen</p>}
+            {captainSlot === null && <p className="text-xs text-amber-400/70 mt-3">Nog geen aanvoerder gekozen — kies een speler hierboven</p>}
           </div>
 
           <div className="flex gap-3 mt-4">

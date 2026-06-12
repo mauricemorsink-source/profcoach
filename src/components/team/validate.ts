@@ -32,7 +32,8 @@ export function validateTeam(
   formation: Formation,
   budget = 1750,
   captainEnabled = false,
-  captainSlot: number | null = null
+  captainSlot: number | null = null,
+  slotDefs?: { slotIndex: number; position: string }[]
 ): ValidationResult {
   const errors: string[] = [];
   const countsByPos: Record<string, number> = {};
@@ -85,6 +86,21 @@ export function validateTeam(
       };
     }),
   ];
+
+  // Positie-mismatch check
+  if (slotDefs) {
+    let mismatchCount = 0;
+    for (const slotDef of slotDefs) {
+      const playerId = slots[slotDef.slotIndex];
+      if (!playerId) continue;
+      const player = playersById[playerId];
+      if (player && player.position !== slotDef.position) mismatchCount++;
+    }
+    if (mismatchCount > 0) {
+      errors.push(`${mismatchCount} speler${mismatchCount > 1 ? "s staan" : " staat"} op de verkeerde positie`);
+      rules.push({ key: "positions", label: "Posities kloppen", display: `${mismatchCount} fout`, met: false });
+    }
+  }
 
   // Aanvoerder regel
   if (captainEnabled) {
