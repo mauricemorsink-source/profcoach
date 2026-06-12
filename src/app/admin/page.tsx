@@ -188,6 +188,12 @@ const TAB_SECTIONS = [
     ],
   },
   {
+    heading: "Bonus",
+    tabs: [
+      { id: "bonusvragen", label: "Bonusvragen" },
+    ],
+  },
+  {
     heading: "Accounts",
     tabs: [
       { id: "gebruikers", label: "Gebruikers" },
@@ -195,7 +201,7 @@ const TAB_SECTIONS = [
   },
 ] as const;
 
-type Tab = "instellingen" | "puntensysteem" | "wedstrijden" | "spelers" | "gebruikers";
+type Tab = "instellingen" | "puntensysteem" | "wedstrijden" | "spelers" | "gebruikers" | "bonusvragen";
 
 const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
 const LABEL = "block text-sm font-medium text-slate-400 mb-1";
@@ -249,6 +255,28 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [bonusInput, setBonusInput] = useState<string>("0");
   const [bonusSaving, setBonusSaving] = useState(false);
   const [bonusMsg, setBonusMsg] = useState<string | null>(null);
+
+  // Bonusvragen config
+  type PredConfig = {
+    topScorerId: string | null; topScorer: { id: string; name: string } | null;
+    assistKoningId: string | null; assistKoning: { id: string; name: string } | null;
+    yellowCardsMin: number | null; yellowCardsMax: number | null;
+    topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number;
+    showPointsToParticipants: boolean; processed: boolean; processedAt: string | null;
+  };
+  const [predConfig, setPredConfig] = useState<PredConfig | null>(null);
+  const [loadingPredConfig, setLoadingPredConfig] = useState(false);
+  const [predConfigSaving, setPredConfigSaving] = useState(false);
+  const [predConfigMsg, setPredConfigMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [predProcessing, setPredProcessing] = useState(false);
+  const [predConfigForm, setPredConfigForm] = useState({
+    topScorerId: "", assistKoningId: "",
+    yellowCardsMin: "", yellowCardsMax: "",
+    topScorerPoints: "5", assistKoningPoints: "5", yellowCardsPoints: "5",
+    showPointsToParticipants: false,
+  });
+  const [predPlayerSearch, setPredPlayerSearch] = useState("");
+  const [predActiveField, setPredActiveField] = useState<"topscorer" | "assistkoning" | null>(null);
 
   // Points config
   const [pointsConfig, setPointsConfig] = useState<PointsConfig[]>([]);
@@ -325,6 +353,69 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     const res = await fetch("/api/admin/points-config");
     if (res.ok) setPointsConfig(await res.json());
     setLoadingPoints(false);
+  }
+
+  async function loadPredConfig() {
+    setLoadingPredConfig(true);
+    const res = await fetch("/api/admin/prediction-config");
+    if (res.ok) {
+      const data = await res.json();
+      setPredConfig(data);
+      setPredConfigForm({
+        topScorerId: data.topScorerId ?? "",
+        assistKoningId: data.assistKoningId ?? "",
+        yellowCardsMin: data.yellowCardsMin != null ? String(data.yellowCardsMin) : "",
+        yellowCardsMax: data.yellowCardsMax != null ? String(data.yellowCardsMax) : "",
+        topScorerPoints: String(data.topScorerPoints ?? 5),
+        assistKoningPoints: String(data.assistKoningPoints ?? 5),
+        yellowCardsPoints: String(data.yellowCardsPoints ?? 5),
+        showPointsToParticipants: data.showPointsToParticipants ?? false,
+      });
+    }
+    setLoadingPredConfig(false);
+  }
+
+  async function savePredConfig() {
+    setPredConfigSaving(true); setPredConfigMsg(null);
+    const res = await fetch("/api/admin/prediction-config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topScorerId: predConfigForm.topScorerId || null,
+        assistKoningId: predConfigForm.assistKoningId || null,
+        yellowCardsMin: predConfigForm.yellowCardsMin !== "" ? Number(predConfigForm.yellowCardsMin) : null,
+        yellowCardsMax: predConfigForm.yellowCardsMax !== "" ? Number(predConfigForm.yellowCardsMax) : null,
+        topScorerPoints: Number(predConfigForm.topScorerPoints) || 5,
+        assistKoningPoints: Number(predConfigForm.assistKoningPoints) || 5,
+        yellowCardsPoints: Number(predConfigForm.yellowCardsPoints) || 5,
+        showPointsToParticipants: predConfigForm.showPointsToParticipants,
+      }),
+    });
+    const data = await res.json();
+    setPredConfigSaving(false);
+    if (!res.ok) { setPredConfigMsg({ type: "err", text: data.error || "Opslaan mislukt" }); return; }
+    setPredConfig(data);
+    setPredConfigMsg({ type: "ok", text: "Opgeslagen" });
+  }
+
+  async function processBonusPoints() {
+    setPredProcessing(true); setPredConfigMsg(null);
+    const res = await fetch("/api/admin/prediction-config/process", { method: "POST" });
+    const data = await res.json();
+    setPredProcessing(false);
+    if (!res.ok) { setPredConfigMsg({ type: "err", text: data.error || "Verwerken mislukt" }); return; }
+    setPredConfigMsg({ type: "ok", text: `Verwerkt: ${data.processed} van ${data.total} deelnemers kregen bonuspunten` });
+    loadPredConfig();
+  }
+
+  async function retractBonusPoints() {
+    setPredProcessing(true); setPredConfigMsg(null);
+    const res = await fetch("/api/admin/prediction-config/retract", { method: "POST" });
+    const data = await res.json();
+    setPredProcessing(false);
+    if (!res.ok) { setPredConfigMsg({ type: "err", text: data.error || "Intrekken mislukt" }); return; }
+    setPredConfigMsg({ type: "ok", text: "Bonuspunten ingetrokken" });
+    loadPredConfig();
   }
 
   async function loadAdminMatches() {
@@ -411,6 +502,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   useEffect(() => {
     if (activeTab === "gebruikers" && users.length === 0) loadUsers();
     if (activeTab === "puntensysteem" && pointsConfig.length === 0) loadPointsConfig();
+    if (activeTab === "bonusvragen" && !predConfig && !loadingPredConfig) loadPredConfig();
     if (activeTab === "wedstrijden") { loadAdminMatches(); loadPublishMoments(); }
   }, [activeTab]);
 
@@ -1305,6 +1397,156 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
           </section>
         )}
 
+        {/* Tab: Bonusvragen */}
+        {activeTab === "bonusvragen" && (
+          <section className="bg-slate-900 neon-border rounded-2xl p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">Bonusvragen</h2>
+              {predConfig?.processed && predConfig.processedAt && (
+                <span className="text-xs text-green-400 bg-green-900/20 border border-green-500/30 px-3 py-1 rounded-full font-semibold">
+                  Verwerkt op {new Date(predConfig.processedAt).toLocaleDateString("nl-NL")}
+                </span>
+              )}
+            </div>
+
+            {loadingPredConfig ? <p className="text-slate-500 text-sm">Laden...</p> : (
+              <>
+                {/* Juiste antwoorden */}
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Correcte antwoorden</p>
+                  <div className="space-y-4">
+
+                    {/* Topscorer */}
+                    <div>
+                      <label className={LABEL}>Topscorer</label>
+                      {predActiveField === "topscorer" ? (
+                        <div className="space-y-1.5">
+                          <input autoFocus type="text" placeholder="Zoek speler..." value={predPlayerSearch} onChange={(e) => setPredPlayerSearch(e.target.value)} className={INPUT} />
+                          <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-700 bg-slate-800/50">
+                            {players.filter(p => !predPlayerSearch.trim() || p.name.toLowerCase().includes(predPlayerSearch.toLowerCase())).slice(0, 30).map(p => (
+                              <button key={p.id} onClick={() => { setPredConfigForm(f => ({ ...f, topScorerId: p.id })); setPredActiveField(null); setPredPlayerSearch(""); }}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors flex items-center justify-between ${predConfigForm.topScorerId === p.id ? "text-cyan-400" : "text-white"}`}>
+                                <span>{p.name}</span>
+                                <span className="text-slate-500 text-xs">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <button onClick={() => { setPredActiveField(null); setPredPlayerSearch(""); }} className="text-xs text-slate-500 hover:text-slate-300">Annuleer</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setPredActiveField("topscorer"); setPredPlayerSearch(""); }}
+                          className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors mt-1 ${predConfigForm.topScorerId ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}>
+                          {predConfigForm.topScorerId ? (players.find(p => p.id === predConfigForm.topScorerId)?.name ?? "Gekozen") : "Kies de topscorer..."}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Assistkoning */}
+                    <div>
+                      <label className={LABEL}>Assistkoning</label>
+                      {predActiveField === "assistkoning" ? (
+                        <div className="space-y-1.5">
+                          <input autoFocus type="text" placeholder="Zoek speler..." value={predPlayerSearch} onChange={(e) => setPredPlayerSearch(e.target.value)} className={INPUT} />
+                          <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-700 bg-slate-800/50">
+                            {players.filter(p => !predPlayerSearch.trim() || p.name.toLowerCase().includes(predPlayerSearch.toLowerCase())).slice(0, 30).map(p => (
+                              <button key={p.id} onClick={() => { setPredConfigForm(f => ({ ...f, assistKoningId: p.id })); setPredActiveField(null); setPredPlayerSearch(""); }}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors flex items-center justify-between ${predConfigForm.assistKoningId === p.id ? "text-cyan-400" : "text-white"}`}>
+                                <span>{p.name}</span>
+                                <span className="text-slate-500 text-xs">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <button onClick={() => { setPredActiveField(null); setPredPlayerSearch(""); }} className="text-xs text-slate-500 hover:text-slate-300">Annuleer</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setPredActiveField("assistkoning"); setPredPlayerSearch(""); }}
+                          className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors mt-1 ${predConfigForm.assistKoningId ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}>
+                          {predConfigForm.assistKoningId ? (players.find(p => p.id === predConfigForm.assistKoningId)?.name ?? "Gekozen") : "Kies de assistkoning..."}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Gele kaarten min-max */}
+                    <div>
+                      <label className={LABEL}>Gele kaarten — correcte range</label>
+                      <div className="flex items-center gap-3 mt-1">
+                        <input type="number" min="0" placeholder="Min" value={predConfigForm.yellowCardsMin} onChange={(e) => setPredConfigForm(f => ({ ...f, yellowCardsMin: e.target.value }))} className={INPUT + " w-24"} />
+                        <span className="text-slate-500 text-sm">t/m</span>
+                        <input type="number" min="0" placeholder="Max" value={predConfigForm.yellowCardsMax} onChange={(e) => setPredConfigForm(f => ({ ...f, yellowCardsMax: e.target.value }))} className={INPUT + " w-24"} />
+                        <span className="text-slate-500 text-xs">kaarten</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Punten per vraag */}
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Punten per vraag</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className={LABEL}>Topscorer</label>
+                      <input type="number" min="0" value={predConfigForm.topScorerPoints} onChange={(e) => setPredConfigForm(f => ({ ...f, topScorerPoints: e.target.value }))} className={INPUT} />
+                    </div>
+                    <div>
+                      <label className={LABEL}>Assistkoning</label>
+                      <input type="number" min="0" value={predConfigForm.assistKoningPoints} onChange={(e) => setPredConfigForm(f => ({ ...f, assistKoningPoints: e.target.value }))} className={INPUT} />
+                    </div>
+                    <div>
+                      <label className={LABEL}>Gele kaarten</label>
+                      <input type="number" min="0" value={predConfigForm.yellowCardsPoints} onChange={(e) => setPredConfigForm(f => ({ ...f, yellowCardsPoints: e.target.value }))} className={INPUT} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Toggle: punten tonen aan deelnemers */}
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Zichtbaarheid</p>
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <div className="relative inline-flex items-center">
+                      <input type="checkbox" checked={predConfigForm.showPointsToParticipants} onChange={(e) => setPredConfigForm(f => ({ ...f, showPointsToParticipants: e.target.checked }))} className="sr-only peer" />
+                      <div className="w-10 h-5 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-slate-300">Punten tonen aan deelnemers</span>
+                      <p className="text-xs text-slate-600">Als aan: deelnemers zien hoeveel punten elke voorspelling waard is</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Opslaan */}
+                {predConfigMsg && (
+                  <p className={`text-sm px-3 py-2 rounded-lg border ${predConfigMsg.type === "ok" ? "bg-green-900/20 text-green-400 border-green-500/30" : "bg-red-900/20 text-red-400 border-red-500/30"}`}>
+                    {predConfigMsg.text}
+                  </p>
+                )}
+                <div className="flex gap-3 flex-wrap items-center">
+                  <button onClick={savePredConfig} disabled={predConfigSaving} className={BTN_PRIMARY}>{predConfigSaving ? "Opslaan..." : "Instellingen opslaan"}</button>
+                </div>
+
+                {/* Verwerken / intrekken */}
+                <div className="border-t border-slate-800 pt-5">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Bonuspunten verwerken</p>
+                  <p className="text-slate-500 text-xs mb-4">
+                    Vergelijkt alle voorspellingen met de correcte antwoorden en kent bonuspunten toe.
+                    Sla de instellingen eerst op voordat je verwerkt.
+                  </p>
+                  <div className="flex gap-3 flex-wrap">
+                    {!predConfig?.processed ? (
+                      <button onClick={processBonusPoints} disabled={predProcessing} className={BTN_PRIMARY + " bg-emerald-700 hover:bg-emerald-600 neon-glow-sm"}>
+                        {predProcessing ? "Verwerken..." : "Bonuspunten verwerken"}
+                      </button>
+                    ) : (
+                      <button onClick={retractBonusPoints} disabled={predProcessing} className="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-400 rounded-lg font-semibold text-sm transition-colors border border-red-500/30 disabled:opacity-50">
+                        {predProcessing ? "Bezig..." : "Bonuspunten intrekken"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
         {/* Tab: Gebruikers */}
         {activeTab === "gebruikers" && (
           <section className="bg-slate-900 neon-border rounded-2xl p-6">
@@ -1477,16 +1719,13 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   ) : (
                     <p className="text-slate-600 text-sm mb-4 italic">Nog geen voorspellingen ingediend.</p>
                   )}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Bonuspunten</label>
-                    <div className="flex gap-2 items-center">
-                      <input type="number" value={bonusInput} onChange={(e) => { setBonusInput(e.target.value); setBonusMsg(null); }} min="0"
-                        className="w-24 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
-                      <button onClick={saveBonus} disabled={bonusSaving} className={BTN_PRIMARY}>{bonusSaving ? "..." : "Opslaan"}</button>
-                      {bonusMsg && <span className={`text-xs ${bonusMsg === "Opgeslagen" ? "text-green-400" : "text-red-400"}`}>{bonusMsg}</span>}
+                  {entry.bonusPoints > 0 && (
+                    <div className="mt-2">
+                      <span className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/30 px-2 py-1 rounded-full font-semibold">
+                        {entry.bonusPoints} bonuspunten toegekend
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-600 mt-1">Niet zichtbaar voor deelnemers. Telt mee in de tussenstand.</p>
-                  </div>
+                  )}
                 </div>
               );
             })()}

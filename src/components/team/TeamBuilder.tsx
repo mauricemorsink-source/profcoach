@@ -77,6 +77,7 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
   const [predSearch, setPredSearch] = useState("");
   const [predActiveField, setPredActiveField] = useState<"topscorer" | "assistkoning" | null>(null);
   const [predSaving, setPredSaving] = useState(false);
+  const [predPointsConfig, setPredPointsConfig] = useState<{ showPointsToParticipants: boolean; topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number } | null>(null);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -93,17 +94,19 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
 
   useEffect(() => {
     async function init() {
-      const [playersRes, draftRes] = await Promise.all([
+      const [playersRes, draftRes, predConfigRes] = await Promise.all([
         fetch("/api/players"),
         fetch("/api/team/draft", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ draftId: localStorage.getItem(DRAFT_KEY) ?? undefined }),
         }),
+        fetch("/api/prediction-config"),
       ]);
 
       const playersData = await playersRes.json();
       const draftData = await draftRes.json();
+      if (predConfigRes.ok) setPredPointsConfig(await predConfigRes.json());
 
       setPlayers(playersData);
 
@@ -497,7 +500,10 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
 
               {/* Topscorer */}
               <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Topscorer</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
+                  Topscorer
+                  {predPointsConfig?.showPointsToParticipants && <span className="ml-2 text-cyan-400 normal-case font-normal">({predPointsConfig.topScorerPoints} pt)</span>}
+                </label>
                 {predActiveField === "topscorer" ? (
                   <div className="space-y-1.5">
                     <input autoFocus type="text" placeholder="Zoek speler..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
@@ -523,7 +529,10 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
 
               {/* Assistkoning */}
               <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Assistkoning</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
+                  Assistkoning
+                  {predPointsConfig?.showPointsToParticipants && <span className="ml-2 text-cyan-400 normal-case font-normal">({predPointsConfig.assistKoningPoints} pt)</span>}
+                </label>
                 {predActiveField === "assistkoning" ? (
                   <div className="space-y-1.5">
                     <input autoFocus type="text" placeholder="Zoek speler..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
@@ -549,7 +558,10 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
 
               {/* Gele kaarten */}
               <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Totaal gele kaarten (heel seizoen)</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
+                  Totaal gele kaarten (heel seizoen)
+                  {predPointsConfig?.showPointsToParticipants && <span className="ml-2 text-cyan-400 normal-case font-normal">({predPointsConfig.yellowCardsPoints} pt)</span>}
+                </label>
                 <input type="number" min="0" value={predYellowCards} onChange={(e) => setPredYellowCards(e.target.value)}
                   placeholder="bv. 47"
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />

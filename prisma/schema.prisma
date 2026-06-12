@@ -101,8 +101,10 @@ model Player {
   teamEntryPlayers TeamEntryPlayer[]
   performances     MatchPerformance[]
   seasonStats      PlayerSeasonStats[]
-  predTopScorer    TeamPrediction[]    @relation("PredTopScorer")
-  predAssistKoning TeamPrediction[]    @relation("PredAssistKoning")
+  predTopScorer       TeamPrediction[]   @relation("PredTopScorer")
+  predAssistKoning    TeamPrediction[]   @relation("PredAssistKoning")
+  configTopScorer     PredictionConfig[] @relation("ConfigTopScorer")
+  configAssistKoning  PredictionConfig[] @relation("ConfigAssistKoning")
 }
 
 model TeamEntry {
@@ -187,6 +189,22 @@ model MatchPerformance {
   player       Player  @relation(fields: [playerId], references: [id])
 
   @@unique([matchId, playerId])
+}
+
+model PredictionConfig {
+  id                       String    @id @default("singleton")
+  topScorerId              String?
+  assistKoningId           String?
+  yellowCardsMin           Int?
+  yellowCardsMax           Int?
+  topScorerPoints          Int       @default(5)
+  assistKoningPoints       Int       @default(5)
+  yellowCardsPoints        Int       @default(5)
+  showPointsToParticipants Boolean   @default(false)
+  processed                Boolean   @default(false)
+  processedAt              DateTime?
+  topScorer                Player?   @relation("ConfigTopScorer", fields: [topScorerId], references: [id])
+  assistKoning             Player?   @relation("ConfigAssistKoning", fields: [assistKoningId], references: [id])
 }
 
 model TeamPrediction {
