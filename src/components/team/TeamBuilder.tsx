@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Player, Formation, Season, SlotDef } from "./types";
 import { buildSlots } from "./formationSlots";
 
@@ -82,7 +82,6 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   const [predPointsConfig, setPredPointsConfig] = useState<{ showPointsToParticipants: boolean; topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number; totalGoalsPoints: number } | null>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [downloading, setDownloading] = useState(false);
-  const overviewRef = useRef<HTMLDivElement>(null);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -296,21 +295,132 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
     showToast("Team en voorspellingen succesvol ingediend!", "success");
   }
 
-  async function handleDownloadImage() {
-    if (!overviewRef.current) return;
+  function handleDownloadImage() {
     setDownloading(true);
-    const html2canvas = (await import("html2canvas")).default;
-    const canvas = await html2canvas(overviewRef.current, {
-      backgroundColor: "#0d1a2e",
-      scale: 2,
-      useCORS: true,
-      logging: false,
+
+    const dpr = 2;
+    const W = 600, PAD = 32;
+    const teamRows = slots
+      .filter(s => slotValues[s.slotIndex])
+      .sort((a, b) => POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position));
+    const predRows = [
+      { label: "Topscorer", value: predTopScorerId ? (players.find(p => p.id === predTopScorerId)?.name ?? "—") : "—" },
+      { label: "Assistkoning", value: predAssistKoningId ? (players.find(p => p.id === predAssistKoningId)?.name ?? "—") : "—" },
+      { label: "Gele kaarten", value: predYellowCards !== "" ? predYellowCards : "—" },
+      { label: "Totaal doelpunten", value: predTotalGoals !== "" ? predTotalGoals : "—" },
+    ];
+
+    const ROW_H = 28, SECTION_GAP = 20, HEADER_H = 72;
+    const H = HEADER_H + (teamRows.length * ROW_H) + SECTION_GAP + 26 + (predRows.length * ROW_H) + PAD;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(dpr, dpr);
+
+    // Achtergrond
+    ctx.fillStyle = "#0d1120";
+    ctx.fillRect(0, 0, W, H);
+
+    // Lichtblauwe top-accent lijn
+    ctx.fillStyle = "#22d3ee";
+    ctx.fillRect(0, 0, W, 3);
+
+    // Titel
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 18px system-ui, sans-serif";
+    ctx.fillText("Profcoach Rietmolen", PAD, 30);
+    ctx.fillStyle = "#22d3ee";
+    ctx.font = "bold 18px system-ui, sans-serif";
+    ctx.fillText(season.name, PAD + ctx.measureText("Profcoach Rietmolen ").width, 30);
+
+    // Formatie badge
+    ctx.fillStyle = "#0e2a4a";
+    const fmtW = ctx.measureText(formation?.code ?? "").width + 16;
+    ctx.beginPath();
+    ctx.roundRect(PAD, 40, fmtW, 20, 4);
+    ctx.fill();
+    ctx.fillStyle = "#22d3ee";
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillText(formation?.code ?? "", PAD + 8, 54);
+
+    // Scheidingslijn
+    ctx.strokeStyle = "#1e3a5a";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD, HEADER_H - 8); ctx.lineTo(W - PAD, HEADER_H - 8); ctx.stroke();
+
+    // Team header
+    ctx.fillStyle = "#475569";
+    ctx.font = "bold 10px system-ui, sans-serif";
+    ctx.fillText("NAAM", PAD, HEADER_H + 4);
+    ctx.fillText("POS.", PAD + 310, HEADER_H + 4);
+    ctx.fillText("ELFTAL", PAD + 360, HEADER_H + 4);
+
+    // Team rijen
+    teamRows.forEach((s, i) => {
+      const player = playersById[slotValues[s.slotIndex]!];
+      if (!player) return;
+      const isCaptain = captainEnabled && captainSlot === s.slotIndex;
+      const y = HEADER_H + 18 + i * ROW_H;
+
+      // Afwisselende achtergrond
+      if (i % 2 === 0) {
+        ctx.fillStyle = "#0f1e30";
+        ctx.fillRect(PAD - 4, y - 14, W - PAD * 2 + 8, ROW_H);
+      }
+
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "13px system-ui, sans-serif";
+      ctx.fillText(player.name, PAD, y);
+
+      if (isCaptain) {
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "bold 11px system-ui, sans-serif";
+        ctx.fillText("C", PAD + ctx.measureText(player.name + " ").width + 2, y);
+      }
+
+      ctx.fillStyle = "#64748b";
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillText(POSITION_LABEL[s.position] ?? s.position, PAD + 310, y);
+      ctx.fillText(CLUB_LABEL[player.clubTeam] ?? player.clubTeam, PAD + 360, y);
     });
-    const link = document.createElement("a");
-    link.download = `profcoach-team-${season.name.replace(/\s+/g, "-")}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-    setDownloading(false);
+
+    // Voorspellingen header
+    const predStartY = HEADER_H + teamRows.length * ROW_H + SECTION_GAP;
+    ctx.strokeStyle = "#1e3a5a";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD, predStartY - 8); ctx.lineTo(W - PAD, predStartY - 8); ctx.stroke();
+
+    ctx.fillStyle = "#475569";
+    ctx.font = "bold 10px system-ui, sans-serif";
+    ctx.fillText("VOORSPELLINGEN", PAD, predStartY + 4);
+
+    predRows.forEach((row, i) => {
+      const y = predStartY + 22 + i * ROW_H;
+      if (i % 2 === 0) {
+        ctx.fillStyle = "#0f1e30";
+        ctx.fillRect(PAD - 4, y - 14, W - PAD * 2 + 8, ROW_H);
+      }
+      ctx.fillStyle = "#64748b";
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillText(row.label, PAD, y);
+      ctx.fillStyle = row.value === "—" ? "#334155" : "#e2e8f0";
+      ctx.font = row.value === "—" ? "12px system-ui, sans-serif" : "bold 12px system-ui, sans-serif";
+      ctx.fillText(row.value, W - PAD - ctx.measureText(row.value).width, y);
+    });
+
+    // Download
+    canvas.toBlob((blob) => {
+      if (!blob) { setDownloading(false); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Mijn Profcoach inzending.png";
+      a.click();
+      URL.revokeObjectURL(url);
+      setDownloading(false);
+    }, "image/png");
   }
 
   async function handleShareCopy() {
@@ -618,7 +728,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
       {/* ── STAP 4: Overzicht + indienen ── */}
       {!locked && !readOnly && step === 4 && (
         <>
-          <div ref={overviewRef} className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
+          <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
             <div>
               <p className="text-base font-bold text-white mb-0.5">Controleer je inschrijving</p>
               <p className="text-slate-500 text-xs">Kijk alles na en dien je team in. Dit kan daarna niet meer worden gewijzigd.</p>
