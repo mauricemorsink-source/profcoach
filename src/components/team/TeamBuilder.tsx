@@ -80,7 +80,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   const [predActiveField, setPredActiveField] = useState<"topscorer" | "assistkoning" | null>(null);
   const [predSaving, setPredSaving] = useState(false);
   const [predPointsConfig, setPredPointsConfig] = useState<{ showPointsToParticipants: boolean; topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number; totalGoalsPoints: number } | null>(null);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -208,10 +208,12 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   function goNext() {
     if (step === 1) setStep(captainEnabled ? 2 : 3);
     else if (step === 2) setStep(3);
+    else if (step === 3) setStep(4);
   }
 
   function goPrev() {
-    if (step === 3) setStep(captainEnabled ? 2 : 1);
+    if (step === 4) setStep(3);
+    else if (step === 3) setStep(captainEnabled ? 2 : 1);
     else if (step === 2) setStep(1);
   }
 
@@ -335,9 +337,10 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
     .map((slot) => ({ slot, playerId: slotValues[slot.slotIndex] }))
     .filter((x) => x.playerId !== null) as { slot: SlotDef; playerId: string }[];
 
-  // Stap-indicator tekst
-  const totalSteps = captainEnabled ? 3 : 2;
-  const displayStep = step === 3 ? totalSteps : step === 2 ? 2 : 1;
+  // Stap-indicator
+  const visibleSteps = captainEnabled ? [1, 2, 3, 4] : [1, 3, 4];
+  const totalSteps = visibleSteps.length;
+  const displayStep = visibleSteps.indexOf(step) + 1;
 
   // Helper: speler picker voor voorspellingen
   function PredPlayerPicker({ field, value, onSelect }: { field: "topscorer" | "assistkoning"; value: string | null; onSelect: (id: string) => void }) {
@@ -583,6 +586,78 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
               <p className="text-xs text-slate-600 mb-1.5">Incl. eigen goals tegenstanders en spelers buiten het spel (jeugdspelers, nieuwe spelers etc.)</p>
               <input type="number" min="0" value={predTotalGoals} onChange={(e) => setPredTotalGoals(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-4">
+            <button onClick={goPrev} className={BTN_SECONDARY}>← Vorige</button>
+            <button onClick={goNext} className={BTN_PRIMARY + " ml-auto"}>Bekijk overzicht →</button>
+          </div>
+        </>
+      )}
+
+      {/* ── STAP 4: Overzicht + indienen ── */}
+      {!locked && !readOnly && step === 4 && (
+        <>
+          <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
+            <div>
+              <p className="text-base font-bold text-white mb-0.5">Controleer je inschrijving</p>
+              <p className="text-slate-500 text-xs">Kijk alles na en dien je team in. Dit kan daarna niet meer worden gewijzigd.</p>
+            </div>
+
+            {/* Team overzicht */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Jouw team</p>
+                <span className="text-xs text-slate-600">{formation?.code}</span>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-600 border-b border-slate-800">
+                    <th className="pb-1.5 font-semibold">Naam</th>
+                    <th className="pb-1.5 font-semibold">Pos.</th>
+                    <th className="pb-1.5 font-semibold">Elftal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slots
+                    .filter(s => slotValues[s.slotIndex])
+                    .sort((a, b) => POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position))
+                    .map(s => {
+                      const player = playersById[slotValues[s.slotIndex]!];
+                      if (!player) return null;
+                      const isCaptain = captainEnabled && captainSlot === s.slotIndex;
+                      return (
+                        <tr key={s.slotIndex} className="border-b border-slate-800/40">
+                          <td className="py-1.5 text-slate-200">
+                            {player.name}
+                            {isCaptain && <span className="ml-1.5 text-amber-400 font-bold text-xs">C</span>}
+                          </td>
+                          <td className="py-1.5 text-slate-500 text-xs">{s.position}</td>
+                          <td className="py-1.5 text-slate-500 text-xs">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Voorspellingen */}
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Voorspellingen</p>
+              <div className="space-y-1.5">
+                {[
+                  { label: "Topscorer", value: predTopScorerId ? (players.find(p => p.id === predTopScorerId)?.name ?? "—") : "—" },
+                  { label: "Assistkoning", value: predAssistKoningId ? (players.find(p => p.id === predAssistKoningId)?.name ?? "—") : "—" },
+                  { label: "Gele kaarten", value: predYellowCards !== "" ? predYellowCards : "—" },
+                  { label: "Totaal doelpunten", value: predTotalGoals !== "" ? predTotalGoals : "—" },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">{row.label}</span>
+                    <span className={`font-medium ${row.value === "—" ? "text-slate-600" : "text-white"}`}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
