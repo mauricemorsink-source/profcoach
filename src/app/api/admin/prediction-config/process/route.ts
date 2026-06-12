@@ -34,6 +34,15 @@ export async function POST() {
     ) {
       bonus += config.yellowCardsPoints;
     }
+    if (
+      pred.totalGoals != null &&
+      config.totalGoalsMin != null &&
+      config.totalGoalsMax != null &&
+      pred.totalGoals >= config.totalGoalsMin &&
+      pred.totalGoals <= config.totalGoalsMax
+    ) {
+      bonus += config.totalGoalsPoints;
+    }
     if (bonus > 0) {
       await prisma.teamEntry.update({
         where: { id: pred.teamEntryId },

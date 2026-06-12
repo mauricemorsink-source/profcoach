@@ -197,9 +197,12 @@ model PredictionConfig {
   assistKoningId           String?
   yellowCardsMin           Int?
   yellowCardsMax           Int?
+  totalGoalsMin            Int?
+  totalGoalsMax            Int?
   topScorerPoints          Int       @default(5)
   assistKoningPoints       Int       @default(5)
   yellowCardsPoints        Int       @default(5)
+  totalGoalsPoints         Int       @default(5)
   showPointsToParticipants Boolean   @default(false)
   processed                Boolean   @default(false)
   processedAt              DateTime?
@@ -213,6 +216,7 @@ model TeamPrediction {
   topScorerId      String?
   assistKoningId   String?
   totalYellowCards Int?
+  totalGoals       Int?
   createdAt        DateTime  @default(now())
   teamEntry        TeamEntry @relation(fields: [teamEntryId], references: [id], onDelete: Cascade)
   topScorer        Player?   @relation("PredTopScorer", fields: [topScorerId], references: [id])

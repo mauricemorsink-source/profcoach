@@ -31,6 +31,7 @@ export async function GET() {
           prediction: {
             select: {
               totalYellowCards: true,
+              totalGoals: true,
               topScorer: { select: { id: true, name: true } },
               assistKoning: { select: { id: true, name: true } },
             },

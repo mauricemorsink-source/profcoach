@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const { teamEntryId, topScorerId, assistKoningId, totalYellowCards } = await req.json();
+  const { teamEntryId, topScorerId, assistKoningId, totalYellowCards, totalGoals } = await req.json();
 
   const team = await prisma.teamEntry.findUnique({
     where: { id: teamEntryId },
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
       topScorerId: topScorerId || null,
       assistKoningId: assistKoningId || null,
       totalYellowCards: totalYellowCards != null ? Number(totalYellowCards) : null,
+      totalGoals: totalGoals != null ? Number(totalGoals) : null,
     },
     include: {
       topScorer: { select: { id: true, name: true } },

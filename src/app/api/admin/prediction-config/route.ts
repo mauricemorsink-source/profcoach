@@ -26,7 +26,8 @@ export async function PUT(req: Request) {
   const {
     topScorerId, assistKoningId,
     yellowCardsMin, yellowCardsMax,
-    topScorerPoints, assistKoningPoints, yellowCardsPoints,
+    totalGoalsMin, totalGoalsMax,
+    topScorerPoints, assistKoningPoints, yellowCardsPoints, totalGoalsPoints,
     showPointsToParticipants,
   } = body;
 
@@ -38,9 +39,12 @@ export async function PUT(req: Request) {
       assistKoningId: assistKoningId || null,
       yellowCardsMin: yellowCardsMin != null ? Number(yellowCardsMin) : null,
       yellowCardsMax: yellowCardsMax != null ? Number(yellowCardsMax) : null,
+      totalGoalsMin: totalGoalsMin != null ? Number(totalGoalsMin) : null,
+      totalGoalsMax: totalGoalsMax != null ? Number(totalGoalsMax) : null,
       topScorerPoints: Number(topScorerPoints) || 5,
       assistKoningPoints: Number(assistKoningPoints) || 5,
       yellowCardsPoints: Number(yellowCardsPoints) || 5,
+      totalGoalsPoints: Number(totalGoalsPoints) || 5,
       showPointsToParticipants: Boolean(showPointsToParticipants),
     },
     update: {
@@ -48,9 +52,12 @@ export async function PUT(req: Request) {
       assistKoningId: assistKoningId || null,
       yellowCardsMin: yellowCardsMin != null ? Number(yellowCardsMin) : null,
       yellowCardsMax: yellowCardsMax != null ? Number(yellowCardsMax) : null,
+      totalGoalsMin: totalGoalsMin != null ? Number(totalGoalsMin) : null,
+      totalGoalsMax: totalGoalsMax != null ? Number(totalGoalsMax) : null,
       topScorerPoints: Number(topScorerPoints) || 5,
       assistKoningPoints: Number(assistKoningPoints) || 5,
       yellowCardsPoints: Number(yellowCardsPoints) || 5,
+      totalGoalsPoints: Number(totalGoalsPoints) || 5,
       showPointsToParticipants: Boolean(showPointsToParticipants),
     },
     include: {

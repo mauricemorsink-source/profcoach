@@ -74,10 +74,11 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
   const [predTopScorerId, setPredTopScorerId] = useState<string | null>(null);
   const [predAssistKoningId, setPredAssistKoningId] = useState<string | null>(null);
   const [predYellowCards, setPredYellowCards] = useState<string>("");
+  const [predTotalGoals, setPredTotalGoals] = useState<string>("");
   const [predSearch, setPredSearch] = useState("");
   const [predActiveField, setPredActiveField] = useState<"topscorer" | "assistkoning" | null>(null);
   const [predSaving, setPredSaving] = useState(false);
-  const [predPointsConfig, setPredPointsConfig] = useState<{ showPointsToParticipants: boolean; topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number } | null>(null);
+  const [predPointsConfig, setPredPointsConfig] = useState<{ showPointsToParticipants: boolean; topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number; totalGoalsPoints: number } | null>(null);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -242,6 +243,7 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
         topScorerId: predTopScorerId || null,
         assistKoningId: predAssistKoningId || null,
         totalYellowCards: predYellowCards !== "" ? Number(predYellowCards) : null,
+        totalGoals: predTotalGoals !== "" ? Number(predTotalGoals) : null,
       }),
     });
     setPredSaving(false);
@@ -566,11 +568,23 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
                   placeholder="bv. 47"
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
               </div>
+
+              {/* Totaal doelpunten */}
+              <div>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
+                  Totaal doelpunten VV Rietmolen (heel seizoen)
+                  {predPointsConfig?.showPointsToParticipants && <span className="ml-2 text-cyan-400 normal-case font-normal">({predPointsConfig.totalGoalsPoints} pt)</span>}
+                </label>
+                <p className="text-xs text-slate-600 mb-1.5">Incl. eigen goals tegenstanders en spelers buiten de selectie</p>
+                <input type="number" min="0" value={predTotalGoals} onChange={(e) => setPredTotalGoals(e.target.value)}
+                  placeholder="bv. 120"
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
+              </div>
             </div>
 
             <div className="px-5 pb-5 pt-3 shrink-0 border-t border-slate-800 flex gap-3">
               <button onClick={() => { setShowPredictionModal(false); showToast("Team ingediend!", "success"); }} className={BTN_SECONDARY}>Overslaan</button>
-              <button onClick={handleSavePrediction} disabled={predSaving || (!predTopScorerId && !predAssistKoningId && predYellowCards === "")} className={BTN_PRIMARY + " flex-1"}>
+              <button onClick={handleSavePrediction} disabled={predSaving || (!predTopScorerId && !predAssistKoningId && predYellowCards === "" && predTotalGoals === "")} className={BTN_PRIMARY + " flex-1"}>
                 {predSaving ? "Opslaan..." : "Voorspellingen indienen"}
               </button>
             </div>
