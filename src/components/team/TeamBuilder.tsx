@@ -566,7 +566,7 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
                   {predPointsConfig?.showPointsToParticipants && <span className="ml-2 text-cyan-400 normal-case font-normal">({predPointsConfig.yellowCardsPoints} pt)</span>}
                 </label>
                 <input type="number" min="0" value={predYellowCards} onChange={(e) => setPredYellowCards(e.target.value)}
-                  placeholder="bv. 47"
+                  placeholder=""
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
               </div>
 
@@ -578,7 +578,7 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
                 </label>
                 <p className="text-xs text-slate-600 mb-1.5">Incl. eigen goals tegenstanders en spelers buiten het spel (jeugdspelers, nieuwe spelers etc.)</p>
                 <input type="number" min="0" value={predTotalGoals} onChange={(e) => setPredTotalGoals(e.target.value)}
-                  placeholder="bv. 120"
+                  placeholder=""
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
               </div>
             </div>
