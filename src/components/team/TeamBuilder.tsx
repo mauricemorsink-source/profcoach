@@ -341,26 +341,51 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
 
   // Helper: speler picker voor voorspellingen
   function PredPlayerPicker({ field, value, onSelect }: { field: "topscorer" | "assistkoning"; value: string | null; onSelect: (id: string) => void }) {
-    return predActiveField === field ? (
-      <div className="space-y-1.5">
-        <input autoFocus type="text" placeholder="Zoek speler..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
-          className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
-        <div className="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-slate-800 bg-slate-800/50">
-          {players.filter(p => !predSearch.trim() || p.name.toLowerCase().includes(predSearch.toLowerCase()) || CLUB_LABEL[p.clubTeam]?.toLowerCase().includes(predSearch.toLowerCase())).slice(0, 30).map(p => (
-            <button key={p.id} onClick={() => { onSelect(p.id); setPredActiveField(null); setPredSearch(""); }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-700 transition-colors flex items-center justify-between ${value === p.id ? "text-cyan-400" : "text-white"}`}>
-              <span>{p.name}</span>
-              <span className="text-slate-500 text-xs">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</span>
-            </button>
-          ))}
-        </div>
-        <button onClick={() => { setPredActiveField(null); setPredSearch(""); }} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Annuleer</button>
+    const isOpen = predActiveField === field;
+    const filteredPlayers = players
+      .filter(p => !predSearch.trim() || p.name.toLowerCase().includes(predSearch.toLowerCase()) || CLUB_LABEL[p.clubTeam]?.toLowerCase().includes(predSearch.toLowerCase()))
+      .slice(0, 10);
+
+    return (
+      <div className="relative">
+        {/* Transparante overlay om buiten-klik te vangen */}
+        {isOpen && (
+          <div className="fixed inset-0 z-[45]" onClick={() => { setPredActiveField(null); setPredSearch(""); }} />
+        )}
+
+        {/* Trigger knop — blijft altijd op dezelfde plek */}
+        <button
+          onClick={() => { setPredActiveField(isOpen ? null : field); setPredSearch(""); }}
+          className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors relative z-[46] ${
+            value ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"
+          }`}
+        >
+          {value ? (players.find(p => p.id === value)?.name ?? "Gekozen") : "Kies een speler..."}
+        </button>
+
+        {/* Floating dropdown */}
+        {isOpen && (
+          <div className="absolute top-full left-0 right-0 z-[47] mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
+            <div className="p-2 border-b border-slate-800">
+              <input autoFocus type="text" placeholder="Zoek op naam of elftal..." value={predSearch}
+                onChange={(e) => setPredSearch(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
+            </div>
+            <div className="overflow-y-auto max-h-[280px]">
+              {filteredPlayers.length === 0 ? (
+                <p className="text-slate-500 text-sm text-center py-4">Geen spelers gevonden</p>
+              ) : filteredPlayers.map(p => (
+                <button key={p.id}
+                  onClick={() => { onSelect(p.id); setPredActiveField(null); setPredSearch(""); }}
+                  className={`w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 transition-colors flex items-center justify-between border-b border-slate-800/40 last:border-0 ${value === p.id ? "text-cyan-400" : "text-white"}`}>
+                  <span>{p.name}</span>
+                  <span className="text-slate-500 text-xs">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    ) : (
-      <button onClick={() => { setPredActiveField(field); setPredSearch(""); }}
-        className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${value ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}>
-        {value ? (players.find(p => p.id === value)?.name ?? "Gekozen") : "Kies een speler..."}
-      </button>
     );
   }
 
