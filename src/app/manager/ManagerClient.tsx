@@ -13,7 +13,7 @@ const CLUB_LABEL: Record<string, string> = {
 };
 
 const POSITION_LABEL: Record<string, string> = {
-  GK: "Keeper", DEF: "Verdediger", MID: "Middenvelder", ATT: "Aanvaller",
+  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -122,7 +122,7 @@ function GuestPicker({
               <span className="text-sm text-white">{p.name}</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-400">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</span>
-                <span className="text-xs text-slate-500">{POSITION_LABEL[p.position]?.slice(0, 3)}</span>
+                <span className="text-xs text-slate-500">{POSITION_LABEL[p.position]}</span>
                 <span className="text-xs text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">+ toevoegen</span>
               </div>
             </button>
@@ -746,7 +746,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                     <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
                                   )}
                                 </td>
-                                <td className="px-2 py-2 text-slate-500 text-xs">{POSITION_LABEL[p.position]?.slice(0, 3)}</td>
+                                <td className="px-2 py-2 text-slate-500 text-xs">{POSITION_LABEL[p.position]}</td>
                                 <td className="px-2 py-2 text-center">
                                   <input type="checkbox" checked={p.played} onChange={(e) => updateAddPerf(p.playerId, "played", e.target.checked)} className="accent-cyan-500 w-4 h-4 cursor-pointer" />
                                 </td>

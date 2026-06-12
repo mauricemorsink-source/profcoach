@@ -143,11 +143,11 @@ const POSITIONS = ["GK", "DEF", "MID", "ATT"];
 const TEAMS = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
 
 const POSITION_LABEL: Record<string, string> = {
-  GK: "Keeper", DEF: "Verdediger", MID: "Middenvelder", ATT: "Aanvaller",
+  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
 };
 
 const POSITION_SHORT: Record<string, string> = {
-  GK: "GK", DEF: "VER", MID: "MID", ATT: "AAN",
+  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
 };
 
 const TAB_LABELS: Record<string, string> = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { Player, Formation, Season, SlotDef } from "./types";
 import { buildSlots } from "./formationSlots";
 
@@ -45,7 +45,7 @@ interface TeamBuilderProps {
 const DRAFT_KEY = "profcoach_draft_id";
 
 const POSITION_LABEL: Record<string, string> = {
-  GK: "Keeper", DEF: "Verdediger", MID: "Middenvelder", ATT: "Aanvaller",
+  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
 };
 
 const CLUB_ORDER = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
@@ -81,6 +81,8 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   const [predSaving, setPredSaving] = useState(false);
   const [predPointsConfig, setPredPointsConfig] = useState<{ showPointsToParticipants: boolean; topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number; totalGoalsPoints: number } | null>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [downloading, setDownloading] = useState(false);
+  const overviewRef = useRef<HTMLDivElement>(null);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -292,6 +294,23 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
     setHasPrediction(true);
     setShowPredictionModal(false);
     showToast("Team en voorspellingen succesvol ingediend!", "success");
+  }
+
+  async function handleDownloadImage() {
+    if (!overviewRef.current) return;
+    setDownloading(true);
+    const html2canvas = (await import("html2canvas")).default;
+    const canvas = await html2canvas(overviewRef.current, {
+      backgroundColor: "#0d1a2e",
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+    const link = document.createElement("a");
+    link.download = `profcoach-team-${season.name.replace(/\s+/g, "-")}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    setDownloading(false);
   }
 
   async function handleShareCopy() {
@@ -599,7 +618,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
       {/* ── STAP 4: Overzicht + indienen ── */}
       {!locked && !readOnly && step === 4 && (
         <>
-          <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
+          <div ref={overviewRef} className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
             <div>
               <p className="text-base font-bold text-white mb-0.5">Controleer je inschrijving</p>
               <p className="text-slate-500 text-xs">Kijk alles na en dien je team in. Dit kan daarna niet meer worden gewijzigd.</p>
@@ -633,7 +652,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
                             {player.name}
                             {isCaptain && <span className="ml-1.5 text-amber-400 font-bold text-xs">C</span>}
                           </td>
-                          <td className="py-1.5 text-slate-500 text-xs">{s.position}</td>
+                          <td className="py-1.5 text-slate-500 text-xs">{POSITION_LABEL[s.position] ?? s.position}</td>
                           <td className="py-1.5 text-slate-500 text-xs">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</td>
                         </tr>
                       );
@@ -661,9 +680,12 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
             </div>
           </div>
 
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-3 mt-4 flex-wrap">
             <button onClick={goPrev} className={BTN_SECONDARY}>← Vorige</button>
-            <button onClick={handleFinalSubmit} disabled={saving} className={BTN_PRIMARY + " flex-1"}>
+            <button onClick={handleDownloadImage} disabled={downloading} className={BTN_SECONDARY}>
+              {downloading ? "Downloaden..." : "Opslaan als afbeelding"}
+            </button>
+            <button onClick={handleFinalSubmit} disabled={saving} className={BTN_PRIMARY + " ml-auto"}>
               {saving ? "Bezig..." : "Team indienen"}
             </button>
           </div>

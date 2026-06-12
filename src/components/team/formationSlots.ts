@@ -4,7 +4,7 @@ export function buildSlots(formation: Formation): SlotDef[] {
   const slots: SlotDef[] = [];
 
   // 1 keeper
-  slots.push({ slotIndex: 0, position: "GK", label: "GK" });
+  slots.push({ slotIndex: 0, position: "GK", label: "DM" });
 
   // Verdedigers
   for (let i = 0; i < formation.defenders; i++) {
