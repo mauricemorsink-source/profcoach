@@ -498,7 +498,8 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
             </div>
 
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
-              <p className="text-slate-400 text-sm">Vul jouw voorspellingen in voor bonuspunten aan het einde van het seizoen. Dit is definitief.</p>
+              <p className="text-slate-400 text-sm">Vul jouw voorspellingen in voor bonuspunten aan het einde van het seizoen. Dit kan na het indienen van je team niet meer worden gewijzigd.</p>
+              <p className="text-slate-500 text-xs">De topscorer en assistkoning hoeven niet in jouw eigen team te zitten — je kiest uit alle spelers in het spel.</p>
 
               {/* Topscorer */}
               <div>
@@ -561,7 +562,7 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
               {/* Gele kaarten */}
               <div>
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                  Totaal gele kaarten (heel seizoen)
+                  Totaal gele kaarten (dit seizoen)
                   {predPointsConfig?.showPointsToParticipants && <span className="ml-2 text-cyan-400 normal-case font-normal">({predPointsConfig.yellowCardsPoints} pt)</span>}
                 </label>
                 <input type="number" min="0" value={predYellowCards} onChange={(e) => setPredYellowCards(e.target.value)}
@@ -572,10 +573,10 @@ export default function TeamBuilder({ formations, season, budget, readOnly = fal
               {/* Totaal doelpunten */}
               <div>
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                  Totaal doelpunten VV Rietmolen (heel seizoen)
+                  Totaal doelpunten VV Rietmolen (dit seizoen)
                   {predPointsConfig?.showPointsToParticipants && <span className="ml-2 text-cyan-400 normal-case font-normal">({predPointsConfig.totalGoalsPoints} pt)</span>}
                 </label>
-                <p className="text-xs text-slate-600 mb-1.5">Incl. eigen goals tegenstanders en spelers buiten de selectie</p>
+                <p className="text-xs text-slate-600 mb-1.5">Incl. eigen goals tegenstanders en spelers buiten het spel (jeugdspelers, nieuwe spelers etc.)</p>
                 <input type="number" min="0" value={predTotalGoals} onChange={(e) => setPredTotalGoals(e.target.value)}
                   placeholder="bv. 120"
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
