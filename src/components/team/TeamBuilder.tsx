@@ -344,7 +344,13 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
     const isOpen = predActiveField === field;
     const filteredPlayers = players
       .filter(p => !predSearch.trim() || p.name.toLowerCase().includes(predSearch.toLowerCase()) || CLUB_LABEL[p.clubTeam]?.toLowerCase().includes(predSearch.toLowerCase()))
-      .slice(0, 10);
+      .sort((a, b) => {
+        const clubDiff = CLUB_ORDER.indexOf(a.clubTeam) - CLUB_ORDER.indexOf(b.clubTeam);
+        if (clubDiff !== 0) return clubDiff;
+        const posDiff = POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position);
+        if (posDiff !== 0) return posDiff;
+        return a.name.localeCompare(b.name, "nl");
+      });
 
     return (
       <div className="relative">
@@ -371,7 +377,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
                 onChange={(e) => setPredSearch(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
             </div>
-            <div className="overflow-y-auto max-h-[280px]">
+            <div className="overflow-y-auto max-h-[352px]">
               {filteredPlayers.length === 0 ? (
                 <p className="text-slate-500 text-sm text-center py-4">Geen spelers gevonden</p>
               ) : filteredPlayers.map(p => (
