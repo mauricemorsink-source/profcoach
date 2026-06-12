@@ -18,13 +18,14 @@ export default async function PlayPage() {
   }
 
   const budget = settings?.budget ?? 1750;
+  const captainBonusPerWin = settings?.captainBonusPerWin ?? 5;
   const deadline = settings?.deadline ? new Date(settings.deadline) : null;
   const isPastDeadline = deadline ? new Date() > deadline : false;
 
   return (
     <main className="min-h-[calc(100vh-56px)] py-8"
       style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(14,40,80,0.5) 0%, #060b14 60%)" }}>
-      <TeamBuilder formations={formations} season={season} budget={budget} readOnly={isPastDeadline} deadline={deadline} />
+      <TeamBuilder formations={formations} season={season} budget={budget} captainBonusPerWin={captainBonusPerWin} readOnly={isPastDeadline} deadline={deadline} />
     </main>
   );
 }
