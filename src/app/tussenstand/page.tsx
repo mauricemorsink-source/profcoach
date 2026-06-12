@@ -54,6 +54,7 @@ export default async function TussenstandPage({
 
     const statsMap = new Map(allStats.map((s) => [s.playerId, s]));
     const captainActive = settings?.captainEnabled ?? false;
+    const captainBonusPerWin = settings?.captainBonusPerWin ?? 5;
 
     deelnemers = teamEntries
       .filter((te) => te.user !== null)
@@ -69,9 +70,7 @@ export default async function TussenstandPage({
             totalPoints += stat.totalPoints;
             prevPoints += stat.prevPoints;
             if (p.playerId === captainPlayerId) {
-              // Captain counts double
-              totalPoints += stat.totalPoints;
-              prevPoints += stat.prevPoints;
+              totalPoints += captainBonusPerWin * (stat.wins ?? 0);
             }
           }
         }

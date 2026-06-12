@@ -7,6 +7,7 @@ type GameSettings = {
   deadline: string | null;
   registrationOpen: boolean;
   captainEnabled: boolean;
+  captainBonusPerWin: number;
   rulesText: string;
   termsText: string;
   privacyText: string;
@@ -239,7 +240,7 @@ export default function AdminPage() {
   // Game settings
   const [settings, setSettings] = useState<GameSettings | null>(null);
   const [settingsForm, setSettingsForm] = useState<GameSettings>({
-    budget: 1750, deadline: null, registrationOpen: true, captainEnabled: false, rulesText: "", termsText: "", privacyText: "",
+    budget: 1750, deadline: null, registrationOpen: true, captainEnabled: false, captainBonusPerWin: 5, rulesText: "", termsText: "", privacyText: "",
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -341,6 +342,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         deadline: data.deadline ? data.deadline.slice(0, 16) : "",
         registrationOpen: data.registrationOpen,
         captainEnabled: data.captainEnabled ?? false,
+        captainBonusPerWin: data.captainBonusPerWin ?? 5,
         rulesText: data.rulesText ?? "",
         termsText: data.termsText ?? "",
         privacyText: data.privacyText ?? "",
@@ -595,7 +597,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
 
   async function saveSettings() {
     setSettingsSaving(true); setSettingsMsg(null);
-    const res = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: Number(settingsForm.budget), deadline: settingsForm.deadline || null, registrationOpen: settingsForm.registrationOpen, captainEnabled: settingsForm.captainEnabled, rulesText: settingsForm.rulesText, termsText: settingsForm.termsText, privacyText: settingsForm.privacyText }) });
+    const res = await fetch("/api/admin/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ budget: Number(settingsForm.budget), deadline: settingsForm.deadline || null, registrationOpen: settingsForm.registrationOpen, captainEnabled: settingsForm.captainEnabled, captainBonusPerWin: Number(settingsForm.captainBonusPerWin), rulesText: settingsForm.rulesText, termsText: settingsForm.termsText, privacyText: settingsForm.privacyText }) });
     const data = await res.json(); setSettingsSaving(false);
     if (!res.ok) { setSettingsMsg({ type: "err", text: data.error || "Opslaan mislukt" }); }
     else {
@@ -605,6 +607,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
         deadline: data.deadline ? data.deadline.slice(0, 16) : "",
         registrationOpen: data.registrationOpen,
         captainEnabled: data.captainEnabled ?? false,
+        captainBonusPerWin: data.captainBonusPerWin ?? 5,
         rulesText: data.rulesText ?? "",
         termsText: data.termsText ?? "",
         privacyText: data.privacyText ?? "",
@@ -863,7 +866,11 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.captainEnabled ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-red-900/40 text-red-400 border border-red-500/30"}`}>
                     {settingsForm.captainEnabled ? "Aan" : "Uit"}
                   </span>
-                  <span className="text-xs text-slate-500">— aanvoerder krijgt 2× punten</span>
+                  <span className="text-xs text-slate-500">— aanvoerder krijgt</span>
+                  <input type="number" min="0" value={settingsForm.captainBonusPerWin} onChange={(e) => setSettingsForm({ ...settingsForm, captainBonusPerWin: Number(e.target.value) })}
+                    disabled={!settingsForm.captainEnabled}
+                    className="w-14 bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/40 disabled:opacity-40" />
+                  <span className="text-xs text-slate-500">pt per overwinning</span>
                 </div>
                 <div>
                   <label className={LABEL}>Spelregels</label>

@@ -17,7 +17,7 @@ export async function PUT(req: Request) {
   }
 
   const body = await req.json();
-  const { budget, deadline, registrationOpen, captainEnabled, rulesText, termsText, privacyText } = body;
+  const { budget, deadline, registrationOpen, captainEnabled, captainBonusPerWin, rulesText, termsText, privacyText } = body;
 
   if (budget !== undefined && (isNaN(Number(budget)) || Number(budget) <= 0)) {
     return NextResponse.json({ error: "Ongeldig budget" }, { status: 400 });
@@ -30,6 +30,7 @@ export async function PUT(req: Request) {
       ...(deadline !== undefined && { deadline: deadline ? new Date(deadline) : null }),
       ...(registrationOpen !== undefined && { registrationOpen: Boolean(registrationOpen) }),
       ...(captainEnabled !== undefined && { captainEnabled: Boolean(captainEnabled) }),
+      ...(captainBonusPerWin !== undefined && { captainBonusPerWin: Math.max(0, Number(captainBonusPerWin) || 0) }),
       ...(rulesText !== undefined && { rulesText: String(rulesText) }),
       ...(termsText !== undefined && { termsText: String(termsText) }),
       ...(privacyText !== undefined && { privacyText: String(privacyText) }),

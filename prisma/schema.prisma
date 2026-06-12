@@ -64,6 +64,7 @@ model GameSettings {
   deadline           DateTime?
   registrationOpen   Boolean   @default(true)
   captainEnabled     Boolean   @default(false)
+  captainBonusPerWin Int       @default(5)
   rulesText          String    @default("")
   termsText          String    @default("")
   privacyText        String    @default("")
