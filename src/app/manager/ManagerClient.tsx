@@ -881,14 +881,20 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                       )}
                     </div>
 
-                    {/* Validatie: goals mismatch */}
-                    {goalsMismatch && (
-                      <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl p-4">
-                        <p className="text-amber-400 font-semibold text-sm mb-1">Doelpunten komen niet overeen</p>
-                        <p className="text-amber-300/80 text-xs mb-3">
-                          Het aantal geregistreerde doelpunten ({totalGoals}) komt niet overeen met de eindstand ({expectedGoals} voor {TEAM_LABEL[managedTeam] ?? managedTeam}).
-                          Zijn er doelpunten gemaakt door spelers buiten de selectie? (jeugdspelers, eigen goal tegenstander, nieuwe spelers die nog niet in het systeem staan)
-                        </p>
+                    {/* Validatie: goals mismatch — toon ook als er al scorers zijn toegevoegd */}
+                    {(goalsMismatch || extraScorers.length > 0) && (
+                      <div className={`rounded-xl p-4 border ${goalsMismatch ? "bg-amber-900/20 border-amber-500/30" : "bg-slate-800/40 border-slate-700/50"}`}>
+                        {goalsMismatch ? (
+                          <>
+                            <p className="text-amber-400 font-semibold text-sm mb-1">Doelpunten komen niet overeen</p>
+                            <p className="text-amber-300/80 text-xs mb-3">
+                              Geregistreerd: {totalGoals} · Eindstand: {expectedGoals} voor {TEAM_LABEL[managedTeam] ?? managedTeam}.
+                              Voeg doelpuntenmakers toe die niet in de selectie staan (jeugdspeler, eigen goal tegenstander).
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-green-400 font-semibold text-sm mb-3">✓ Doelpunten kloppen ({totalGoals}/{expectedGoals})</p>
+                        )}
                         <div className="space-y-2">
                           {extraScorers.map((s, i) => (
                             <div key={i} className="flex items-center gap-2">
@@ -899,11 +905,13 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                 onChange={(e) => setExtraScorers(prev => prev.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
                                 className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500/50" />
                               <button onClick={() => setExtraScorers(prev => prev.filter((_, j) => j !== i))}
-                                className="text-slate-500 hover:text-red-400 transition-colors text-lg leading-none px-1">✕</button>
+                                className="text-slate-500 hover:text-red-400 transition-colors text-lg leading-none px-1 shrink-0">✕</button>
                             </div>
                           ))}
-                          <button onClick={() => setExtraScorers(prev => [...prev, { goals: "1", description: "" }])}
-                            className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors">
+                          <button
+                            onClick={() => setExtraScorers(prev => [...prev, { goals: "1", description: "" }])}
+                            className="mt-1 px-3 py-1.5 text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
+                          >
                             + Doelpuntenmaker toevoegen
                           </button>
                         </div>
@@ -959,15 +967,21 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                 >
                   Volgende →
                 </button>
-              ) : (
+              ) : (() => {
+                const totalPerfGoals = addPerfs.filter(p => p.played).reduce((s, p) => s + p.goals + p.penaltyGoals, 0);
+                const totalExtraGoals = extraScorers.reduce((s, e) => s + (Number(e.goals) || 0), 0);
+                const goalsMismatch = (totalPerfGoals + totalExtraGoals) !== (Number(addForm.goalsScored) || 0);
+                return (
                 <button
                   onClick={submitMatch}
-                  disabled={addLoading}
-                  className="px-5 py-2 text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 transition-colors neon-glow-sm"
+                  disabled={addLoading || goalsMismatch}
+                  title={goalsMismatch ? "Herstel eerst het aantal doelpunten" : undefined}
+                  className="px-5 py-2 text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors neon-glow-sm"
                 >
                   {addLoading ? "Opslaan..." : "Wedstrijd opslaan"}
                 </button>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>
