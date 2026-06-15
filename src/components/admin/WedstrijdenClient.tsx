@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 type FlexConflict = {
   playerId: string;
   player: { name: string; position: string; clubTeam: string; altTeam: string | null };
-  matches: { matchId: string; matchName: string; matchClubTeam: string; isOriginalTeam: boolean }[];
+  matches: { matchId: string; matchName: string; matchDate: string; matchClubTeam: string; isOriginalTeam: boolean }[];
 };
 
 type PublishMoment = {
@@ -401,14 +401,20 @@ export default function WedstrijdenClient() {
     const data = await res.json();
     setPublishingMomentId(null);
     if (res.status === 409 && data.error === "conflicts" && Array.isArray(data.conflicts)) {
-      // Server detected unresolved conflicts — show the modal
+      // Server detected unresolved conflicts — show the modal, preserve existing selections where possible
       const conflicts: FlexConflict[] = data.conflicts;
       const selections: Record<string, Set<string>> = {};
-      for (const c of conflicts) {
-        const original = c.matches.find((m: FlexConflict["matches"][number]) => m.isOriginalTeam);
-        selections[c.playerId] = new Set([original ? original.matchId : c.matches[0].matchId]);
-      }
-      setConflictModal({ momentId, conflicts, selections });
+      setConflictModal((prev) => {
+        for (const c of conflicts) {
+          if (prev?.selections[c.playerId]) {
+            selections[c.playerId] = prev.selections[c.playerId];
+          } else {
+            const original = c.matches.find((m) => m.isOriginalTeam);
+            selections[c.playerId] = new Set([original ? original.matchId : c.matches[0].matchId]);
+          }
+        }
+        return { momentId, conflicts, selections };
+      });
     } else if (!res.ok) {
       setPointsMsg({ type: "err", text: data.error || "Publiceren mislukt" });
     } else {
@@ -1639,6 +1645,8 @@ export default function WedstrijdenClient() {
                               </div>
                               <span className="text-xs text-slate-400">
                                 {TEAM_LABEL[m.matchClubTeam] ?? m.matchClubTeam}
+                                {" · "}
+                                {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
                               </span>
                             </div>
                           </label>

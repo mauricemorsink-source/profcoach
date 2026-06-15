@@ -28,6 +28,7 @@ export async function GET(
   type ConflictMatch = {
     matchId: string;
     matchName: string;
+    matchDate: string;
     matchClubTeam: string;
     isOriginalTeam: boolean;
   };
@@ -47,6 +48,7 @@ export async function GET(
       const entry: ConflictMatch = {
         matchId: match.id,
         matchName: match.name,
+        matchDate: match.matchDate.toISOString(),
         matchClubTeam: match.clubTeam,
         isOriginalTeam,
       };

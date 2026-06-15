@@ -75,7 +75,7 @@ export async function POST(
     if (!conflictsResolved) {
     const playerMatchMap = new Map<string, {
       player: { name: string; position: string; clubTeam: string; altTeam: string | null };
-      matches: { matchId: string; matchName: string; matchClubTeam: string; isOriginalTeam: boolean }[];
+      matches: { matchId: string; matchName: string; matchDate: string; matchClubTeam: string; isOriginalTeam: boolean }[];
     }>();
     for (const match of approvedMatches) {
       for (const perf of match.performances) {
@@ -85,6 +85,7 @@ export async function POST(
         const entry = {
           matchId: match.id,
           matchName: match.name,
+          matchDate: match.matchDate.toISOString(),
           matchClubTeam: match.clubTeam,
           isOriginalTeam: match.clubTeam === perf.player.clubTeam,
         };
