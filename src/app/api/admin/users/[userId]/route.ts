@@ -13,7 +13,7 @@ export async function PATCH(
 
   const { userId } = await params;
   const body = await req.json();
-  const { role, managedTeam, isParticipant, name, email } = body;
+  const { role, managedTeam, isParticipant, name, email, betaald } = body;
 
   if (role && !["ADMIN", "USER", "MANAGER"].includes(role)) {
     return NextResponse.json({ error: "Ongeldige rol" }, { status: 400 });
@@ -38,8 +38,9 @@ export async function PATCH(
       ...(role && { role }),
       ...(role && { managedTeam: role === "MANAGER" ? managedTeam : null }),
       ...(isParticipant !== undefined && { isParticipant: Boolean(isParticipant) }),
+      ...(betaald !== undefined && { betaald: Boolean(betaald) }),
     },
-    select: { id: true, name: true, email: true, role: true, managedTeam: true, isParticipant: true },
+    select: { id: true, name: true, email: true, role: true, managedTeam: true, isParticipant: true, betaald: true },
   });
 
   return NextResponse.json(user);

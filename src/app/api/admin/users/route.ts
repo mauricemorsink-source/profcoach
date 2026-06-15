@@ -19,6 +19,7 @@ export async function GET() {
       role: true,
       managedTeam: true,
       isParticipant: true,
+      betaald: true,
       createdAt: true,
       teamEntries: {
         where: season ? { seasonId: season.id } : { id: "none" },

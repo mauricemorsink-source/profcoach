@@ -30,6 +30,7 @@ type User = {
   role: "ADMIN" | "USER" | "MANAGER";
   managedTeam: string | null;
   isParticipant: boolean;
+  betaald: boolean;
   createdAt: string;
   teamEntries: TeamEntry[];
 };
@@ -70,6 +71,7 @@ export default function GebruikersClient() {
   const [bonusInput, setBonusInput] = useState<string>("0");
   const [bonusSaving, setBonusSaving] = useState(false);
   const [bonusMsg, setBonusMsg] = useState<string | null>(null);
+  const [betaaldFilter, setBetaaldFilter] = useState<"alle" | "betaald" | "nietbetaald">("alle");
 
   async function loadUsers() {
     setLoadingUsers(true);
@@ -136,6 +138,18 @@ export default function GebruikersClient() {
     await loadUsers();
   }
 
+  async function toggleBetaald(user: User) {
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ betaald: !user.betaald }),
+    });
+    if (res.ok) {
+      setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, betaald: !user.betaald } : u));
+      setRoleModal((prev) => prev && prev.id === user.id ? { ...prev, betaald: !user.betaald } : prev);
+    }
+  }
+
   async function generateLoginLink(userId: string) {
     setLinkGenerating(true);
     setGeneratedLink(null);
@@ -152,11 +166,38 @@ export default function GebruikersClient() {
   return (
     <div className="max-w-4xl">
       <section className="bg-slate-900 neon-border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">Gebruikers</h2>
-          <button onClick={loadUsers} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-            Vernieuwen
-          </button>
+        <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg font-bold text-white">Gebruikers</h2>
+            {users.length > 0 && (() => {
+              const deelnemers = users.filter((u) => u.isParticipant);
+              const aantalBetaald = deelnemers.filter((u) => u.betaald).length;
+              return (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  <span className={aantalBetaald === deelnemers.length && deelnemers.length > 0 ? "text-green-400 font-semibold" : "text-amber-400 font-semibold"}>
+                    {aantalBetaald}/{deelnemers.length} betaald
+                  </span>
+                  {aantalBetaald < deelnemers.length && <span className="ml-1">· {deelnemers.length - aantalBetaald} nog niet</span>}
+                </p>
+              );
+            })()}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-slate-700 overflow-hidden text-xs">
+              {(["alle", "betaald", "nietbetaald"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setBetaaldFilter(v)}
+                  className={`px-3 py-1.5 font-medium transition-colors ${betaaldFilter === v ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}
+                >
+                  {v === "alle" ? "Alle" : v === "betaald" ? "Betaald" : "Niet betaald"}
+                </button>
+              ))}
+            </div>
+            <button onClick={loadUsers} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
+              Vernieuwen
+            </button>
+          </div>
         </div>
         {loadingUsers ? (
           <p className="text-slate-500 text-sm py-4">Laden...</p>
@@ -173,28 +214,25 @@ export default function GebruikersClient() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {users.filter((u) =>
+                  betaaldFilter === "betaald" ? u.betaald :
+                  betaaldFilter === "nietbetaald" ? !u.betaald : true
+                ).map((user) => (
                   <tr key={user.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
                     <td className="py-2 font-medium text-white whitespace-nowrap">
                       {user.name ?? <span className="text-slate-500 italic">Geen naam</span>}
                     </td>
                     <td className="py-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
-                            user.role === "ADMIN"
-                              ? "bg-purple-900/40 text-purple-400 border-purple-500/30"
-                              : user.role === "MANAGER"
-                              ? "bg-blue-900/40 text-blue-400 border-blue-500/30"
-                              : "bg-slate-800 text-slate-400 border-slate-700"
-                          }`}
-                        >
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                          user.role === "ADMIN" ? "bg-purple-900/40 text-purple-400 border-purple-500/30"
+                          : user.role === "MANAGER" ? "bg-blue-900/40 text-blue-400 border-blue-500/30"
+                          : "bg-slate-800 text-slate-400 border-slate-700"
+                        }`}>
                           {user.role === "ADMIN" ? "Admin" : user.role === "MANAGER" ? "Beheerder" : "Deelnemer"}
                         </span>
                         {user.managedTeam && (
-                          <span className="text-xs text-slate-500">
-                            {TEAM_LABEL[user.managedTeam] ?? user.managedTeam}
-                          </span>
+                          <span className="text-xs text-slate-500">{TEAM_LABEL[user.managedTeam] ?? user.managedTeam}</span>
                         )}
                       </div>
                     </td>
@@ -410,6 +448,19 @@ export default function GebruikersClient() {
                   <p className="text-xs text-slate-600">Verschijnt in de tussenstand als deelnemer</p>
                 </div>
               </label>
+              <button
+                type="button"
+                onClick={() => toggleBetaald(roleModal)}
+                className="flex items-center gap-3 cursor-pointer select-none w-full text-left"
+              >
+                <div className={`relative inline-flex h-5 w-10 shrink-0 items-center rounded-full transition-colors ${roleModal.betaald ? "bg-green-500" : "bg-slate-700"}`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${roleModal.betaald ? "translate-x-5" : "translate-x-0.5"}`} />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-slate-300">Betaald</span>
+                  <p className="text-xs text-slate-600">Deelnamekosten voldaan</p>
+                </div>
+              </button>
               {roleError && (
                 <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">
                   {roleError}

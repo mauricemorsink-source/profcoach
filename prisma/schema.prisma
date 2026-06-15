@@ -54,6 +54,7 @@ model User {
   loginToken          String?       @unique
   loginTokenExpiry    DateTime?
   mustChangePassword  Boolean       @default(false)
+  betaald             Boolean       @default(false)
   teamEntries         TeamEntry[]
   createdMatches      Match[]
 }
