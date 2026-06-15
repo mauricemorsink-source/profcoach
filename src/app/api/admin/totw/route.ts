@@ -52,7 +52,7 @@ export async function POST(req: Request) {
   for (const match of matches) {
     const pointsMap = calculateMatchPoints(match, configMap);
     for (const perf of match.performances) {
-      const pts = pointsMap.get(perf.playerId)?.points ?? 0;
+      const pts = perf.isExcluded ? 0 : (pointsMap.get(perf.playerId)?.points ?? 0);
       const existing = playerMap.get(perf.playerId);
       if (existing) {
         existing.points += pts;

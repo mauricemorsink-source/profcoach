@@ -254,6 +254,14 @@ export async function POST(
       }
     }
 
+    // Persist exclusions so TOTW and future reads know which performances don't count for points
+    for (const exc of excludedPerformances) {
+      await prisma.matchPerformance.updateMany({
+        where: { matchId: exc.matchId, playerId: exc.playerId },
+        data: { isExcluded: true },
+      });
+    }
+
     await prisma.match.updateMany({
       where: { id: { in: approvedMatches.map((m) => m.id) } },
       data: { status: "PROCESSED", processedAt: new Date() },

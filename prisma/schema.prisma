@@ -192,6 +192,7 @@ model MatchPerformance {
   ownGoals     Int     @default(0)
   yellowCards  Int     @default(0)
   redCard      Boolean @default(false)
+  isExcluded   Boolean @default(false)
   match        Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
   player       Player  @relation(fields: [playerId], references: [id])
 
