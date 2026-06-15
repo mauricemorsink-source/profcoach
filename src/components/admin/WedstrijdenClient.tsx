@@ -1563,7 +1563,7 @@ export default function WedstrijdenClient() {
           <div className="bg-slate-900 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
               <div>
-                <h3 className="text-base font-bold text-white">FLEX speler conflict</h3>
+                <h3 className="text-base font-bold text-white">Speler conflict</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Vink aan welke wedstrijd meetelt voor deze spelers
                 </p>
@@ -1583,9 +1583,11 @@ export default function WedstrijdenClient() {
                   <div key={conflict.playerId} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-sm font-semibold text-white">{conflict.player.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-violet-900/50 text-violet-300 border border-violet-500/30 font-medium">
-                        FLEX
-                      </span>
+                      {conflict.player.altTeam && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-violet-900/50 text-violet-300 border border-violet-500/30 font-medium">
+                          FLEX
+                        </span>
+                      )}
                       <span className="text-xs text-slate-500">
                         {POSITION_LABEL[conflict.player.position] ?? conflict.player.position}
                       </span>
