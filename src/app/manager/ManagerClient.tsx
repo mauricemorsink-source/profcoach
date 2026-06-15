@@ -87,7 +87,11 @@ function GuestPicker({
 
   const candidates = allPlayers.filter(
     (p) =>
-      p.clubTeam !== managedTeam &&
+      // eigen team-spelers zonder altTeam staan al in de gewone lijst → uitsluiten
+      // FLEX spelers van eigen team (clubTeam===managedTeam maar altTeam!==null) → wél tonen
+      // FLEX spelers die al naar dit team zijn overgezet (altTeam===managedTeam) → uitsluiten
+      !(p.clubTeam === managedTeam && p.altTeam === null) &&
+      p.altTeam !== managedTeam &&
       !existingIds.has(p.id) &&
       (search.length < 2 ||
         p.name.toLowerCase().includes(search.toLowerCase()) ||
