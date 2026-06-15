@@ -138,6 +138,20 @@ function GuestPicker({
   );
 }
 
+function toCardValue(yellowCards: number, redCard: boolean): string {
+  if (yellowCards >= 2 && redCard) return "2y";
+  if (redCard) return "r";
+  if (yellowCards >= 1) return "1y";
+  return "";
+}
+
+function fromCardValue(v: string): { yellowCards: number; redCard: boolean } {
+  if (v === "1y") return { yellowCards: 1, redCard: false };
+  if (v === "2y") return { yellowCards: 2, redCard: true };
+  if (v === "r") return { yellowCards: 0, redCard: true };
+  return { yellowCards: 0, redCard: false };
+}
+
 // Sub-component: single performance row
 function PerfRow({
   p,
@@ -181,8 +195,19 @@ function PerfRow({
       <td className="px-3 py-2.5"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => onChange("penaltyGoals", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
       <td className="px-3 py-2.5"><input type="number" min="0" value={p.assists} onChange={(e) => onChange("assists", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
       <td className="px-3 py-2.5"><input type="number" min="0" value={p.ownGoals} onChange={(e) => onChange("ownGoals", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
-      <td className="px-3 py-2.5"><input type="number" min="0" max="2" value={p.yellowCards} onChange={(e) => onChange("yellowCards", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
-      <td className="px-3 py-2.5 text-center"><input type="checkbox" checked={p.redCard} onChange={(e) => onChange("redCard", e.target.checked)} disabled={!p.played || locked} className="accent-red-400 w-4 h-4 cursor-pointer" /></td>
+      <td className="px-3 py-2.5">
+        <select
+          value={toCardValue(p.yellowCards, p.redCard)}
+          onChange={(e) => { const c = fromCardValue(e.target.value); onChange("yellowCards", c.yellowCards); onChange("redCard", c.redCard); }}
+          disabled={!p.played || locked}
+          className="bg-slate-800 border border-slate-700 text-white rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <option value="">–</option>
+          <option value="1y">🟡 1× geel</option>
+          <option value="2y">🟡🟡 2× geel</option>
+          <option value="r">🔴 Direct rood</option>
+        </select>
+      </td>
       <td className="px-3 py-2.5 text-center">
         {p.isGuest && onRemove && !locked && (
           <button onClick={onRemove} className="text-slate-600 hover:text-red-400 transition-colors text-sm" title="Gastspeler verwijderen">✕</button>
@@ -425,8 +450,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
       <th className={`${TH} text-center`}>Pen.</th>
       <th className={`${TH} text-center`}>Ass.</th>
       <th className={`${TH} text-center`}>E.G.</th>
-      <th className={`${TH} text-center`}>Geel</th>
-      <th className={`${TH} text-center`}>Rood</th>
+      <th className={`${TH} text-center`}>Kaart</th>
       <th className={`${TH} text-center w-8`}></th>
     </tr>
   );
@@ -742,8 +766,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                               <th className="px-2 py-2 font-medium text-center">Pen</th>
                               <th className="px-2 py-2 font-medium text-center">Ass</th>
                               <th className="px-2 py-2 font-medium text-center">EG</th>
-                              <th className="px-2 py-2 font-medium text-center">🟡</th>
-                              <th className="px-2 py-2 font-medium text-center">🔴</th>
+                              <th className="px-2 py-2 font-medium text-center">Kaart</th>
                               <th className="px-2 py-2 w-6"></th>
                             </tr>
                           </thead>
@@ -775,8 +798,19 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                 <td className="px-2 py-2"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => updateAddPerf(p.playerId, "penaltyGoals", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
                                 <td className="px-2 py-2"><input type="number" min="0" value={p.assists} onChange={(e) => updateAddPerf(p.playerId, "assists", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
                                 <td className="px-2 py-2"><input type="number" min="0" value={p.ownGoals} onChange={(e) => updateAddPerf(p.playerId, "ownGoals", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2"><input type="number" min="0" max="2" value={p.yellowCards} onChange={(e) => updateAddPerf(p.playerId, "yellowCards", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2 text-center"><input type="checkbox" checked={p.redCard} onChange={(e) => updateAddPerf(p.playerId, "redCard", e.target.checked)} disabled={!p.played} className="accent-red-400 w-4 h-4 cursor-pointer" /></td>
+                                <td className="px-2 py-2">
+                                  <select
+                                    value={toCardValue(p.yellowCards, p.redCard)}
+                                    onChange={(e) => { const c = fromCardValue(e.target.value); updateAddPerf(p.playerId, "yellowCards", c.yellowCards); updateAddPerf(p.playerId, "redCard", c.redCard); }}
+                                    disabled={!p.played}
+                                    className="bg-slate-800 border border-slate-700 text-white rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30"
+                                  >
+                                    <option value="">–</option>
+                                    <option value="1y">🟡 1× geel</option>
+                                    <option value="2y">🟡🟡 2× geel</option>
+                                    <option value="r">🔴 Direct rood</option>
+                                  </select>
+                                </td>
                                 <td className="px-2 py-2 text-center">
                                   {p.isGuest && (
                                     <button onClick={() => removeGuest(p.playerId, true)} className="text-slate-600 hover:text-red-400 transition-colors text-sm">✕</button>
@@ -887,8 +921,10 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                 {p.penaltyGoals > 0 && <span className="text-slate-300">Pen {p.penaltyGoals}</span>}
                                 {p.assists > 0 && <span className="text-cyan-400">Ass {p.assists}</span>}
                                 {p.ownGoals > 0 && <span className="text-red-400">EG {p.ownGoals}</span>}
-                                {p.yellowCards > 0 && <span className="text-amber-400">🟡</span>}
-                                {p.redCard && <span className="text-red-500">🔴</span>}
+                                {p.yellowCards === 1 && !p.redCard && <span className="text-amber-400">🟡</span>}
+                                {p.yellowCards >= 2 && p.redCard && <span className="text-amber-400">🟡🟡</span>}
+                                {p.redCard && p.yellowCards === 0 && <span className="text-red-500">🔴</span>}
+                                {p.redCard && p.yellowCards >= 2 && <span className="text-red-500">🔴</span>}
                                 {p.goals === 0 && p.assists === 0 && p.ownGoals === 0 && !p.yellowCards && !p.redCard && <span className="text-slate-600">–</span>}
                               </div>
                             </div>

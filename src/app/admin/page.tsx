@@ -2,6 +2,20 @@
 
 import { useState, useEffect } from "react";
 
+function toCardValue(yellowCards: number, redCard: boolean): string {
+  if (yellowCards >= 2 && redCard) return "2y";
+  if (redCard) return "r";
+  if (yellowCards >= 1) return "1y";
+  return "";
+}
+
+function fromCardValue(v: string): { yellowCards: number; redCard: boolean } {
+  if (v === "1y") return { yellowCards: 1, redCard: false };
+  if (v === "2y") return { yellowCards: 2, redCard: true };
+  if (v === "r") return { yellowCards: 0, redCard: true };
+  return { yellowCards: 0, redCard: false };
+}
+
 type GameSettings = {
   budget: number;
   deadline: string | null;
@@ -2125,8 +2139,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                         <th className="pb-2 font-semibold text-center">Pen.</th>
                         <th className="pb-2 font-semibold text-center">Ass.</th>
                         <th className="pb-2 font-semibold text-center">E.G.</th>
-                        <th className="pb-2 font-semibold text-center">Geel</th>
-                        <th className="pb-2 font-semibold text-center">Rood</th>
+                        <th className="pb-2 font-semibold text-center">Kaart</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2143,8 +2156,19 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             <td className="py-1.5 text-center"><input type="number" value={ed.penaltyGoals} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "penaltyGoals", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
                             <td className="py-1.5 text-center"><input type="number" value={ed.assists} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "assists", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
                             <td className="py-1.5 text-center"><input type="number" value={ed.ownGoals} min={0} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "ownGoals", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
-                            <td className="py-1.5 text-center"><input type="number" value={ed.yellowCards} min={0} max={2} readOnly={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "yellowCards", Number(e.target.value))} className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`} /></td>
-                            <td className="py-1.5 text-center"><input type="checkbox" checked={ed.redCard} disabled={editMatchReadOnly} onChange={(e) => updatePerfField(p.playerId, "redCard", e.target.checked)} className="accent-cyan-500 disabled:opacity-60" /></td>
+                            <td className="py-1.5 text-center">
+                              <select
+                                value={toCardValue(ed.yellowCards, ed.redCard)}
+                                disabled={editMatchReadOnly}
+                                onChange={(e) => { const c = fromCardValue(e.target.value); updatePerfField(p.playerId, "yellowCards", c.yellowCards); updatePerfField(p.playerId, "redCard", c.redCard); }}
+                                className={`text-white rounded px-1 py-0.5 text-xs focus:outline-none ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`}
+                              >
+                                <option value="">–</option>
+                                <option value="1y">🟡 1× geel</option>
+                                <option value="2y">🟡🟡 2× geel</option>
+                                <option value="r">🔴 Direct rood</option>
+                              </select>
+                            </td>
                           </tr>
                         );
                       })}
