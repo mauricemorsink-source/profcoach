@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     where: all
       ? { active: true }
       : { active: true, OR: [{ clubTeam: team as any }, { altTeam: team as any }] },
-    orderBy: [{ clubTeam: "asc" }, { position: "asc" }, { name: "asc" }],
+    orderBy: [{ position: "asc" }, { name: "asc" }],
     select: { id: true, name: true, position: true, clubTeam: true, altTeam: true },
   });
 
