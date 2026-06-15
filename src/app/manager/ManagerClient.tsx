@@ -140,15 +140,17 @@ function GuestPicker({
 
 function toCardValue(yellowCards: number, redCard: boolean): string {
   if (yellowCards >= 2 && redCard) return "2y";
+  if (yellowCards === 1 && redCard) return "1yr";
   if (redCard) return "r";
   if (yellowCards >= 1) return "1y";
   return "";
 }
 
 function fromCardValue(v: string): { yellowCards: number; redCard: boolean } {
-  if (v === "1y") return { yellowCards: 1, redCard: false };
-  if (v === "2y") return { yellowCards: 2, redCard: true };
-  if (v === "r") return { yellowCards: 0, redCard: true };
+  if (v === "1y")  return { yellowCards: 1, redCard: false };
+  if (v === "2y")  return { yellowCards: 2, redCard: true };
+  if (v === "r")   return { yellowCards: 0, redCard: true };
+  if (v === "1yr") return { yellowCards: 1, redCard: true };
   return { yellowCards: 0, redCard: false };
 }
 
@@ -206,6 +208,7 @@ function PerfRow({
           <option value="1y">🟡 1× geel</option>
           <option value="2y">🟡🟡 2× geel</option>
           <option value="r">🔴 Direct rood</option>
+          <option value="1yr">🟡🔴 Geel + direct rood</option>
         </select>
       </td>
       <td className="px-3 py-2.5 text-center">
@@ -922,9 +925,9 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                 {p.assists > 0 && <span className="text-cyan-400">Ass {p.assists}</span>}
                                 {p.ownGoals > 0 && <span className="text-red-400">EG {p.ownGoals}</span>}
                                 {p.yellowCards === 1 && !p.redCard && <span className="text-amber-400">🟡</span>}
-                                {p.yellowCards >= 2 && p.redCard && <span className="text-amber-400">🟡🟡</span>}
+                                {p.yellowCards >= 2 && p.redCard && <span>🟡🟡 🔴</span>}
+                                {p.yellowCards === 1 && p.redCard && <span>🟡 🔴</span>}
                                 {p.redCard && p.yellowCards === 0 && <span className="text-red-500">🔴</span>}
-                                {p.redCard && p.yellowCards >= 2 && <span className="text-red-500">🔴</span>}
                                 {p.goals === 0 && p.assists === 0 && p.ownGoals === 0 && !p.yellowCards && !p.redCard && <span className="text-slate-600">–</span>}
                               </div>
                             </div>
