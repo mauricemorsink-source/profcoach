@@ -149,12 +149,6 @@ export default function GebruikersClient() {
     loadUsers();
   }, []);
 
-  // suppress unused warning
-  void bonusInput;
-  void bonusSaving;
-  void bonusMsg;
-  void saveBonus;
-
   return (
     <div className="max-w-4xl">
       <section className="bg-slate-900 neon-border rounded-2xl p-6">

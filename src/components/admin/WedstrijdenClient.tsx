@@ -459,9 +459,6 @@ export default function WedstrijdenClient() {
     await loadPublishMoments();
   }
 
-  // suppress unused warning
-  void assignMomentMatchId;
-
   return (
     <div className="flex gap-4 items-start">
       {/* Links: wedstrijdenoverzicht */}
