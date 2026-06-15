@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!season) return NextResponse.json({ error: "Geen actief seizoen gevonden" }, { status: 400 });
 
   const body = await req.json();
-  const { name, homeAway, matchDate, goalsScored, goalsConceded } = body;
+  const { name, homeAway, matchDate, goalsScored, goalsConceded, extraScorers, notes } = body;
 
   if (!name?.trim() || !matchDate) {
     return NextResponse.json({ error: "Naam en datum zijn verplicht" }, { status: 400 });
@@ -57,6 +57,8 @@ export async function POST(req: NextRequest) {
       matchDate: new Date(matchDate),
       goalsScored: Number(goalsScored) || 0,
       goalsConceded: Number(goalsConceded) || 0,
+      extraScorers: extraScorers?.length ? extraScorers : null,
+      notes: notes?.trim() || null,
       status: "PENDING",
       createdById: session.userId,
     },

@@ -122,6 +122,8 @@ type AdminMatch = {
   matchDate: string;
   goalsScored: number;
   goalsConceded: number;
+  extraScorers: { goals: number; description: string }[] | null;
+  notes: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED" | "CORRECTION";
   publishMomentId: string | null;
   publishMoment: { id: string; label: string; scheduledAt: string; publishedAt: string | null } | null;
@@ -301,7 +303,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   const [matchFilterTeam, setMatchFilterTeam] = useState("");
   const [matchFilterStatus, setMatchFilterStatus] = useState("");
   const [editingMatch, setEditingMatch] = useState<AdminMatch | null>(null);
-  const [editMatchForm, setEditMatchForm] = useState({ name: "", matchDate: "", thuisGoals: 0, uitGoals: 0, homeAway: "HOME" });
+  const [editMatchForm, setEditMatchForm] = useState({ name: "", matchDate: "", thuisGoals: 0, uitGoals: 0, homeAway: "HOME", notes: "" });
   const [editMatchSaving, setEditMatchSaving] = useState(false);
   const [editMatchError, setEditMatchError] = useState("");
   const [matchMenuId, setMatchMenuId] = useState<string | null>(null);
@@ -708,7 +710,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   function openEditMatch(m: AdminMatch) {
     const thuisGoals = m.homeAway === "HOME" ? m.goalsScored : m.goalsConceded;
     const uitGoals   = m.homeAway === "HOME" ? m.goalsConceded : m.goalsScored;
-    setEditMatchForm({ name: m.name, matchDate: m.matchDate.slice(0, 16), thuisGoals, uitGoals, homeAway: m.homeAway });
+    setEditMatchForm({ name: m.name, matchDate: m.matchDate.slice(0, 16), thuisGoals, uitGoals, homeAway: m.homeAway, notes: m.notes ?? "" });
     const data: Record<string, { played: boolean; goals: number; penaltyGoals: number; assists: number; ownGoals: number; yellowCards: number; redCard: boolean }> = {};
     for (const p of m.performances) {
       data[p.playerId] = { played: p.played, goals: p.goals, penaltyGoals: p.penaltyGoals, assists: p.assists, ownGoals: p.ownGoals, yellowCards: p.yellowCards, redCard: p.redCard };
@@ -729,7 +731,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
     const homeAway = editMatchForm.homeAway;
     const goalsScored   = homeAway === "HOME" ? Number(editMatchForm.thuisGoals) : Number(editMatchForm.uitGoals);
     const goalsConceded = homeAway === "HOME" ? Number(editMatchForm.uitGoals)   : Number(editMatchForm.thuisGoals);
-    const res = await fetch(`/api/admin/matches/${editingMatch.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editMatchForm.name, matchDate: editMatchForm.matchDate, goalsScored, goalsConceded, homeAway }) });
+    const res = await fetch(`/api/admin/matches/${editingMatch.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: editMatchForm.name, matchDate: editMatchForm.matchDate, goalsScored, goalsConceded, homeAway, notes: editMatchForm.notes.trim() || null }) });
     const data = await res.json();
     if (!res.ok) { setEditMatchSaving(false); setEditMatchError(data.error || "Opslaan mislukt"); return; }
     const performances = Object.entries(editPerfsData).map(([playerId, d]) => ({ playerId, ...d }));
@@ -1984,6 +1986,49 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                   </div>
                 </div>
                 {editMatchError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{editMatchError}</p>}
+              </div>
+            )}
+
+            {/* Extra scorers + notes (read-only weergave) */}
+            {(editingMatch.extraScorers?.length || editingMatch.notes) && (
+              <div className="border-t border-slate-700 pt-5 space-y-3">
+                {editingMatch.extraScorers && editingMatch.extraScorers.length > 0 && (
+                  <div>
+                    <label className={LABEL}>Doelpunten buiten selectie</label>
+                    <div className="space-y-1 mt-1">
+                      {(editingMatch.extraScorers as { goals: number; description: string }[]).map((s, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm bg-slate-800/50 rounded-lg px-3 py-1.5">
+                          <span className="text-white font-semibold w-6 text-center">{s.goals}</span>
+                          <span className="text-slate-400">{s.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {editingMatch.notes && (
+                  <div>
+                    <label className={LABEL}>Opmerkingen</label>
+                    <p className="text-slate-300 text-sm whitespace-pre-wrap mt-1 bg-slate-800/50 rounded-lg px-3 py-2">{editingMatch.notes}</p>
+                  </div>
+                )}
+                {!editMatchReadOnly && (
+                  <div>
+                    <label className={LABEL}>Opmerkingen bewerken</label>
+                    <textarea value={editMatchForm.notes}
+                      onChange={(e) => setEditMatchForm({ ...editMatchForm, notes: e.target.value })}
+                      rows={3} placeholder="Eigen doelen, bijzonderheden, weetjes..."
+                      className={`${INPUT} resize-none`} />
+                  </div>
+                )}
+              </div>
+            )}
+            {!editMatchReadOnly && !editingMatch.notes && (
+              <div className="border-t border-slate-700 pt-5">
+                <label className={LABEL}>Opmerkingen</label>
+                <textarea value={editMatchForm.notes}
+                  onChange={(e) => setEditMatchForm({ ...editMatchForm, notes: e.target.value })}
+                  rows={3} placeholder="Eigen doelen, bijzonderheden, weetjes..."
+                  className={`${INPUT} resize-none`} />
               </div>
             )}
 

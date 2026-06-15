@@ -203,7 +203,9 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
   const [modalStep, setModalStep] = useState<1 | 2 | 3>(1);
   const [addForm, setAddForm] = useState({
     name: "", homeAway: "HOME", matchDate: "", goalsScored: "", goalsConceded: "",
+    notes: "",
   });
+  const [extraScorers, setExtraScorers] = useState<{ goals: string; description: string }[]>([]);
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [addPerfs, setAddPerfs] = useState<PlayerPerf[]>([]);
@@ -258,7 +260,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
   useEffect(() => { loadMatches(); }, []);
 
   function openAddModal() {
-    setAddForm({ name: "", homeAway: "HOME", matchDate: "", goalsScored: "", goalsConceded: "" });
+    setAddForm({ name: "", homeAway: "HOME", matchDate: "", goalsScored: "", goalsConceded: "", notes: "" });
+    setExtraScorers([]);
     setAddError("");
     setModalStep(1);
     setShowAddModal(true);
@@ -332,6 +335,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
         matchDate: addForm.matchDate ? new Date(addForm.matchDate).toISOString() : null,
         goalsScored: Number(addForm.goalsScored) || 0,
         goalsConceded: Number(addForm.goalsConceded) || 0,
+        extraScorers: extraScorers.filter(s => s.description.trim()).map(s => ({ goals: Number(s.goals) || 1, description: s.description.trim() })),
+        notes: addForm.notes.trim() || null,
       }),
     });
     const matchData = await res.json();
@@ -705,11 +710,15 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                       </div>
                     </div>
                   </div>
+                  <p className="text-xs text-slate-600 bg-slate-800/40 rounded-lg px-3 py-2 border border-slate-700/50">
+                    In de volgende stappen kun je de spelersprestaties invullen en eventueel bijzonderheden over de wedstrijd toevoegen, zoals jubileums, eerste doelpunt in senioren of andere leuke weetjes.
+                  </p>
                 </div>
               )}
 
               {/* Step 2: Player performances */}
               {modalStep === 2 && (
+
                 <div>
                   {loadingPlayers ? (
                     <p className="text-slate-500 text-sm text-center py-8">Spelers laden...</p>
@@ -767,6 +776,21 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                         </table>
                       </div>
 
+                      {/* Opmerkingen */}
+                      <div className="mt-4 pt-4 border-t border-slate-700/50">
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
+                          Opmerkingen
+                        </label>
+                        <p className="text-xs text-slate-600 mb-2">Eigen doelen, bijzonderheden, leuke weetjes of overige informatie over de wedstrijd</p>
+                        <textarea
+                          value={addForm.notes}
+                          onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                          rows={3}
+                          placeholder="Optioneel..."
+                          className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 resize-none"
+                        />
+                      </div>
+
                       {showGuestPickerAdd ? (
                         <GuestPicker
                           allPlayers={allPlayers}
@@ -790,66 +814,124 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                 </div>
               )}
 
-              {/* Step 3: Overview */}
-              {modalStep === 3 && (
-                <div>
-                  <div className="bg-slate-800/50 rounded-xl p-4 mb-5 border border-slate-700/50">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-slate-500 text-xs">Tegenstander</span>
-                        <p className="text-white font-semibold">{addForm.name}</p>
+              {/* Step 3: Overzicht + validatie */}
+              {modalStep === 3 && (() => {
+                const totalPerfGoals = addPerfs.filter(p => p.played).reduce((s, p) => s + p.goals + p.penaltyGoals, 0);
+                const totalExtraGoals = extraScorers.reduce((s, e) => s + (Number(e.goals) || 0), 0);
+                const totalGoals = totalPerfGoals + totalExtraGoals;
+                const expectedGoals = Number(addForm.goalsScored) || 0;
+                const goalsMismatch = totalGoals !== expectedGoals;
+                const totalAssists = addPerfs.filter(p => p.played).reduce((s, p) => s + p.assists, 0);
+                const assistsMismatch = totalAssists > totalGoals;
+
+                return (
+                  <div className="space-y-4">
+                    {/* Wedstrijd samenvatting */}
+                    <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-slate-500 text-xs">Tegenstander</span>
+                          <p className="text-white font-semibold">{addForm.name}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 text-xs">Datum</span>
+                          <p className="text-white">{addForm.matchDate ? new Date(addForm.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "–"}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 text-xs">Thuis / Uit</span>
+                          <p className="text-white">{addForm.homeAway === "HOME" ? "Thuis" : addForm.homeAway === "AWAY" ? "Uit" : "Neutraal"}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 text-xs">Stand</span>
+                          <p className="text-white font-mono text-sm">
+                            {addForm.homeAway === "AWAY"
+                              ? `${addForm.name || "Tegenstander"} ${addForm.goalsConceded || 0} – ${addForm.goalsScored || 0} ${TEAM_LABEL[managedTeam] ?? managedTeam}`
+                              : `${TEAM_LABEL[managedTeam] ?? managedTeam} ${addForm.goalsScored || 0} – ${addForm.goalsConceded || 0} ${addForm.name || "Tegenstander"}`}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-slate-500 text-xs">Datum</span>
-                        <p className="text-white">{addForm.matchDate ? new Date(addForm.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "–"}</p>
+                    </div>
+
+                    {/* Speelden mee */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Speelden mee ({addPerfs.filter(p => p.played).length})</h4>
+                      {addPerfs.filter(p => p.played).length === 0 ? (
+                        <p className="text-slate-500 text-sm">Geen spelers geselecteerd.</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {addPerfs.filter(p => p.played).map((p) => (
+                            <div key={p.playerId} className="flex items-center gap-3 bg-slate-800/40 rounded-lg px-3 py-2">
+                              <div className="flex-1 flex items-center gap-2 min-w-0">
+                                <span className="text-white text-sm font-medium truncate">{p.playerName}</span>
+                                {p.isGuest && <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded shrink-0">GAST</span>}
+                                <span className="text-slate-500 text-xs shrink-0">{POSITION_LABEL[p.position]}</span>
+                              </div>
+                              <div className="flex gap-2 text-xs shrink-0">
+                                {p.goals > 0 && <span className="text-white">⚽ {p.goals}</span>}
+                                {p.penaltyGoals > 0 && <span className="text-slate-300">Pen {p.penaltyGoals}</span>}
+                                {p.assists > 0 && <span className="text-cyan-400">Ass {p.assists}</span>}
+                                {p.ownGoals > 0 && <span className="text-red-400">EG {p.ownGoals}</span>}
+                                {p.yellowCards > 0 && <span className="text-amber-400">🟡</span>}
+                                {p.redCard && <span className="text-red-500">🔴</span>}
+                                {p.goals === 0 && p.assists === 0 && p.ownGoals === 0 && !p.yellowCards && !p.redCard && <span className="text-slate-600">–</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Validatie: goals mismatch */}
+                    {goalsMismatch && (
+                      <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl p-4">
+                        <p className="text-amber-400 font-semibold text-sm mb-1">Doelpunten komen niet overeen</p>
+                        <p className="text-amber-300/80 text-xs mb-3">
+                          Het aantal geregistreerde doelpunten ({totalGoals}) komt niet overeen met de eindstand ({expectedGoals} voor {TEAM_LABEL[managedTeam] ?? managedTeam}).
+                          Zijn er doelpunten gemaakt door spelers buiten de selectie? (jeugdspelers, eigen goal tegenstander, nieuwe spelers die nog niet in het systeem staan)
+                        </p>
+                        <div className="space-y-2">
+                          {extraScorers.map((s, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input type="number" min="0" value={s.goals}
+                                onChange={(e) => setExtraScorers(prev => prev.map((x, j) => j === i ? { ...x, goals: e.target.value } : x))}
+                                className="w-14 bg-slate-800 border border-slate-600 text-white rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-amber-500/50" />
+                              <input type="text" value={s.description} placeholder="bijv. Eigen goal of Jan Jansen"
+                                onChange={(e) => setExtraScorers(prev => prev.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                                className="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-1.5 text-sm placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500/50" />
+                              <button onClick={() => setExtraScorers(prev => prev.filter((_, j) => j !== i))}
+                                className="text-slate-500 hover:text-red-400 transition-colors text-lg leading-none px-1">✕</button>
+                            </div>
+                          ))}
+                          <button onClick={() => setExtraScorers(prev => [...prev, { goals: "1", description: "" }])}
+                            className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors">
+                            + Doelpuntenmaker toevoegen
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-slate-500 text-xs">Thuis / Uit</span>
-                        <p className="text-white">{addForm.homeAway === "HOME" ? "Thuis" : addForm.homeAway === "AWAY" ? "Uit" : "Neutraal"}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 text-xs">Stand</span>
-                        <p className="text-white font-mono text-sm">
-                          {addForm.homeAway === "AWAY"
-                            ? `${addForm.name || "Tegenstander"} ${addForm.goalsConceded || 0} – ${addForm.goalsScored || 0} ${TEAM_LABEL[managedTeam] ?? managedTeam}`
-                            : `${TEAM_LABEL[managedTeam] ?? managedTeam} ${addForm.goalsScored || 0} – ${addForm.goalsConceded || 0} ${addForm.name || "Tegenstander"}`}
+                    )}
+
+                    {/* Validatie: assists > goals */}
+                    {assistsMismatch && (
+                      <div className="bg-red-900/20 border border-red-500/30 rounded-xl px-4 py-3 flex items-start gap-2">
+                        <span className="text-red-400 shrink-0 mt-0.5">⚠</span>
+                        <p className="text-red-300 text-xs">
+                          Het aantal assists ({totalAssists}) is hoger dan het aantal doelpunten ({totalGoals}). Controleer de statistieken.
                         </p>
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Speelden mee ({addPerfs.filter(p => p.played).length})</h4>
-                  {addPerfs.filter(p => p.played).length === 0 ? (
-                    <p className="text-slate-500 text-sm">Geen spelers geselecteerd.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {addPerfs.filter(p => p.played).map((p) => (
-                        <div key={p.playerId} className="flex items-center gap-3 bg-slate-800/40 rounded-lg px-3 py-2">
-                          <div className="flex-1 flex items-center gap-2 min-w-0">
-                            <span className="text-white text-sm font-medium truncate">{p.playerName}</span>
-                            {p.isGuest && (
-                              <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded shrink-0">GAST</span>
-                            )}
-                            <span className="text-slate-500 text-xs shrink-0">{POSITION_LABEL[p.position]}</span>
-                          </div>
-                          <div className="flex gap-2 text-xs text-slate-400 shrink-0">
-                            {p.goals > 0 && <span className="text-white">⚽ {p.goals}</span>}
-                            {p.penaltyGoals > 0 && <span className="text-slate-300">Pen {p.penaltyGoals}</span>}
-                            {p.assists > 0 && <span className="text-cyan-400">Ass {p.assists}</span>}
-                            {p.ownGoals > 0 && <span className="text-red-400">EG {p.ownGoals}</span>}
-                            {p.yellowCards > 0 && <span className="text-amber-400">🟡</span>}
-                            {p.redCard && <span className="text-red-500">🔴</span>}
-                            {p.goals === 0 && p.assists === 0 && p.ownGoals === 0 && !p.yellowCards && !p.redCard && (
-                              <span className="text-slate-600">–</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {addError && <p className="mt-4 text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{addError}</p>}
-                </div>
-              )}
+                    {/* Opmerkingen */}
+                    {addForm.notes.trim() && (
+                      <div className="bg-slate-800/40 rounded-xl px-4 py-3">
+                        <span className="text-slate-500 text-xs font-semibold uppercase tracking-wide block mb-1">Opmerkingen</span>
+                        <p className="text-slate-300 text-sm whitespace-pre-wrap">{addForm.notes.trim()}</p>
+                      </div>
+                    )}
+
+                    {addError && <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{addError}</p>}
+                  </div>
+                );
+              })()}
 
               {addError && modalStep < 3 && (
                 <p className="mt-4 text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">{addError}</p>

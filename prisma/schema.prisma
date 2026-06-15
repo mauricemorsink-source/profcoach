@@ -164,6 +164,8 @@ model Match {
   matchDate       DateTime
   goalsScored     Int                @default(0)
   goalsConceded   Int                @default(0)
+  extraScorers    Json?
+  notes           String?
   status          MatchStatus        @default(PENDING)
   processedAt     DateTime?
   createdAt       DateTime           @default(now())
