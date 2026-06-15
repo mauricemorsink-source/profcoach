@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { calculateMatchPoints, buildConfigMap } from "@/lib/points";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ momentId: string }> }
 ) {
   const session = await getSession();
@@ -13,6 +13,17 @@ export async function POST(
   }
 
   const { momentId } = await params;
+
+  let excludedPerformances: { playerId: string; matchId: string }[] = [];
+  try {
+    const body = await req.json();
+    if (Array.isArray(body?.excludedPerformances)) {
+      excludedPerformances = body.excludedPerformances;
+    }
+  } catch {
+    // No body → no exclusions
+  }
+  const excludedSet = new Set(excludedPerformances.map((e) => `${e.matchId}:${e.playerId}`));
 
   const moment = await prisma.publishMoment.findUnique({ where: { id: momentId } });
   if (!moment) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
@@ -74,6 +85,7 @@ export async function POST(
 
     for (const match of approvedMatches) {
       for (const [playerId, delta] of calculateMatchPoints(match, configMap)) {
+        if (excludedSet.has(`${match.id}:${playerId}`)) continue;
         mergeDelta(playerId, delta);
       }
     }
