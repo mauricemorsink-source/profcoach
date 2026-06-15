@@ -17,6 +17,7 @@ const TAB_SECTIONS = [
     tabs: [
       { href: "/admin/wedstrijden", label: "Wedstrijden" },
       { href: "/admin/spelers", label: "Spelersbeheer" },
+      { href: "/admin/totw", label: "Team of the Week" },
     ],
   },
   {
