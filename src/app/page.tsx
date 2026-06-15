@@ -8,6 +8,7 @@ export default async function HomePage() {
   const session = await getSession();
   const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
   const registrationOpen = settings?.registrationOpen ?? false;
+  const requireLogin = settings?.requireLogin ?? true;
   const deadline = settings?.deadline ? new Date(settings.deadline) : null;
   const showCountdown = registrationOpen && deadline && deadline > new Date();
 
@@ -90,7 +91,11 @@ export default async function HomePage() {
           </>
         ) : (
           <>
-            {registrationOpen ? (
+            {registrationOpen && !requireLogin ? (
+              <Link href="/kladopstelling" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
+                Team samenstellen
+              </Link>
+            ) : registrationOpen ? (
               <Link href="/register" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
                 Deelnemen
               </Link>

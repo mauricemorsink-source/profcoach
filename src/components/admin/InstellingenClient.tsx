@@ -6,6 +6,8 @@ type GameSettings = {
   budget: number;
   deadline: string | null;
   registrationOpen: boolean;
+  requireLogin: boolean;
+  inschrijfgeld: number;
   captainEnabled: boolean;
   captainBonusPerWin: number;
   showTussenstand: boolean;
@@ -25,6 +27,8 @@ export default function InstellingenClient() {
     budget: 1750,
     deadline: null,
     registrationOpen: true,
+    requireLogin: true,
+    inschrijfgeld: 0,
     captainEnabled: false,
     captainBonusPerWin: 5,
     showTussenstand: true,
@@ -45,6 +49,8 @@ export default function InstellingenClient() {
         budget: data.budget,
         deadline: data.deadline ? data.deadline.slice(0, 16) : "",
         registrationOpen: data.registrationOpen,
+        requireLogin: data.requireLogin ?? true,
+        inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
         captainBonusPerWin: data.captainBonusPerWin ?? 5,
         showTussenstand: data.showTussenstand ?? true,
@@ -66,6 +72,8 @@ export default function InstellingenClient() {
         budget: Number(settingsForm.budget),
         deadline: settingsForm.deadline || null,
         registrationOpen: settingsForm.registrationOpen,
+        requireLogin: settingsForm.requireLogin,
+        inschrijfgeld: Number(settingsForm.inschrijfgeld),
         captainEnabled: settingsForm.captainEnabled,
         captainBonusPerWin: Number(settingsForm.captainBonusPerWin),
         showTussenstand: settingsForm.showTussenstand,
@@ -85,6 +93,8 @@ export default function InstellingenClient() {
         budget: data.budget,
         deadline: data.deadline ? data.deadline.slice(0, 16) : "",
         registrationOpen: data.registrationOpen,
+        requireLogin: data.requireLogin ?? true,
+        inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
         captainBonusPerWin: data.captainBonusPerWin ?? 5,
         showTussenstand: data.showTussenstand ?? true,
@@ -166,6 +176,42 @@ export default function InstellingenClient() {
                   {new Date(settingsForm.deadline).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}) is al
                   verstreken. Nieuwe aanmeldingen worden geblokkeerd totdat de deadline wordt aangepast of verwijderd.
                 </p>
+              )}
+            </div>
+            <div className="space-y-3 border-t border-slate-800 pt-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Inschrijving zonder account</p>
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!settingsForm.requireLogin}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, requireLogin: !e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                </label>
+                <span className="text-sm font-medium text-slate-300">Inschrijven zonder account (via kladopstelling)</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${!settingsForm.requireLogin ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
+                  {!settingsForm.requireLogin ? "Aan" : "Uit"}
+                </span>
+              </div>
+              {!settingsForm.requireLogin && (
+                <div className="flex items-center gap-3 ml-14">
+                  <label className="text-sm text-slate-400 shrink-0">Inschrijfgeld</label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-400 text-sm">€</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={settingsForm.inschrijfgeld}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, inschrijfgeld: Number(e.target.value) })}
+                      className="w-24 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                      placeholder="0,00"
+                    />
+                  </div>
+                  <span className="text-xs text-slate-500">— wordt getoond bij het indienen</span>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-3">

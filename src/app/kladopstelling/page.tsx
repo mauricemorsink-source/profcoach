@@ -11,6 +11,9 @@ export default async function KladopstellingPage() {
     <KladopstellingClient
       formations={formations}
       budget={settings?.budget ?? 1750}
+      requireLogin={settings?.requireLogin ?? true}
+      inschrijfgeld={settings?.inschrijfgeld ?? 0}
+      registrationOpen={settings?.registrationOpen ?? false}
     />
   );
 }

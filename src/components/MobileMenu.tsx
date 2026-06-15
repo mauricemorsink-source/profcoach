@@ -56,6 +56,13 @@ export default function MobileMenu({ session }: { session: SessionPayload | null
               Tussenstand
             </Link>
             <Link
+              href="/kladopstelling"
+              onClick={() => setOpen(false)}
+              className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              Kladopstelling
+            </Link>
+            <Link
               href="/spelregels"
               onClick={() => setOpen(false)}
               className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"

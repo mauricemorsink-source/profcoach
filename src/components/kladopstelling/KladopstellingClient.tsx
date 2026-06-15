@@ -13,7 +13,6 @@ const POSITION_LABEL: Record<string, string> = {
   GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
 };
 const CLUB_ORDER = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
-const POS_ORDER = ["GK", "DEF", "MID", "ATT"];
 
 function remapSlots(
   oldSlotValues: (string | null)[],
@@ -44,9 +43,25 @@ function remapSlots(
 interface Props {
   formations: Formation[];
   budget: number;
+  requireLogin: boolean;
+  inschrijfgeld: number;
+  registrationOpen: boolean;
 }
 
-export default function KladopstellingClient({ formations, budget }: Props) {
+type SubmitStep = 1 | 2;
+
+interface PersonInfo {
+  voornaam: string;
+  achternaam: string;
+  email: string;
+  telefoonnummer: string;
+  whatsappGroep: boolean;
+}
+
+const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
+const LABEL = "block text-xs font-medium text-slate-400 mb-1";
+
+export default function KladopstellingClient({ formations, budget, requireLogin, inschrijfgeld, registrationOpen }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [formationId, setFormationId] = useState<string>(formations[0]?.id ?? "");
@@ -54,6 +69,17 @@ export default function KladopstellingClient({ formations, budget }: Props) {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [playerSearch, setPlayerSearch] = useState("");
+
+  // Indienen modal
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [submitStep, setSubmitStep] = useState<SubmitStep>(1);
+  const [personInfo, setPersonInfo] = useState<PersonInfo>({
+    voornaam: "", achternaam: "", email: "", telefoonnummer: "", whatsappGroep: false,
+  });
+  const [betaaldAkkoord, setBetaaldAkkoord] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -68,7 +94,6 @@ export default function KladopstellingClient({ formations, budget }: Props) {
     [slotValues, playersById, formation, budget, slots]
   );
 
-  // Laad spelers + herstel localStorage
   useEffect(() => {
     async function init() {
       const res = await fetch("/api/players");
@@ -92,7 +117,6 @@ export default function KladopstellingClient({ formations, budget }: Props) {
     init();
   }, []);
 
-  // Persist naar localStorage bij elke wijziging
   useEffect(() => {
     if (!loading) localStorage.setItem(KLAD_SLOTS_KEY, JSON.stringify(slotValues));
   }, [slotValues, loading]);
@@ -146,6 +170,59 @@ export default function KladopstellingClient({ formations, budget }: Props) {
     setFormationId(formations[0]?.id ?? "");
   }
 
+  function openSubmitModal() {
+    setSubmitStep(1);
+    setSubmitError(null);
+    setBetaaldAkkoord(false);
+    setShowSubmitModal(true);
+  }
+
+  function closeSubmitModal() {
+    if (submitting) return;
+    setShowSubmitModal(false);
+    setSubmitError(null);
+  }
+
+  function handleStep1Next() {
+    if (!personInfo.voornaam.trim()) { setSubmitError("Voornaam is verplicht"); return; }
+    if (!personInfo.achternaam.trim()) { setSubmitError("Achternaam is verplicht"); return; }
+    if (!personInfo.email.trim()) { setSubmitError("Mailadres is verplicht"); return; }
+    if (!personInfo.telefoonnummer.trim()) { setSubmitError("Telefoonnummer is verplicht"); return; }
+    setSubmitError(null);
+    setSubmitStep(2);
+  }
+
+  async function handleSubmit() {
+    if (!betaaldAkkoord) { setSubmitError("Je moet akkoord gaan met het inschrijfgeld"); return; }
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/team/submit-public", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...personInfo,
+          betaaldAkkoord,
+          formationId,
+          slots: slotValues,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error ?? "Er is een fout opgetreden");
+      } else {
+        setSubmitted(true);
+        localStorage.removeItem(KLAD_SLOTS_KEY);
+        localStorage.removeItem(KLAD_FORMATION_KEY);
+      }
+    } catch {
+      setSubmitError("Verbindingsfout. Probeer het opnieuw.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const canSubmitPublic = !requireLogin && registrationOpen;
   const activeSlot = selectedSlot !== null ? slots[selectedSlot] : null;
   const currentInSlot = activeSlot ? slotValues[activeSlot.slotIndex] : null;
   const chosenIds = new Set(slotValues.filter(Boolean) as string[]);
@@ -164,6 +241,8 @@ export default function KladopstellingClient({ formations, budget }: Props) {
           return a.name.localeCompare(b.name, "nl");
         })
     : [];
+
+  const inschrijfgeldDisplay = (inschrijfgeld / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   if (loading) {
     return (
@@ -191,7 +270,7 @@ export default function KladopstellingClient({ formations, budget }: Props) {
             Dit is een vrije speelomgeving — geen account nodig.
           </p>
           <p className="text-slate-500 text-xs mt-1">
-            Je kunt hier vrijblijvend experimenteren met je opstelling. Jouw kladopstelling wordt alleen in deze browser opgeslagen. Klaar? Dien je echte team in via <span className="text-slate-400">Mijn team</span>.
+            Je kunt hier vrijblijvend experimenteren met je opstelling. Jouw kladopstelling wordt alleen in deze browser opgeslagen.
           </p>
         </div>
 
@@ -267,9 +346,24 @@ export default function KladopstellingClient({ formations, budget }: Props) {
         {/* CTA onderaan */}
         <div className="mt-8 bg-cyan-900/20 border border-cyan-500/30 rounded-2xl px-5 py-5">
           <p className="text-white font-bold text-sm mb-1">Tevreden met je opstelling?</p>
-          <p className="text-slate-400 text-sm">
-            De kladopstelling is alleen bedoeld om te puzzelen en experimenteren. Dien je echte team in via <span className="text-cyan-400 font-medium">Mijn team</span> — daar kun je je opstelling officieel inschrijven voor het spel.
-          </p>
+          {canSubmitPublic ? (
+            <>
+              <p className="text-slate-400 text-sm mb-4">
+                Dien je team hieronder direct in. Je hebt geen account nodig.
+              </p>
+              <button
+                onClick={openSubmitModal}
+                disabled={!validation.allValid}
+                className="w-full py-3 px-6 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-colors neon-glow-sm"
+              >
+                {validation.allValid ? "Team indienen" : "Vul eerst alle 11 posities in"}
+              </button>
+            </>
+          ) : (
+            <p className="text-slate-400 text-sm">
+              Dien je echte team in via <span className="text-cyan-400 font-medium">Mijn team</span> — daar kun je je opstelling officieel inschrijven voor het spel.
+            </p>
+          )}
         </div>
       </div>
 
@@ -352,6 +446,185 @@ export default function KladopstellingClient({ formations, budget }: Props) {
                 })
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team indienen modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90dvh] flex flex-col">
+            {submitted ? (
+              /* Bevestiging */
+              <div className="flex flex-col items-center justify-center px-8 py-12 text-center gap-4">
+                <div className="text-4xl">✅</div>
+                <h3 className="text-xl font-black text-white">Team ingediend!</h3>
+                <p className="text-slate-400 text-sm">
+                  Je team is succesvol ingediend. Je ontvangt bericht via het opgegeven mailadres.
+                </p>
+                <button
+                  onClick={() => { setShowSubmitModal(false); setSubmitted(false); }}
+                  className="mt-2 px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl text-sm transition-colors"
+                >
+                  Sluiten
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 shrink-0">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">
+                      Stap {submitStep} van 2
+                    </p>
+                    <h3 className="font-bold text-white">
+                      {submitStep === 1 ? "Jouw gegevens" : "Akkoord & indienen"}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={closeSubmitModal}
+                    disabled={submitting}
+                    className="text-slate-500 hover:text-white text-xl leading-none w-8 h-8 flex items-center justify-center transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto flex-1 px-5 py-5">
+                  {submitStep === 1 && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={LABEL}>Voornaam *</label>
+                          <input
+                            type="text"
+                            value={personInfo.voornaam}
+                            onChange={(e) => setPersonInfo({ ...personInfo, voornaam: e.target.value })}
+                            className={INPUT}
+                            placeholder="Jan"
+                          />
+                        </div>
+                        <div>
+                          <label className={LABEL}>Achternaam *</label>
+                          <input
+                            type="text"
+                            value={personInfo.achternaam}
+                            onChange={(e) => setPersonInfo({ ...personInfo, achternaam: e.target.value })}
+                            className={INPUT}
+                            placeholder="Janssen"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className={LABEL}>Mailadres *</label>
+                        <input
+                          type="email"
+                          value={personInfo.email}
+                          onChange={(e) => setPersonInfo({ ...personInfo, email: e.target.value })}
+                          className={INPUT}
+                          placeholder="jan@voorbeeld.nl"
+                        />
+                      </div>
+                      <div>
+                        <label className={LABEL}>Telefoonnummer *</label>
+                        <input
+                          type="tel"
+                          value={personInfo.telefoonnummer}
+                          onChange={(e) => setPersonInfo({ ...personInfo, telefoonnummer: e.target.value })}
+                          className={INPUT}
+                          placeholder="06 12345678"
+                        />
+                        <p className="text-xs text-slate-500 mt-1.5">
+                          Het inschrijfgeld wordt via een Tikkie betaald. Voer je nummer in zodat we je dat kunnen sturen.
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3 bg-slate-800/50 rounded-xl border border-slate-700 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          id="whatsapp"
+                          checked={personInfo.whatsappGroep}
+                          onChange={(e) => setPersonInfo({ ...personInfo, whatsappGroep: e.target.checked })}
+                          className="mt-0.5 w-4 h-4 accent-cyan-500 shrink-0"
+                        />
+                        <label htmlFor="whatsapp" className="text-sm text-slate-300 cursor-pointer">
+                          Voeg me toe aan de ProfCoach WhatsApp-groep voor updates over de tussenstand
+                        </label>
+                      </div>
+                      {submitError && (
+                        <p className="text-sm text-red-400 bg-red-900/20 border border-red-500/30 px-3 py-2 rounded-lg">
+                          {submitError}
+                        </p>
+                      )}
+                      <button
+                        onClick={handleStep1Next}
+                        className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-sm transition-colors"
+                      >
+                        Volgende stap
+                      </button>
+                    </div>
+                  )}
+
+                  {submitStep === 2 && (
+                    <div className="space-y-4">
+                      {/* Samenvatting */}
+                      <div className="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 space-y-1">
+                        <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Jouw gegevens</p>
+                        <p className="text-sm text-white font-semibold">{personInfo.voornaam} {personInfo.achternaam}</p>
+                        <p className="text-sm text-slate-400">{personInfo.email}</p>
+                        <p className="text-sm text-slate-400">{personInfo.telefoonnummer}</p>
+                      </div>
+
+                      {inschrijfgeld > 0 && (
+                        <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl px-4 py-3">
+                          <p className="text-sm font-bold text-amber-300 mb-1">Inschrijfgeld: €{inschrijfgeldDisplay}</p>
+                          <p className="text-xs text-slate-400">
+                            Na het indienen ontvang je een Tikkie op je telefoonnummer voor het inschrijfgeld van €{inschrijfgeldDisplay}.
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-3 bg-slate-800/50 rounded-xl border border-slate-700 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          id="akkoord"
+                          checked={betaaldAkkoord}
+                          onChange={(e) => setBetaaldAkkoord(e.target.checked)}
+                          className="mt-0.5 w-4 h-4 accent-cyan-500 shrink-0"
+                        />
+                        <label htmlFor="akkoord" className="text-sm text-slate-300 cursor-pointer">
+                          {inschrijfgeld > 0
+                            ? `Ik ga akkoord met het inschrijfgeld van €${inschrijfgeldDisplay} dat via een Tikkie wordt betaald`
+                            : "Ik ga akkoord met de spelregels en dien mijn team definitief in"}
+                        </label>
+                      </div>
+
+                      {submitError && (
+                        <p className="text-sm text-red-400 bg-red-900/20 border border-red-500/30 px-3 py-2 rounded-lg">
+                          {submitError}
+                        </p>
+                      )}
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => { setSubmitStep(1); setSubmitError(null); }}
+                          disabled={submitting}
+                          className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition-colors border border-slate-700"
+                        >
+                          Terug
+                        </button>
+                        <button
+                          onClick={handleSubmit}
+                          disabled={submitting || !betaaldAkkoord}
+                          className="flex-1 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl text-sm transition-colors neon-glow-sm"
+                        >
+                          {submitting ? "Indienen..." : "Definitief indienen"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

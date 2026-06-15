@@ -64,6 +64,8 @@ model GameSettings {
   budget             Int       @default(1750)
   deadline           DateTime?
   registrationOpen   Boolean   @default(true)
+  requireLogin       Boolean   @default(true)
+  inschrijfgeld      Int       @default(0)
   captainEnabled     Boolean   @default(false)
   captainBonusPerWin Int       @default(5)
   rulesText          String    @default("")
@@ -113,19 +115,25 @@ model Player {
 }
 
 model TeamEntry {
-  id           String            @id @default(cuid())
-  seasonId     String
-  formationId  String
-  userId       String?
-  locked       Boolean           @default(false)
-  captainSlot  Int?
-  bonusPoints  Int               @default(0)
-  createdAt    DateTime          @default(now())
-  season      Season            @relation(fields: [seasonId], references: [id])
-  formation   Formation         @relation(fields: [formationId], references: [id])
-  user        User?             @relation(fields: [userId], references: [id])
-  players     TeamEntryPlayer[]
-  prediction  TeamPrediction?
+  id             String            @id @default(cuid())
+  seasonId       String
+  formationId    String
+  userId         String?
+  locked         Boolean           @default(false)
+  captainSlot    Int?
+  bonusPoints    Int               @default(0)
+  createdAt      DateTime          @default(now())
+  voornaam       String?
+  achternaam     String?
+  email          String?
+  telefoonnummer String?
+  whatsappGroep  Boolean           @default(false)
+  betaaldAkkoord Boolean           @default(false)
+  season         Season            @relation(fields: [seasonId], references: [id])
+  formation      Formation         @relation(fields: [formationId], references: [id])
+  user           User?             @relation(fields: [userId], references: [id])
+  players        TeamEntryPlayer[]
+  prediction     TeamPrediction?
 }
 
 model TeamEntryPlayer {
