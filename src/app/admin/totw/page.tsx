@@ -17,5 +17,10 @@ export default async function TotWPage() {
     prisma.formation.findMany({ orderBy: { code: "asc" } }),
   ]);
 
-  return <TotWClient matches={matches} formations={formations} />;
+  return (
+    <TotWClient
+      matches={matches.map((m) => ({ ...m, matchDate: m.matchDate.toISOString() }))}
+      formations={formations}
+    />
+  );
 }
