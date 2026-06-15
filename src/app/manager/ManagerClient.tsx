@@ -429,6 +429,15 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
     setSaving(false);
     if (res.ok) {
       setSaveMsg("Prestaties opgeslagen");
+      // Status kan zijn teruggezet naar PENDING — refresh zodat UI klopt
+      await loadMatches();
+      if (selectedMatchId) {
+        const refreshed = await fetch(`/api/manager/matches/${selectedMatchId}${adminSuffix}`);
+        if (refreshed.ok) {
+          const data: MatchDetail = await refreshed.json();
+          setMatchDetail(data);
+        }
+      }
     } else {
       const data = await res.json();
       setSaveMsg(data.error || "Er is een fout opgetreden");
@@ -544,11 +553,17 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                             className={`px-2 py-1 sm:px-3 text-xs rounded font-medium transition-colors whitespace-nowrap ${
                               m.status === "PENDING"
                                 ? "bg-cyan-900/50 text-cyan-400 hover:bg-cyan-800/50 border border-cyan-500/30"
+                                : m.status === "APPROVED" || m.status === "REJECTED"
+                                ? "bg-amber-900/40 text-amber-400 hover:bg-amber-800/40 border border-amber-500/30"
                                 : "bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-600"
                             }`}
                           >
-                            <span className="sm:hidden">{m.status === "PENDING" ? "Invullen" : "Bekijken"}</span>
-                            <span className="hidden sm:inline">{m.status === "PENDING" ? "Prestaties invullen" : "Bekijken"}</span>
+                            <span className="sm:hidden">
+                              {m.status === "PENDING" ? "Bewerken" : m.status === "APPROVED" || m.status === "REJECTED" ? "Corrigeren" : "Bekijken"}
+                            </span>
+                            <span className="hidden sm:inline">
+                              {m.status === "PENDING" ? "Prestaties bewerken" : m.status === "APPROVED" || m.status === "REJECTED" ? "Corrigeren" : "Bekijken"}
+                            </span>
                           </button>
                         </td>
                       </tr>
@@ -593,7 +608,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                         <PerfRow
                           key={p.playerId}
                           p={p}
-                          locked={matchDetail.match.status !== "PENDING"}
+                          locked={matchDetail.match.status === "PROCESSED"}
                           onChange={(field, value) => updatePerf(p.playerId, field, value)}
                           onRemove={p.isGuest ? () => removeGuest(p.playerId, false) : undefined}
                           numInputClass={NUM_INPUT}
@@ -603,7 +618,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   </table>
                 </div>
 
-                {matchDetail.match.status === "PENDING" && (
+                {(matchDetail.match.status === "PENDING" || matchDetail.match.status === "APPROVED" || matchDetail.match.status === "REJECTED") && (
                   <div className="mt-3">
                     {showGuestPickerPerf ? (
                       <GuestPicker
@@ -626,20 +641,32 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   </div>
                 )}
 
-                {matchDetail.match.status === "PENDING" && (
-                  <div className="mt-4 flex items-center gap-4">
-                    <button
-                      onClick={savePerformances}
-                      disabled={saving}
-                      className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors neon-glow-sm"
-                    >
-                      {saving ? "Opslaan..." : "Prestaties opslaan"}
-                    </button>
-                    {saveMsg && (
-                      <p className={`text-sm ${saveMsg === "Prestaties opgeslagen" ? "text-green-400" : "text-red-400"}`}>
-                        {saveMsg}
+                {(matchDetail.match.status === "PENDING" || matchDetail.match.status === "APPROVED" || matchDetail.match.status === "REJECTED") && (
+                  <div className="mt-4">
+                    {matchDetail.match.status === "APPROVED" && (
+                      <p className="text-xs text-amber-400 mb-3">
+                        Deze wedstrijd is al goedgekeurd. Opslaan zet hem terug naar &apos;Ingediend&apos; zodat de admin opnieuw kan fiatteren.
                       </p>
                     )}
+                    {matchDetail.match.status === "REJECTED" && (
+                      <p className="text-xs text-amber-400 mb-3">
+                        Deze wedstrijd is afgekeurd. Pas de statistieken aan en sla op om opnieuw in te dienen.
+                      </p>
+                    )}
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={savePerformances}
+                        disabled={saving}
+                        className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-colors neon-glow-sm"
+                      >
+                        {saving ? "Opslaan..." : "Prestaties opslaan"}
+                      </button>
+                      {saveMsg && (
+                        <p className={`text-sm ${saveMsg === "Prestaties opgeslagen" ? "text-green-400" : "text-red-400"}`}>
+                          {saveMsg}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

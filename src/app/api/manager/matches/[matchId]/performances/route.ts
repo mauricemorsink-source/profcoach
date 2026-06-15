@@ -20,8 +20,8 @@ export async function POST(
   if (match.clubTeam !== team) {
     return NextResponse.json({ error: "Geen toegang tot deze wedstrijd" }, { status: 403 });
   }
-  if (match.status !== "PENDING") {
-    return NextResponse.json({ error: "Prestaties kunnen alleen bij ingediende wedstrijden worden gewijzigd" }, { status: 400 });
+  if (match.status === "PROCESSED" || match.status === "CORRECTION") {
+    return NextResponse.json({ error: "Verwerkte wedstrijden kunnen niet meer worden gewijzigd" }, { status: 400 });
   }
 
   const body = await req.json();
@@ -66,6 +66,11 @@ export async function POST(
         redCard: perf.redCard ?? false,
       },
     });
+  }
+
+  // Als de wedstrijd al was goedgekeurd of afgekeurd, zet terug naar PENDING zodat admin opnieuw kan fiatteren
+  if (match.status === "APPROVED" || match.status === "REJECTED") {
+    await prisma.match.update({ where: { id: matchId }, data: { status: "PENDING" } });
   }
 
   return NextResponse.json({ saved: performances.length });
