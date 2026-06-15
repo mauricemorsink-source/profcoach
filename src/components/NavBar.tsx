@@ -32,6 +32,9 @@ export default async function NavBar() {
           <Link href="/tussenstand" className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 whitespace-nowrap transition-colors">
             Tussenstand
           </Link>
+          <Link href="/spelers" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 whitespace-nowrap transition-colors">
+            Spelers
+          </Link>
           <Link href="/spelregels" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 whitespace-nowrap transition-colors">
             Spelregels
           </Link>

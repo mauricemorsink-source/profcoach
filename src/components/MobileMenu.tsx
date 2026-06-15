@@ -48,6 +48,9 @@ export default function MobileMenu({ session, requireLogin }: { session: Session
             <Link href="/tussenstand" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 transition-colors">
               Tussenstand
             </Link>
+            <Link href="/spelers" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+              Spelers
+            </Link>
             <Link href="/spelregels" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
               Spelregels
             </Link>
