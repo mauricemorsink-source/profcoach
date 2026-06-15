@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const players = await prisma.player.findMany({
     where: all
-      ? { active: true, NOT: { clubTeam: team as any, altTeam: { not: null } } }
+      ? { active: true }
       : { active: true, OR: [{ clubTeam: team as any, altTeam: null }, { altTeam: team as any }] },
     orderBy: [{ position: "asc" }, { name: "asc" }],
     select: { id: true, name: true, position: true, clubTeam: true, altTeam: true },
