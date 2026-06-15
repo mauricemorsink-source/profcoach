@@ -399,7 +399,16 @@ export default function WedstrijdenClient() {
     });
     const data = await res.json();
     setPublishingMomentId(null);
-    if (!res.ok) {
+    if (res.status === 409 && data.error === "conflicts" && Array.isArray(data.conflicts)) {
+      // Server detected unresolved conflicts — show the modal
+      const conflicts: FlexConflict[] = data.conflicts;
+      const selections: Record<string, Set<string>> = {};
+      for (const c of conflicts) {
+        const original = c.matches.find((m: FlexConflict["matches"][number]) => m.isOriginalTeam);
+        selections[c.playerId] = new Set([original ? original.matchId : c.matches[0].matchId]);
+      }
+      setConflictModal({ momentId, conflicts, selections });
+    } else if (!res.ok) {
       setPointsMsg({ type: "err", text: data.error || "Publiceren mislukt" });
     } else {
       setPointsMsg({

@@ -50,7 +50,13 @@ export async function POST(
 
     const approvedMatches = await prisma.match.findMany({
       where: { publishMomentId: momentId, status: "APPROVED", seasonId: season.id },
-      include: { performances: { include: { player: { select: { position: true } } } } },
+      include: {
+        performances: {
+          include: {
+            player: { select: { name: true, position: true, clubTeam: true, altTeam: true } },
+          },
+        },
+      },
     });
 
     if (approvedMatches.length === 0) {
@@ -58,6 +64,47 @@ export async function POST(
       // Still mark moment as published even if no matches to process
       await prisma.publishMoment.update({ where: { id: momentId }, data: { publishedAt: new Date() } });
       return NextResponse.json({ processed: 0, playersUpdated: 0 });
+    }
+
+    // Server-side conflict check: weiger te publiceren als een speler in 2+ matches gespeeld heeft
+    // zonder dat die extra wedstrijden expliciet zijn uitgesloten via excludedPerformances.
+    const playerMatchMap = new Map<string, {
+      player: { name: string; position: string; clubTeam: string; altTeam: string | null };
+      matches: { matchId: string; matchName: string; matchClubTeam: string; isOriginalTeam: boolean }[];
+    }>();
+    for (const match of approvedMatches) {
+      for (const perf of match.performances) {
+        if (!perf.played) continue;
+        if (excludedSet.has(`${match.id}:${perf.playerId}`)) continue;
+        const existing = playerMatchMap.get(perf.playerId);
+        const entry = {
+          matchId: match.id,
+          matchName: match.name,
+          matchClubTeam: match.clubTeam,
+          isOriginalTeam: match.clubTeam === perf.player.clubTeam,
+        };
+        if (existing) {
+          existing.matches.push(entry);
+        } else {
+          playerMatchMap.set(perf.playerId, {
+            player: {
+              name: perf.player.name,
+              position: perf.player.position,
+              clubTeam: perf.player.clubTeam,
+              altTeam: perf.player.altTeam,
+            },
+            matches: [entry],
+          });
+        }
+      }
+    }
+    const unresolvedConflicts = [];
+    for (const [playerId, data] of playerMatchMap) {
+      if (data.matches.length >= 2) unresolvedConflicts.push({ playerId, ...data });
+    }
+    if (unresolvedConflicts.length > 0) {
+      await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
+      return NextResponse.json({ error: "conflicts", conflicts: unresolvedConflicts }, { status: 409 });
     }
 
     type Delta = ReturnType<typeof calculateMatchPoints> extends Map<string, infer V> ? V : never;
