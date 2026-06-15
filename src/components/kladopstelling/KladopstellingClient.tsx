@@ -404,7 +404,7 @@ export default function KladopstellingClient({
             onClick={() => { setSubmitted(false); handleReset(); setPersonInfo({ voornaam: "", achternaam: "", email: "", telefoonnummer: "", whatsappGroep: false }); setBetaaldAkkoord(false); }}
             className={BTN_SECONDARY + " w-full"}
           >
-            Nieuw team samenstellen
+            Terug naar begin
           </button>
         </div>
       </div>
