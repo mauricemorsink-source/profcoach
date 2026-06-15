@@ -144,6 +144,8 @@ export default function WedstrijdenClient() {
   const [pointsMsg, setPointsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [processing, setProcessing] = useState(false);
   const [processSelectedIds, setProcessSelectedIds] = useState<Set<string>>(new Set());
+  const [isProcessingStuck, setIsProcessingStuck] = useState(false);
+  const [resettingProcessing, setResettingProcessing] = useState(false);
 
   async function loadAdminMatches() {
     setLoadingMatches(true);
@@ -160,9 +162,23 @@ export default function WedstrijdenClient() {
     if (res.ok) setPublishMoments(await res.json());
   }
 
+  async function resetProcessingLock() {
+    setResettingProcessing(true);
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resetProcessing: true }),
+    });
+    setResettingProcessing(false);
+    if (res.ok) setIsProcessingStuck(false);
+  }
+
   useEffect(() => {
     loadAdminMatches();
     loadPublishMoments();
+    fetch("/api/admin/settings").then(r => r.ok ? r.json() : null).then(s => {
+      if (s?.isProcessing) setIsProcessingStuck(true);
+    });
   }, []);
 
   const STATUS_SORT_ORDER: Record<string, number> = {
@@ -429,6 +445,7 @@ export default function WedstrijdenClient() {
         return { momentId, conflicts, selections };
       });
     } else if (!res.ok) {
+      if (res.status === 409 && data.error?.includes("al bezig")) setIsProcessingStuck(true);
       setPointsMsg({ type: "err", text: data.error || "Publiceren mislukt" });
     } else {
       setPointsMsg({
@@ -581,6 +598,22 @@ export default function WedstrijdenClient() {
             </button>
           )}
         </div>
+
+        {/* isProcessing vastgelopen banner */}
+        {isProcessingStuck && (
+          <div className="flex items-center gap-3 rounded-xl px-4 py-3 mb-3 border border-amber-500/40 bg-amber-900/20 text-amber-300 text-sm">
+            <span className="flex-1">
+              <strong>Verwerkingsvergrendeling actief.</strong> Een eerdere publicatie is vastgelopen. Reset de vergrendeling om opnieuw te kunnen publiceren.
+            </span>
+            <button
+              onClick={resetProcessingLock}
+              disabled={resettingProcessing}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              {resettingProcessing ? "Resetten..." : "Reset vergrendeling"}
+            </button>
+          </div>
+        )}
 
         {/* Feedback */}
         {pointsMsg && (

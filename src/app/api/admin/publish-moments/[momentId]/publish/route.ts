@@ -65,54 +65,73 @@ export async function POST(
 
     if (approvedMatches.length === 0) {
       await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
-      // Still mark moment as published even if no matches to process
       await prisma.publishMoment.update({ where: { id: momentId }, data: { publishedAt: new Date() } });
       return NextResponse.json({ processed: 0, playersUpdated: 0 });
     }
 
-    // Server-side conflict check: alleen als de admin de modal nog niet heeft gezien.
-    // Als conflictsResolved=true stuurt de client betekent dat de admin bewust een keuze heeft gemaakt.
-    if (!conflictsResolved) {
-    const playerMatchMap = new Map<string, {
-      player: { name: string; position: string; clubTeam: string; altTeam: string | null };
-      matches: { matchId: string; matchName: string; matchDate: string; matchClubTeam: string; isOriginalTeam: boolean }[];
-    }>();
+    // Pre-calculate points per match (needed for conflict 409 response and processing)
+    const matchPointsMaps = new Map<string, ReturnType<typeof calculateMatchPoints>>();
     for (const match of approvedMatches) {
-      for (const perf of match.performances) {
-        if (!perf.played) continue;
-        if (excludedSet.has(`${match.id}:${perf.playerId}`)) continue;
-        const existing = playerMatchMap.get(perf.playerId);
-        const entry = {
-          matchId: match.id,
-          matchName: match.name,
-          matchDate: match.matchDate.toISOString(),
-          matchClubTeam: match.clubTeam,
-          isOriginalTeam: match.clubTeam === perf.player.clubTeam,
-        };
-        if (existing) {
-          existing.matches.push(entry);
-        } else {
-          playerMatchMap.set(perf.playerId, {
-            player: {
-              name: perf.player.name,
-              position: perf.player.position,
-              clubTeam: perf.player.clubTeam,
-              altTeam: perf.player.altTeam,
-            },
-            matches: [entry],
-          });
+      matchPointsMaps.set(match.id, calculateMatchPoints(match, configMap));
+    }
+
+    // Server-side conflict check: only when admin hasn't gone through the modal yet.
+    if (!conflictsResolved) {
+      const playerMatchMap = new Map<string, {
+        player: { name: string; position: string; clubTeam: string; altTeam: string | null };
+        matches: {
+          matchId: string; matchName: string; matchDate: string; matchClubTeam: string;
+          isOriginalTeam: boolean; goals: number; penaltyGoals: number; assists: number;
+          ownGoals: number; yellowCards: number; redCard: boolean; points: number;
+        }[];
+      }>();
+
+      for (const match of approvedMatches) {
+        const matchPointsMap = matchPointsMaps.get(match.id)!;
+        for (const perf of match.performances) {
+          if (!perf.played) continue;
+          if (excludedSet.has(`${match.id}:${perf.playerId}`)) continue;
+          const delta = matchPointsMap.get(perf.playerId);
+          const entry = {
+            matchId: match.id,
+            matchName: match.name,
+            matchDate: match.matchDate.toISOString(),
+            matchClubTeam: match.clubTeam,
+            isOriginalTeam: match.clubTeam === perf.player.clubTeam,
+            goals: perf.goals,
+            penaltyGoals: perf.penaltyGoals,
+            assists: perf.assists,
+            ownGoals: perf.ownGoals,
+            yellowCards: perf.yellowCards,
+            redCard: perf.redCard,
+            points: delta?.points ?? 0,
+          };
+          const existing = playerMatchMap.get(perf.playerId);
+          if (existing) {
+            existing.matches.push(entry);
+          } else {
+            playerMatchMap.set(perf.playerId, {
+              player: {
+                name: perf.player.name,
+                position: perf.player.position,
+                clubTeam: perf.player.clubTeam,
+                altTeam: perf.player.altTeam,
+              },
+              matches: [entry],
+            });
+          }
         }
       }
+
+      const unresolvedConflicts = [];
+      for (const [playerId, data] of playerMatchMap) {
+        if (data.matches.length >= 2) unresolvedConflicts.push({ playerId, ...data });
+      }
+      if (unresolvedConflicts.length > 0) {
+        await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
+        return NextResponse.json({ error: "conflicts", conflicts: unresolvedConflicts }, { status: 409 });
+      }
     }
-    const unresolvedConflicts = [];
-    for (const [playerId, data] of playerMatchMap) {
-      if (data.matches.length >= 2) unresolvedConflicts.push({ playerId, ...data });
-    }
-    if (unresolvedConflicts.length > 0) {
-      await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
-      return NextResponse.json({ error: "conflicts", conflicts: unresolvedConflicts }, { status: 409 });
-    }
-    } // end !conflictsResolved
 
     type Delta = ReturnType<typeof calculateMatchPoints> extends Map<string, infer V> ? V : never;
     const totalDeltas = new Map<string, Delta>();
@@ -138,10 +157,9 @@ export async function POST(
     }
 
     for (const match of approvedMatches) {
-      for (const [playerId, delta] of calculateMatchPoints(match, configMap)) {
+      for (const [playerId, delta] of matchPointsMaps.get(match.id)!) {
         if (excludedSet.has(`${match.id}:${playerId}`)) {
-          // Uitgesloten wegens conflict: goals/assists tellen nog wel voor statistieken,
-          // maar leveren geen punten, speelminuten, overwinningen etc. op.
+          // Excluded by conflict resolution: goals/assists still count for stats, but no points.
           mergeDelta(playerId, {
             points: 0, matchesPlayed: 0, wins: 0, draws: 0,
             cleanSheets: 0, goalsConceded: 0,
@@ -158,7 +176,7 @@ export async function POST(
       }
     }
 
-    // Snapshot prev* = huidige waarden voor ALLE spelers → delta wordt 0 voor wie niet speelde
+    // Snapshot prev* for all players before updating
     await prisma.$executeRaw`
       UPDATE "PlayerSeasonStats"
       SET "prevPoints"      = "totalPoints",
@@ -168,7 +186,6 @@ export async function POST(
       WHERE "seasonId" = ${season.id}
     `;
 
-    // Huidige stats ophalen voor de betrokken spelers
     const playerIds = Array.from(totalDeltas.keys());
     const currentStats = await prisma.playerSeasonStats.findMany({
       where: { playerId: { in: playerIds }, seasonId: season.id },
@@ -209,13 +226,39 @@ export async function POST(
       });
     }
 
-    // Wedstrijden op PROCESSED zetten
+    // Captain bonus: for each team entry whose captain's team won a match in this moment
+    if (settings?.captainEnabled && (settings.captainBonusPerWin ?? 0) > 0) {
+      const teamEntries = await prisma.teamEntry.findMany({
+        where: { seasonId: season.id, captainSlot: { not: null } },
+        include: {
+          players: {
+            include: { player: { select: { clubTeam: true, altTeam: true } } },
+          },
+        },
+      });
+
+      for (const entry of teamEntries) {
+        if (entry.captainSlot === null) continue;
+        const captainSlotPlayer = entry.players.find((p) => p.slotIndex === entry.captainSlot);
+        if (!captainSlotPlayer) continue;
+        const captainTeam = captainSlotPlayer.player.altTeam ?? captainSlotPlayer.player.clubTeam;
+        const wins = approvedMatches.filter(
+          (m) => m.clubTeam === captainTeam && m.goalsScored > m.goalsConceded
+        ).length;
+        if (wins > 0) {
+          await prisma.teamEntry.update({
+            where: { id: entry.id },
+            data: { bonusPoints: { increment: wins * settings.captainBonusPerWin } },
+          });
+        }
+      }
+    }
+
     await prisma.match.updateMany({
       where: { id: { in: approvedMatches.map((m) => m.id) } },
       data: { status: "PROCESSED", processedAt: new Date() },
     });
 
-    // Moment als gepubliceerd markeren
     await prisma.publishMoment.update({
       where: { id: momentId },
       data: { publishedAt: new Date() },

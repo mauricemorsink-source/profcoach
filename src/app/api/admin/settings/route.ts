@@ -39,3 +39,19 @@ export async function PUT(req: Request) {
 
   return NextResponse.json(settings);
 }
+
+export async function PATCH(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+  const body = await req.json();
+  if (body?.resetProcessing === true) {
+    const settings = await prisma.gameSettings.update({
+      where: { id: "singleton" },
+      data: { isProcessing: false },
+    });
+    return NextResponse.json(settings);
+  }
+  return NextResponse.json({ error: "Onbekende actie" }, { status: 400 });
+}
