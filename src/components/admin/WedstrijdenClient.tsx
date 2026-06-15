@@ -438,8 +438,7 @@ export default function WedstrijdenClient() {
           if (prev?.selections[c.playerId]) {
             selections[c.playerId] = prev.selections[c.playerId];
           } else {
-            const original = c.matches.find((m) => m.isOriginalTeam);
-            selections[c.playerId] = new Set([original ? original.matchId : c.matches[0].matchId]);
+            selections[c.playerId] = new Set(c.matches.map((m) => m.matchId));
           }
         }
         return { momentId, conflicts, selections };
@@ -473,8 +472,7 @@ export default function WedstrijdenClient() {
     }
     const selections: Record<string, Set<string>> = {};
     for (const c of conflicts) {
-      const original = c.matches.find((m) => m.isOriginalTeam);
-      selections[c.playerId] = new Set([original ? original.matchId : c.matches[0].matchId]);
+      selections[c.playerId] = new Set(c.matches.map((m) => m.matchId));
     }
     setConflictModal({ momentId: id, conflicts, selections });
   }
@@ -1618,7 +1616,7 @@ export default function WedstrijdenClient() {
               <div>
                 <h3 className="text-base font-bold text-white">Speler conflict</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Vink aan welke wedstrijd meetelt voor deze spelers
+                  Alle wedstrijden zijn standaard aangevinkt. Haal het vinkje weg om een wedstrijd uit te sluiten.
                 </p>
               </div>
               <button
