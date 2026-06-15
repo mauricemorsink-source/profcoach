@@ -15,10 +15,14 @@ export async function POST(
   const { momentId } = await params;
 
   let excludedPerformances: { playerId: string; matchId: string }[] = [];
+  let conflictsResolved = false;
   try {
     const body = await req.json();
     if (Array.isArray(body?.excludedPerformances)) {
       excludedPerformances = body.excludedPerformances;
+    }
+    if (body?.conflictsResolved === true) {
+      conflictsResolved = true;
     }
   } catch {
     // No body → no exclusions
@@ -66,8 +70,9 @@ export async function POST(
       return NextResponse.json({ processed: 0, playersUpdated: 0 });
     }
 
-    // Server-side conflict check: weiger te publiceren als een speler in 2+ matches gespeeld heeft
-    // zonder dat die extra wedstrijden expliciet zijn uitgesloten via excludedPerformances.
+    // Server-side conflict check: alleen als de admin de modal nog niet heeft gezien.
+    // Als conflictsResolved=true stuurt de client betekent dat de admin bewust een keuze heeft gemaakt.
+    if (!conflictsResolved) {
     const playerMatchMap = new Map<string, {
       player: { name: string; position: string; clubTeam: string; altTeam: string | null };
       matches: { matchId: string; matchName: string; matchClubTeam: string; isOriginalTeam: boolean }[];
@@ -106,6 +111,7 @@ export async function POST(
       await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
       return NextResponse.json({ error: "conflicts", conflicts: unresolvedConflicts }, { status: 409 });
     }
+    } // end !conflictsResolved
 
     type Delta = ReturnType<typeof calculateMatchPoints> extends Map<string, infer V> ? V : never;
     const totalDeltas = new Map<string, Delta>();

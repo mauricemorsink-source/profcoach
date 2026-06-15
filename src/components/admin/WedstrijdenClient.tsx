@@ -388,14 +388,15 @@ export default function WedstrijdenClient() {
 
   async function doPublishMoment(
     momentId: string,
-    excludedPerformances: { playerId: string; matchId: string }[]
+    excludedPerformances: { playerId: string; matchId: string }[],
+    conflictsResolved = false
   ) {
     setPublishingMomentId(momentId);
     setPointsMsg(null);
     const res = await fetch(`/api/admin/publish-moments/${momentId}/publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ excludedPerformances }),
+      body: JSON.stringify({ excludedPerformances, conflictsResolved }),
     });
     const data = await res.json();
     setPublishingMomentId(null);
@@ -454,7 +455,7 @@ export default function WedstrijdenClient() {
       }
     }
     setConflictModal(null);
-    doPublishMoment(conflictModal.momentId, excludedPerformances);
+    doPublishMoment(conflictModal.momentId, excludedPerformances, true);
   }
 
   async function assignToMoment(matchId: string, momentId: string | null) {
