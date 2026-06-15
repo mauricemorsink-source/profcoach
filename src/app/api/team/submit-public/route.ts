@@ -15,7 +15,11 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { voornaam, achternaam, email, telefoonnummer, whatsappGroep, betaaldAkkoord, formationId, slots } = body as {
+  const {
+    voornaam, achternaam, email, telefoonnummer, whatsappGroep, betaaldAkkoord,
+    formationId, slots, captainSlot,
+    topScorerId, assistKoningId, totalYellowCards, totalGoals,
+  } = body as {
     voornaam: string;
     achternaam: string;
     email: string;
@@ -24,6 +28,11 @@ export async function POST(req: Request) {
     betaaldAkkoord: boolean;
     formationId: string;
     slots: (string | null)[];
+    captainSlot?: number | null;
+    topScorerId?: string | null;
+    assistKoningId?: string | null;
+    totalYellowCards?: number | null;
+    totalGoals?: number | null;
   };
 
   if (!voornaam?.trim()) return NextResponse.json({ error: "Voornaam is verplicht" }, { status: 400 });
@@ -48,6 +57,7 @@ export async function POST(req: Request) {
         formationId,
         userId: null,
         locked: true,
+        captainSlot: captainSlot ?? null,
         voornaam: voornaam.trim(),
         achternaam: achternaam.trim(),
         email: email.trim().toLowerCase(),
@@ -61,6 +71,18 @@ export async function POST(req: Request) {
         .map((playerId, slotIndex) => ({ teamEntryId: teamEntry.id, playerId: playerId!, slotIndex }))
         .filter((s) => s.playerId != null),
     });
+    const hasPred = topScorerId || assistKoningId || totalYellowCards != null || totalGoals != null;
+    if (hasPred) {
+      await tx.teamPrediction.create({
+        data: {
+          teamEntryId: teamEntry.id,
+          topScorerId: topScorerId || null,
+          assistKoningId: assistKoningId || null,
+          totalYellowCards: totalYellowCards ?? null,
+          totalGoals: totalGoals ?? null,
+        },
+      });
+    }
     return teamEntry;
   });
 

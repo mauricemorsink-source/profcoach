@@ -14,6 +14,8 @@ export default async function KladopstellingPage() {
       requireLogin={settings?.requireLogin ?? true}
       inschrijfgeld={settings?.inschrijfgeld ?? 0}
       registrationOpen={settings?.registrationOpen ?? false}
+      captainEnabled={settings?.captainEnabled ?? false}
+      captainBonusPerWin={settings?.captainBonusPerWin ?? 5}
     />
   );
 }

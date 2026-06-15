@@ -195,24 +195,22 @@ export default function InstellingenClient() {
                   {!settingsForm.requireLogin ? "Aan" : "Uit"}
                 </span>
               </div>
-              {!settingsForm.requireLogin && (
-                <div className="flex items-center gap-3 ml-14">
-                  <label className="text-sm text-slate-400 shrink-0">Inschrijfgeld</label>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400 text-sm">€</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={settingsForm.inschrijfgeld}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, inschrijfgeld: Number(e.target.value) })}
-                      className="w-24 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-                      placeholder="0,00"
-                    />
-                  </div>
-                  <span className="text-xs text-slate-500">— wordt getoond bij het indienen</span>
+              <div className="flex items-center gap-3 ml-14">
+                <label className="text-sm text-slate-400 shrink-0">Inschrijfgeld</label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-400 text-sm">€</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={settingsForm.inschrijfgeld}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, inschrijfgeld: Number(e.target.value) })}
+                    className="w-24 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                    placeholder="0,00"
+                  />
                 </div>
-              )}
+                <span className="text-xs text-slate-500">— wordt getoond bij het indienen</span>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <label className="relative inline-flex items-center cursor-pointer">
