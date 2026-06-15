@@ -1,10 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import MobileMenu from "./MobileMenu";
 
 export default async function NavBar() {
-  const session = await getSession();
+  const [session, settings] = await Promise.all([
+    getSession(),
+    prisma.gameSettings.findUnique({ where: { id: "singleton" }, select: { requireLogin: true } }),
+  ]);
+  const requireLogin = settings?.requireLogin ?? true;
+  const isStaff = session?.role === "ADMIN" || session?.role === "MANAGER";
 
   return (
     <nav className="relative bg-slate-900/95 border-b border-cyan-500/15 sticky top-0 z-40 backdrop-blur-sm" style={{ boxShadow: "0 1px 20px rgba(34,211,238,0.08)" }}>
@@ -18,16 +24,13 @@ export default async function NavBar() {
 
         {/* Desktop: primaire navigatie */}
         <div className="hidden sm:flex items-center gap-0.5 flex-1 min-w-0">
-          {session && (session.isParticipant ?? true) && (
+          {session && !isStaff && (session.isParticipant ?? true) && (
             <Link href="/mijn-team" className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 whitespace-nowrap transition-colors">
               Mijn team
             </Link>
           )}
           <Link href="/tussenstand" className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 whitespace-nowrap transition-colors">
             Tussenstand
-          </Link>
-          <Link href="/kladopstelling" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 whitespace-nowrap transition-colors">
-            Kladopstelling
           </Link>
           <Link href="/spelregels" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 whitespace-nowrap transition-colors">
             Spelregels
@@ -37,8 +40,13 @@ export default async function NavBar() {
         {/* Spacer op mobile */}
         <div className="flex-1 sm:hidden" />
 
-        {/* Mobile: directe Mijn Team link */}
-        {session && (session.isParticipant ?? true) && (
+        {/* Mobile: directe knop */}
+        {!requireLogin && !session && (
+          <Link href="/kladopstelling" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-cyan-600 whitespace-nowrap transition-colors">
+            Team indienen
+          </Link>
+        )}
+        {session && !isStaff && (session.isParticipant ?? true) && (
           <Link href="/mijn-team" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 whitespace-nowrap transition-colors">
             Mijn team
           </Link>
@@ -62,7 +70,7 @@ export default async function NavBar() {
                 Uitloggen
               </button>
             </form>
-          ) : (
+          ) : requireLogin ? (
             <div className="flex gap-1">
               <Link href="/login" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 whitespace-nowrap transition-colors">
                 Inloggen
@@ -71,11 +79,15 @@ export default async function NavBar() {
                 Registreren
               </Link>
             </div>
+          ) : (
+            <Link href="/kladopstelling" className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
+              Team indienen
+            </Link>
           )}
         </div>
 
         {/* Mobile: hamburger menu */}
-        <MobileMenu session={session} />
+        <MobileMenu session={session} requireLogin={requireLogin} />
 
       </div>
     </nav>

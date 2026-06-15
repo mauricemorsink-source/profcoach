@@ -331,16 +331,78 @@ export default function KladopstellingClient({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#060b14] flex items-center justify-center p-8">
-        <div className="text-center max-w-sm space-y-4">
-          <div className="text-5xl">✅</div>
-          <h1 className="text-2xl font-black text-white">Team ingediend!</h1>
-          <p className="text-slate-400 text-sm">
-            Je team is succesvol ingediend. Je ontvangt bericht via <span className="text-white font-medium">{personInfo.email}</span>.
-          </p>
+      <div className="min-h-screen bg-[#060b14]">
+        <div className="max-w-xl mx-auto px-4 py-8 pb-16">
+          {/* Bevestiging */}
+          <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex items-center gap-3">
+            <span className="text-green-400 text-xl shrink-0">✓</span>
+            <div>
+              <p className="text-green-400 font-bold text-sm">Team ingediend</p>
+              <p className="text-slate-400 text-xs mt-0.5">Je inschrijving is ontvangen voor {personInfo.voornaam} {personInfo.achternaam}.</p>
+            </div>
+          </div>
+
+          {/* Screenshot tip */}
+          <div className="mb-5 bg-amber-900/15 border border-amber-500/25 rounded-2xl px-5 py-4">
+            <p className="text-amber-400 font-semibold text-sm mb-1">Tip: maak een screenshot</p>
+            <p className="text-slate-400 text-sm">
+              Bewaar een foto of screenshot van je team hieronder, zodat je altijd kunt terugzien welke spelers je hebt gekozen.
+            </p>
+          </div>
+
+          {/* Team overzicht header */}
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs text-slate-500 uppercase tracking-wide">Jouw team — {formation?.code}</p>
+            <span className="text-xs bg-green-900/30 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-semibold">Ingediend</span>
+          </div>
+
+          {/* Pitch */}
+          <Pitch
+            slots={slots}
+            selectedSlot={null}
+            playersById={playersById}
+            slotValues={slotValues}
+            onSlotClick={() => {}}
+            locked={true}
+            captainSlot={captainEnabled ? captainSlot : null}
+          />
+
+          {/* Spelerlijst */}
+          <div className="mt-5 bg-slate-900 neon-border rounded-2xl overflow-hidden mb-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-800 bg-slate-800/50">
+                  <th className="px-4 py-2.5 font-semibold">Speler</th>
+                  <th className="px-4 py-2.5 font-semibold">Elftal</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">€</th>
+                </tr>
+              </thead>
+              <tbody>
+                {slots
+                  .filter((s) => slotValues[s.slotIndex])
+                  .sort((a, b) => POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position))
+                  .map((s) => {
+                    const player = playersById[slotValues[s.slotIndex]!];
+                    if (!player) return null;
+                    const isCaptain = captainEnabled && captainSlot === s.slotIndex;
+                    return (
+                      <tr key={s.slotIndex} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+                        <td className="px-4 py-2.5 font-medium text-white">
+                          {player.name}
+                          {isCaptain && <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold">C</span>}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-400 text-xs">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</td>
+                        <td className="px-4 py-2.5 text-right text-cyan-400 font-bold">{player.value}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+
           <button
-            onClick={() => { setSubmitted(false); setStep(1); setSlotValues(Array(11).fill(null)); setCaptainSlot(null); setPersonInfo({ voornaam: "", achternaam: "", email: "", telefoonnummer: "", whatsappGroep: false }); setBetaaldAkkoord(false); }}
-            className="mt-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-sm transition-colors border border-slate-700"
+            onClick={() => { setSubmitted(false); handleReset(); setPersonInfo({ voornaam: "", achternaam: "", email: "", telefoonnummer: "", whatsappGroep: false }); setBetaaldAkkoord(false); }}
+            className={BTN_SECONDARY + " w-full"}
           >
             Nieuw team samenstellen
           </button>
@@ -399,13 +461,6 @@ export default function KladopstellingClient({
         {/* ── STAP 1: Team samenstellen ── */}
         {step === 1 && (
           <>
-            {canSubmitPublic && (
-              <div className="mb-4 bg-slate-900 border border-slate-700/60 rounded-2xl px-4 py-3">
-                <p className="text-slate-300 text-sm font-medium">Geen account nodig.</p>
-                <p className="text-slate-500 text-xs mt-0.5">Stel hier je team samen en dien het daarna in. Je kladopstelling wordt alleen in deze browser opgeslagen.</p>
-              </div>
-            )}
-
             {/* Validatie checklist */}
             {(() => {
               const v = validateTeam(slotValues, playersById, formation, budget, false, null, slots);

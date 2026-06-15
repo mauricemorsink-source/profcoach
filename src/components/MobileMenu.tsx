@@ -5,9 +5,10 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import type { SessionPayload } from "@/lib/auth";
 
-export default function MobileMenu({ session }: { session: SessionPayload | null }) {
+export default function MobileMenu({ session, requireLogin }: { session: SessionPayload | null; requireLogin: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const isStaff = session?.role === "ADMIN" || session?.role === "MANAGER";
 
   useEffect(() => {
     setOpen(false);
@@ -39,54 +40,27 @@ export default function MobileMenu({ session }: { session: SessionPayload | null
           <div className="px-4 py-3 space-y-0.5">
 
             {/* Primary links */}
-            {session && (session.isParticipant ?? true) && (
-              <Link
-                href="/mijn-team"
-                onClick={() => setOpen(false)}
-                className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 transition-colors"
-              >
+            {session && !isStaff && (session.isParticipant ?? true) && (
+              <Link href="/mijn-team" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 transition-colors">
                 Mijn team
               </Link>
             )}
-            <Link
-              href="/tussenstand"
-              onClick={() => setOpen(false)}
-              className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 transition-colors"
-            >
+            <Link href="/tussenstand" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 transition-colors">
               Tussenstand
             </Link>
-            <Link
-              href="/kladopstelling"
-              onClick={() => setOpen(false)}
-              className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              Kladopstelling
-            </Link>
-            <Link
-              href="/spelregels"
-              onClick={() => setOpen(false)}
-              className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            >
+            <Link href="/spelregels" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
               Spelregels
             </Link>
 
             {/* Admin / Manager links */}
-            {session && (session.role === "ADMIN" || session.role === "MANAGER") && (
+            {session && isStaff && (
               <div className="pt-2 mt-1 border-t border-slate-800 space-y-0.5">
                 {session.role === "ADMIN" && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-cyan-400 hover:bg-cyan-500/10 transition-colors"
-                  >
+                  <Link href="/admin" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-cyan-400 hover:bg-cyan-500/10 transition-colors">
                     Admin
                   </Link>
                 )}
-                <Link
-                  href="/manager"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-blue-400 hover:bg-blue-500/10 transition-colors"
-                >
+                <Link href="/manager" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-blue-400 hover:bg-blue-500/10 transition-colors">
                   Manager
                 </Link>
               </div>
@@ -96,31 +70,23 @@ export default function MobileMenu({ session }: { session: SessionPayload | null
             <div className="pt-2 mt-1 border-t border-slate-800">
               {session ? (
                 <form action="/api/auth/logout" method="POST">
-                  <button
-                    type="submit"
-                    className="w-full text-left px-3 py-3 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                  >
+                  <button type="submit" className="w-full text-left px-3 py-3 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                     Uitloggen
                   </button>
                 </form>
-              ) : (
+              ) : requireLogin ? (
                 <div className="space-y-0.5">
-                  <Link
-                    href="/login"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                  >
+                  <Link href="/login" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                     Inloggen
                   </Link>
-                  <Link
-                    href="/register"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors"
-                    style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}
-                  >
+                  <Link href="/register" onClick={() => setOpen(false)} className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
                     Registreren
                   </Link>
                 </div>
+              ) : (
+                <Link href="/kladopstelling" onClick={() => setOpen(false)} className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
+                  Team indienen
+                </Link>
               )}
             </div>
 
