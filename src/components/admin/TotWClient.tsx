@@ -200,10 +200,12 @@ export default function TotWClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Group matches by publish moment
+  // Group matches by match date (day)
   const groups = new Map<string, Match[]>();
   for (const match of matches) {
-    const key = match.publishMoment?.label ?? "Overig";
+    const key = new Date(match.matchDate).toLocaleDateString("nl-NL", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric",
+    });
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(match);
   }
@@ -287,25 +289,23 @@ export default function TotWClient({
                 return (
                   <div key={label}>
                     <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-slate-400 capitalize">{label}</span>
                       <button
                         onClick={() => toggleGroup(groupMatches)}
-                        className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded transition-colors ${
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors border ${
                           allSelected
-                            ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                            ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
                             : someSelected
-                            ? "bg-slate-700 text-slate-300 border border-slate-600"
-                            : "text-slate-500 hover:text-slate-300"
+                            ? "bg-slate-700 text-slate-300 border-slate-600"
+                            : "text-slate-600 border-slate-700 hover:text-slate-400"
                         }`}
                       >
-                        {label}
+                        {allSelected ? "Alles uit" : "Alles aan"}
                       </button>
                     </div>
                     <div className="space-y-1 pl-1">
                       {groupMatches.map((match) => {
                         const checked = selectedMatchIds.has(match.id);
-                        const date = new Date(match.matchDate).toLocaleDateString("nl-NL", {
-                          day: "numeric", month: "short", year: "numeric",
-                        });
                         return (
                           <label
                             key={match.id}
@@ -321,11 +321,10 @@ export default function TotWClient({
                             />
                             <div className="flex-1 min-w-0">
                               <span className="text-sm text-white font-medium">{match.name}</span>
-                              <span className="text-slate-500 text-xs ml-2">
-                                {TEAM_LABEL[match.clubTeam] ?? match.clubTeam}
-                              </span>
                             </div>
-                            <span className="text-slate-500 text-xs shrink-0">{date}</span>
+                            <span className="text-slate-400 text-xs shrink-0">
+                              {TEAM_LABEL[match.clubTeam] ?? match.clubTeam}
+                            </span>
                           </label>
                         );
                       })}
