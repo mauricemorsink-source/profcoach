@@ -42,7 +42,7 @@ export default async function NavBar() {
 
         {/* Mobile: directe knop */}
         {!requireLogin && !session && (
-          <Link href="/kladopstelling" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-cyan-600 whitespace-nowrap transition-colors">
+          <Link href="/team-indienen" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-cyan-600 whitespace-nowrap transition-colors">
             Team indienen
           </Link>
         )}
@@ -80,7 +80,7 @@ export default async function NavBar() {
               </Link>
             </div>
           ) : (
-            <Link href="/kladopstelling" className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
+            <Link href="/team-indienen" className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
               Team indienen
             </Link>
           )}

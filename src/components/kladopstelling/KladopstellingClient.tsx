@@ -200,11 +200,14 @@ export default function KladopstellingClient({
     setStep(1);
   }
 
+  function scrollTop() { window.scrollTo({ top: 0, behavior: "instant" }); }
+
   function goNext() {
     setSubmitError(null);
     if (step === 1) setStep(captainEnabled ? 2 : 3);
     else if (step === 2) setStep(3);
     else if (step === 3) setStep(4);
+    scrollTop();
   }
 
   function goPrev() {
@@ -212,6 +215,7 @@ export default function KladopstellingClient({
     if (step === 4) setStep(3);
     else if (step === 3) setStep(captainEnabled ? 2 : 1);
     else if (step === 2) setStep(1);
+    scrollTop();
   }
 
   async function handleSubmit() {

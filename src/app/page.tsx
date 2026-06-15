@@ -92,7 +92,7 @@ export default async function HomePage() {
         ) : (
           <>
             {registrationOpen && !requireLogin ? (
-              <Link href="/kladopstelling" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
+              <Link href="/team-indienen" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
                 Team samenstellen
               </Link>
             ) : registrationOpen ? (
