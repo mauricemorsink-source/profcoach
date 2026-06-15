@@ -19,14 +19,14 @@ export default async function NavBar() {
         {/* Desktop: primaire navigatie */}
         <div className="hidden sm:flex items-center gap-0.5 flex-1 min-w-0">
           {session && (session.isParticipant ?? true) && (
-            <Link href="/play" className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 whitespace-nowrap transition-colors">
+            <Link href="/mijn-team" className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 whitespace-nowrap transition-colors">
               Mijn team
             </Link>
           )}
           <Link href="/tussenstand" className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 whitespace-nowrap transition-colors">
             Tussenstand
           </Link>
-          <Link href="/rules" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 whitespace-nowrap transition-colors">
+          <Link href="/spelregels" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 whitespace-nowrap transition-colors">
             Spelregels
           </Link>
         </div>
@@ -36,7 +36,7 @@ export default async function NavBar() {
 
         {/* Mobile: directe Mijn Team link */}
         {session && (session.isParticipant ?? true) && (
-          <Link href="/play" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 whitespace-nowrap transition-colors">
+          <Link href="/mijn-team" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 whitespace-nowrap transition-colors">
             Mijn team
           </Link>
         )}

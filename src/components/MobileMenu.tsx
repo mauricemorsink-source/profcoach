@@ -41,7 +41,7 @@ export default function MobileMenu({ session }: { session: SessionPayload | null
             {/* Primary links */}
             {session && (session.isParticipant ?? true) && (
               <Link
-                href="/play"
+                href="/mijn-team"
                 onClick={() => setOpen(false)}
                 className="flex items-center px-3 py-3 rounded-lg text-sm font-semibold text-white hover:bg-cyan-500/10 hover:text-cyan-300 transition-colors"
               >
@@ -56,7 +56,7 @@ export default function MobileMenu({ session }: { session: SessionPayload | null
               Tussenstand
             </Link>
             <Link
-              href="/rules"
+              href="/spelregels"
               onClick={() => setOpen(false)}
               className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             >

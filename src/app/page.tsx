@@ -80,7 +80,7 @@ export default async function HomePage() {
               Welkom terug,{" "}
               <span className="font-semibold text-white">{session.name ?? session.email}</span>
             </p>
-            <Link href="/play" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
+            <Link href="/mijn-team" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
               Mijn team
             </Link>
             {showCountdown && <CountdownTimer deadline={deadline!.toISOString()} />}
@@ -103,7 +103,7 @@ export default async function HomePage() {
             <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
               Tussenstand bekijken
             </Link>
-            <Link href="/rules" className="block w-full text-center py-2.5 px-6 text-slate-400 hover:text-white text-sm font-medium transition-colors">
+            <Link href="/spelregels" className="block w-full text-center py-2.5 px-6 text-slate-400 hover:text-white text-sm font-medium transition-colors">
               Spelregels
             </Link>
             <p className="text-center text-sm text-slate-500 pt-1">
