@@ -15,9 +15,11 @@ export async function GET(req: NextRequest) {
   const all = req.nextUrl.searchParams.get("all") === "true";
 
   const players = await prisma.player.findMany({
-    where: all ? { active: true } : { clubTeam: team as any, active: true },
+    where: all
+      ? { active: true }
+      : { active: true, OR: [{ clubTeam: team as any }, { altTeam: team as any }] },
     orderBy: [{ clubTeam: "asc" }, { position: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, position: true, clubTeam: true },
+    select: { id: true, name: true, position: true, clubTeam: true, altTeam: true },
   });
 
   return NextResponse.json(players);

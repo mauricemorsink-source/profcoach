@@ -99,6 +99,7 @@ model Player {
   clubTeam         ClubTeamCode
   value            Int
   active           Boolean             @default(true)
+  altTeam          ClubTeamCode?
   teamEntryPlayers TeamEntryPlayer[]
   performances     MatchPerformance[]
   seasonStats      PlayerSeasonStats[]

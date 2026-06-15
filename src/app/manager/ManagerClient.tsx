@@ -43,6 +43,7 @@ type PlayerPerf = {
   playerName: string;
   position: string;
   clubTeam?: string;
+  altTeam?: string | null;
   isGuest?: boolean;
   played: boolean;
   goals: number;
@@ -59,7 +60,7 @@ type MatchDetail = {
   performances: PlayerPerf[];
 };
 
-type AllPlayer = { id: string; name: string; position: string; clubTeam: string };
+type AllPlayer = { id: string; name: string; position: string; clubTeam: string; altTeam?: string | null };
 
 type Props = { managedTeam: string; managerName: string; isAdmin?: boolean };
 
@@ -237,6 +238,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
         playerName: p.name,
         position: p.position,
         clubTeam: p.clubTeam,
+        altTeam: p.altTeam ?? null,
         isGuest: false,
         played: false,
         goals: 0,
@@ -773,8 +775,14 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                     {p.isGuest && (
                                       <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded">GAST</span>
                                     )}
+                                    {!p.isGuest && p.altTeam && (
+                                      <span className="text-[9px] font-bold text-violet-400 bg-violet-900/30 border border-violet-500/30 px-1 py-0.5 rounded">FLEX</span>
+                                    )}
                                   </div>
                                   {p.isGuest && p.clubTeam && (
+                                    <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
+                                  )}
+                                  {!p.isGuest && p.altTeam && p.clubTeam && (
                                     <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
                                   )}
                                 </td>

@@ -19,6 +19,7 @@ type Player = {
   shortName?: string | null;
   position: "GK" | "DEF" | "MID" | "ATT";
   clubTeam: "ONE" | "TWO" | "THREE" | "FOUR" | "FIVE" | "DAMES";
+  altTeam?: string | null;
   value: number;
 };
 
@@ -27,6 +28,7 @@ type PlayerForm = {
   shortName: string;
   position: string;
   clubTeam: string;
+  altTeam: string;
   value: string;
 };
 
@@ -174,7 +176,7 @@ const STATUS_STYLE: Record<string, string> = {
   CORRECTION: "bg-orange-900/40 text-orange-400 border border-orange-500/30",
 };
 
-const emptyForm: PlayerForm = { name: "", shortName: "", position: "GK", clubTeam: "ONE", value: "" };
+const emptyForm: PlayerForm = { name: "", shortName: "", position: "GK", clubTeam: "ONE", altTeam: "", value: "" };
 
 const TAB_SECTIONS = [
   {
@@ -553,7 +555,7 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
   function openAdd() { setForm(emptyForm); setFormError(""); setFormTouched(false); setEditingPlayer(null); setModal("add"); }
 
   function openEdit(player: Player) {
-    setForm({ name: player.name, shortName: player.shortName ?? "", position: player.position, clubTeam: player.clubTeam, value: player.value.toString() });
+    setForm({ name: player.name, shortName: player.shortName ?? "", position: player.position, clubTeam: player.clubTeam, altTeam: player.altTeam ?? "", value: player.value.toString() });
     setFormError(""); setFormTouched(false); setEditingPlayer(player); setModal("edit");
   }
 
@@ -996,11 +998,22 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                             <input type="checkbox" checked={selectedIds.has(player.id)} onChange={() => toggleSelect(player.id)} className="rounded accent-cyan-500" />
                           </td>
                           <td className="py-2">
-                            <div className="font-medium text-white">{player.name}</div>
-                            <div className="text-xs text-slate-500 sm:hidden">{TEAM_LABEL[player.clubTeam]}</div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium text-white">{player.name}</span>
+                              {player.altTeam && (
+                                <span className="text-[9px] font-bold text-violet-400 bg-violet-900/30 border border-violet-500/30 px-1 py-0.5 rounded shrink-0">FLEX</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500 sm:hidden">
+                              {TEAM_LABEL[player.clubTeam]}
+                              {player.altTeam && <span className="text-violet-400"> → {TEAM_LABEL[player.altTeam]}</span>}
+                            </div>
                           </td>
                           <td className="py-2 text-slate-400">{POSITION_SHORT[player.position]}</td>
-                          <td className="py-2 text-slate-400 hidden sm:table-cell">{TEAM_LABEL[player.clubTeam]}</td>
+                          <td className="py-2 text-slate-400 hidden sm:table-cell">
+                            {TEAM_LABEL[player.clubTeam]}
+                            {player.altTeam && <span className="text-violet-400 text-xs"> → {TEAM_LABEL[player.altTeam]}</span>}
+                          </td>
                           <td className="py-2 text-slate-400">€{player.value}</td>
                           <td className="py-2 text-right">
                             <button onClick={() => openPlayerStats(player)} className={BTN_SMALL}>Details</button>
@@ -1660,6 +1673,18 @@ const [roleModal, setRoleModal] = useState<User | null>(null);
                     {TEAMS.map((t) => <option key={t} value={t}>{TEAM_LABEL[t]}</option>)}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className={LABEL}>FLEX-team <span className="text-slate-500 font-normal">(speelt standaard in ander team)</span></label>
+                <select value={form.altTeam} onChange={(e) => setForm({ ...form, altTeam: e.target.value })} className={SELECT}>
+                  <option value="">— Geen (speler speelt in eigen team) —</option>
+                  {TEAMS.filter(t => t !== form.clubTeam).map((t) => <option key={t} value={t}>{TEAM_LABEL[t]}</option>)}
+                </select>
+                {form.altTeam && (
+                  <p className="text-xs text-amber-400/80 mt-1">
+                    Speler verschijnt standaard in de wedstrijdinvoer van {TEAM_LABEL[form.altTeam]}. Puntentelling blijft op {TEAM_LABEL[form.clubTeam]}.
+                  </p>
+                )}
               </div>
               <div>
                 <label className={LABEL}>Waarde</label>

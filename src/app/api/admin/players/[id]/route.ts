@@ -16,7 +16,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, shortName, position, clubTeam, value } = body;
+  const { name, shortName, position, clubTeam, value, altTeam } = body;
 
   if (!name?.trim() || !position || !clubTeam || value === undefined) {
     return NextResponse.json({ error: "Alle velden zijn verplicht" }, { status: 400 });
@@ -59,6 +59,7 @@ export async function PUT(
         position: position,
         clubTeam: clubTeam,
         value: numValue,
+        altTeam: altTeam && validTeams.includes(altTeam) && altTeam !== clubTeam ? altTeam : null,
       },
     });
     return NextResponse.json(player);
