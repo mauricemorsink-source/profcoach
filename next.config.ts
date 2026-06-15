@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
       { source: "/rules", destination: "/spelregels", permanent: true },
       { source: "/terms", destination: "/voorwaarden", permanent: true },
       { source: "/tussenstand", destination: "/tussenstand/deelnemers", permanent: false },
+      { source: "/admin", destination: "/admin/wedstrijden", permanent: false },
     ];
   },
 };
