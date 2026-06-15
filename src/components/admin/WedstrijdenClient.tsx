@@ -5,7 +5,20 @@ import { useState, useEffect } from "react";
 type FlexConflict = {
   playerId: string;
   player: { name: string; position: string; clubTeam: string; altTeam: string | null };
-  matches: { matchId: string; matchName: string; matchDate: string; matchClubTeam: string; isOriginalTeam: boolean }[];
+  matches: {
+    matchId: string;
+    matchName: string;
+    matchDate: string;
+    matchClubTeam: string;
+    isOriginalTeam: boolean;
+    goals: number;
+    penaltyGoals: number;
+    assists: number;
+    ownGoals: number;
+    yellowCards: number;
+    redCard: boolean;
+    points: number;
+  }[];
 };
 
 type PublishMoment = {
@@ -1643,11 +1656,24 @@ export default function WedstrijdenClient() {
                                   </span>
                                 )}
                               </div>
-                              <span className="text-xs text-slate-400">
+                              <span className={`text-xs ${isChecked ? "text-slate-400" : "text-slate-600"}`}>
                                 {TEAM_LABEL[m.matchClubTeam] ?? m.matchClubTeam}
                                 {" · "}
                                 {new Date(m.matchDate).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
                               </span>
+                              <div className={`flex items-center gap-2 mt-1 text-xs ${isChecked ? "text-slate-300" : "text-slate-600"}`}>
+                                {m.goals > 0 && <span>{m.goals} ⚽</span>}
+                                {m.assists > 0 && <span>{m.assists} 🅰</span>}
+                                {m.yellowCards > 0 && <span>{m.yellowCards} 🟨</span>}
+                                {m.redCard && <span>🟥</span>}
+                                {m.ownGoals > 0 && <span>{m.ownGoals} ED</span>}
+                                {m.goals === 0 && m.assists === 0 && m.yellowCards === 0 && !m.redCard && m.ownGoals === 0 && (
+                                  <span>Gespeeld</span>
+                                )}
+                                <span className={`ml-auto font-semibold ${isChecked ? "text-cyan-400" : "text-slate-600 line-through"}`}>
+                                  {m.points > 0 ? "+" : ""}{m.points} ptn
+                                </span>
+                              </div>
                             </div>
                           </label>
                         );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { calculateMatchPoints, buildConfigMap } from "@/lib/points";
 
 export async function GET(
   _req: Request,
@@ -13,17 +14,22 @@ export async function GET(
 
   const { momentId } = await params;
 
-  const approvedMatches = await prisma.match.findMany({
-    where: { publishMomentId: momentId, status: "APPROVED" },
-    include: {
-      performances: {
-        where: { played: true },
-        include: {
-          player: { select: { name: true, position: true, clubTeam: true, altTeam: true } },
+  const [approvedMatches, configs] = await Promise.all([
+    prisma.match.findMany({
+      where: { publishMomentId: momentId, status: "APPROVED" },
+      include: {
+        performances: {
+          where: { played: true },
+          include: {
+            player: { select: { name: true, position: true, clubTeam: true, altTeam: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.pointsConfig.findMany(),
+  ]);
+
+  const configMap = buildConfigMap(configs);
 
   type ConflictMatch = {
     matchId: string;
@@ -31,6 +37,13 @@ export async function GET(
     matchDate: string;
     matchClubTeam: string;
     isOriginalTeam: boolean;
+    goals: number;
+    penaltyGoals: number;
+    assists: number;
+    ownGoals: number;
+    yellowCards: number;
+    redCard: boolean;
+    points: number;
   };
 
   const playerMatchMap = new Map<
@@ -42,8 +55,11 @@ export async function GET(
   >();
 
   for (const match of approvedMatches) {
+    const pointsMap = calculateMatchPoints(match, configMap);
+
     for (const perf of match.performances) {
       const isOriginalTeam = match.clubTeam === perf.player.clubTeam;
+      const delta = pointsMap.get(perf.playerId);
       const existing = playerMatchMap.get(perf.playerId);
       const entry: ConflictMatch = {
         matchId: match.id,
@@ -51,6 +67,13 @@ export async function GET(
         matchDate: match.matchDate.toISOString(),
         matchClubTeam: match.clubTeam,
         isOriginalTeam,
+        goals: perf.goals,
+        penaltyGoals: perf.penaltyGoals,
+        assists: perf.assists,
+        ownGoals: perf.ownGoals,
+        yellowCards: perf.yellowCards,
+        redCard: perf.redCard,
+        points: delta?.points ?? 0,
       };
       if (existing) {
         existing.matches.push(entry);

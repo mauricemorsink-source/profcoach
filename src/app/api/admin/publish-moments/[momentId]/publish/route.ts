@@ -139,7 +139,21 @@ export async function POST(
 
     for (const match of approvedMatches) {
       for (const [playerId, delta] of calculateMatchPoints(match, configMap)) {
-        if (excludedSet.has(`${match.id}:${playerId}`)) continue;
+        if (excludedSet.has(`${match.id}:${playerId}`)) {
+          // Uitgesloten wegens conflict: goals/assists tellen nog wel voor statistieken,
+          // maar leveren geen punten, speelminuten, overwinningen etc. op.
+          mergeDelta(playerId, {
+            points: 0, matchesPlayed: 0, wins: 0, draws: 0,
+            cleanSheets: 0, goalsConceded: 0,
+            goals: delta.goals,
+            penaltyGoals: delta.penaltyGoals,
+            assists: delta.assists,
+            ownGoals: delta.ownGoals,
+            yellowCards: delta.yellowCards,
+            redCards: delta.redCards,
+          });
+          continue;
+        }
         mergeDelta(playerId, delta);
       }
     }
