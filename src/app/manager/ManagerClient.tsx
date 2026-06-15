@@ -724,7 +724,30 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     <p className="text-slate-500 text-sm text-center py-8">Spelers laden...</p>
                   ) : (
                     <div>
-                      <p className="text-slate-400 text-xs mb-4">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-slate-400 text-xs">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
+                        {!showGuestPickerAdd && (
+                          <button
+                            onClick={() => { setShowGuestPickerAdd(true); loadAllPlayers(); }}
+                            className="shrink-0 ml-3 px-3 py-1.5 text-xs font-semibold text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 border border-amber-500/30 rounded-lg transition-colors"
+                          >
+                            + Gastspeler
+                          </button>
+                        )}
+                      </div>
+                      {showGuestPickerAdd && (
+                        <div className="mb-3">
+                          <GuestPicker
+                            allPlayers={allPlayers}
+                            managedTeam={managedTeam}
+                            search={guestSearchAdd}
+                            onSearchChange={setGuestSearchAdd}
+                            onAdd={addGuestToAdd}
+                            onClose={() => { setShowGuestPickerAdd(false); setGuestSearchAdd(""); }}
+                            existingIds={new Set(addPerfs.map((p) => p.playerId))}
+                          />
+                        </div>
+                      )}
                       <div className="overflow-x-auto -mx-5 px-5">
                         <table className="w-full text-sm min-w-[400px]">
                           <thead>
@@ -791,24 +814,6 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                         />
                       </div>
 
-                      {showGuestPickerAdd ? (
-                        <GuestPicker
-                          allPlayers={allPlayers}
-                          managedTeam={managedTeam}
-                          search={guestSearchAdd}
-                          onSearchChange={setGuestSearchAdd}
-                          onAdd={addGuestToAdd}
-                          onClose={() => { setShowGuestPickerAdd(false); setGuestSearchAdd(""); }}
-                          existingIds={new Set(addPerfs.map((p) => p.playerId))}
-                        />
-                      ) : (
-                        <button
-                          onClick={() => { setShowGuestPickerAdd(true); loadAllPlayers(); }}
-                          className="mt-4 px-3 py-1.5 text-xs font-semibold text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 border border-amber-500/30 rounded-lg transition-colors"
-                        >
-                          + Gastspeler toevoegen
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
