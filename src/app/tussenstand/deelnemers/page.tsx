@@ -1,9 +1,27 @@
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import DeelnemersTable from "@/components/tussenstand/DeelnemersTable";
 
 export default async function DeelnemersPage() {
+  const [session, settings] = await Promise.all([
+    getSession(),
+    prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
+  ]);
+
+  const isAdmin = session?.role === "ADMIN";
+
+  if (!isAdmin && settings?.showTussenstand === false) {
+    return (
+      <div className="bg-slate-900 neon-border rounded-2xl p-8 text-center">
+        <p className="text-slate-300 font-medium">De tussenstand is momenteel niet te bekijken.</p>
+        <p className="text-slate-500 text-sm mt-2">
+          Volg de updates op Whatsapp om op de hoogte van de tussenstand en alle statistieken te blijven.
+        </p>
+      </div>
+    );
+  }
+
   const season = await prisma.season.findFirst({ where: { isActive: true } });
-  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
 
   let deelnemers: {
     userId: string; userName: string; totalPoints: number; prevPoints: number; delta: number;

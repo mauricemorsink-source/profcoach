@@ -17,7 +17,7 @@ export async function PUT(req: Request) {
   }
 
   const body = await req.json();
-  const { budget, deadline, registrationOpen, captainEnabled, captainBonusPerWin, rulesText, termsText, privacyText } = body;
+  const { budget, deadline, registrationOpen, captainEnabled, captainBonusPerWin, rulesText, termsText, privacyText, showTussenstand, showStatistieken } = body;
 
   if (budget !== undefined && (isNaN(Number(budget)) || Number(budget) <= 0)) {
     return NextResponse.json({ error: "Ongeldig budget" }, { status: 400 });
@@ -34,6 +34,8 @@ export async function PUT(req: Request) {
       ...(rulesText !== undefined && { rulesText: String(rulesText) }),
       ...(termsText !== undefined && { termsText: String(termsText) }),
       ...(privacyText !== undefined && { privacyText: String(privacyText) }),
+      ...(showTussenstand !== undefined && { showTussenstand: Boolean(showTussenstand) }),
+      ...(showStatistieken !== undefined && { showStatistieken: Boolean(showStatistieken) }),
     },
   });
 

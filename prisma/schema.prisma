@@ -71,6 +71,8 @@ model GameSettings {
   privacyText        String    @default("")
   standingsUpdatedAt DateTime?
   isProcessing       Boolean   @default(false)
+  showTussenstand    Boolean   @default(true)
+  showStatistieken   Boolean   @default(true)
   updatedAt          DateTime  @updatedAt
 }
 

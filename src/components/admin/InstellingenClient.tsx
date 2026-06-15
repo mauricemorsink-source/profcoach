@@ -8,6 +8,8 @@ type GameSettings = {
   registrationOpen: boolean;
   captainEnabled: boolean;
   captainBonusPerWin: number;
+  showTussenstand: boolean;
+  showStatistieken: boolean;
   rulesText: string;
   termsText: string;
   privacyText: string;
@@ -25,6 +27,8 @@ export default function InstellingenClient() {
     registrationOpen: true,
     captainEnabled: false,
     captainBonusPerWin: 5,
+    showTussenstand: true,
+    showStatistieken: true,
     rulesText: "",
     termsText: "",
     privacyText: "",
@@ -43,6 +47,8 @@ export default function InstellingenClient() {
         registrationOpen: data.registrationOpen,
         captainEnabled: data.captainEnabled ?? false,
         captainBonusPerWin: data.captainBonusPerWin ?? 5,
+        showTussenstand: data.showTussenstand ?? true,
+        showStatistieken: data.showStatistieken ?? true,
         rulesText: data.rulesText ?? "",
         termsText: data.termsText ?? "",
         privacyText: data.privacyText ?? "",
@@ -62,6 +68,8 @@ export default function InstellingenClient() {
         registrationOpen: settingsForm.registrationOpen,
         captainEnabled: settingsForm.captainEnabled,
         captainBonusPerWin: Number(settingsForm.captainBonusPerWin),
+        showTussenstand: settingsForm.showTussenstand,
+        showStatistieken: settingsForm.showStatistieken,
         rulesText: settingsForm.rulesText,
         termsText: settingsForm.termsText,
         privacyText: settingsForm.privacyText,
@@ -79,6 +87,8 @@ export default function InstellingenClient() {
         registrationOpen: data.registrationOpen,
         captainEnabled: data.captainEnabled ?? false,
         captainBonusPerWin: data.captainBonusPerWin ?? 5,
+        showTussenstand: data.showTussenstand ?? true,
+        showStatistieken: data.showStatistieken ?? true,
         rulesText: data.rulesText ?? "",
         termsText: data.termsText ?? "",
         privacyText: data.privacyText ?? "",
@@ -188,6 +198,53 @@ export default function InstellingenClient() {
                 className="w-14 bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/40 disabled:opacity-40"
               />
               <span className="text-xs text-slate-500">pt per overwinning</span>
+            </div>
+            <div className="border-t border-slate-800 pt-5">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Zichtbaarheid voor deelnemers</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settingsForm.showTussenstand}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, showTussenstand: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                  </label>
+                  <span className="text-sm font-medium text-slate-300">Tussenstand zichtbaar</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      settingsForm.showTussenstand
+                        ? "bg-green-900/40 text-green-400 border border-green-500/30"
+                        : "bg-red-900/40 text-red-400 border border-red-500/30"
+                    }`}
+                  >
+                    {settingsForm.showTussenstand ? "Zichtbaar" : "Verborgen"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={settingsForm.showStatistieken}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, showStatistieken: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                  </label>
+                  <span className="text-sm font-medium text-slate-300">Statistieken zichtbaar</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      settingsForm.showStatistieken
+                        ? "bg-green-900/40 text-green-400 border border-green-500/30"
+                        : "bg-red-900/40 text-red-400 border border-red-500/30"
+                    }`}
+                  >
+                    {settingsForm.showStatistieken ? "Zichtbaar" : "Verborgen"}
+                  </span>
+                </div>
+              </div>
             </div>
             <div>
               <label className={LABEL}>Spelregels</label>

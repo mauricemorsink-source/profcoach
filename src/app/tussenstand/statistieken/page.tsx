@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 const TEAM_LABEL: Record<string, string> = {
   ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
@@ -15,6 +16,24 @@ function Delta({ value }: { value: number }) {
 }
 
 export default async function StatistiekenPage() {
+  const [session, settings] = await Promise.all([
+    getSession(),
+    prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
+  ]);
+
+  const isAdmin = session?.role === "ADMIN";
+
+  if (!isAdmin && settings?.showStatistieken === false) {
+    return (
+      <div className="bg-slate-900 neon-border rounded-2xl p-8 text-center">
+        <p className="text-slate-300 font-medium">De statistieken zijn momenteel niet te bekijken.</p>
+        <p className="text-slate-500 text-sm mt-2">
+          Volg de updates op Whatsapp om op de hoogte van de tussenstand en alle statistieken te blijven.
+        </p>
+      </div>
+    );
+  }
+
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
   let topScorers: { playerId: string; playerName: string; clubTeam: string; goals: number; delta: number }[] = [];
