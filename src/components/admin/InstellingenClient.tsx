@@ -12,6 +12,7 @@ type GameSettings = {
   captainBonusPerWin: number;
   showTussenstand: boolean;
   showStatistieken: boolean;
+  wijzigingsvensterOpen: boolean;
   rulesText: string;
   termsText: string;
   privacyText: string;
@@ -33,6 +34,7 @@ export default function InstellingenClient() {
     captainBonusPerWin: 5,
     showTussenstand: true,
     showStatistieken: true,
+    wijzigingsvensterOpen: false,
     rulesText: "",
     termsText: "",
     privacyText: "",
@@ -55,6 +57,7 @@ export default function InstellingenClient() {
         captainBonusPerWin: data.captainBonusPerWin ?? 5,
         showTussenstand: data.showTussenstand ?? true,
         showStatistieken: data.showStatistieken ?? true,
+        wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
         rulesText: data.rulesText ?? "",
         termsText: data.termsText ?? "",
         privacyText: data.privacyText ?? "",
@@ -78,6 +81,7 @@ export default function InstellingenClient() {
         captainBonusPerWin: Number(settingsForm.captainBonusPerWin),
         showTussenstand: settingsForm.showTussenstand,
         showStatistieken: settingsForm.showStatistieken,
+        wijzigingsvensterOpen: settingsForm.wijzigingsvensterOpen,
         rulesText: settingsForm.rulesText,
         termsText: settingsForm.termsText,
         privacyText: settingsForm.privacyText,
@@ -99,6 +103,7 @@ export default function InstellingenClient() {
         captainBonusPerWin: data.captainBonusPerWin ?? 5,
         showTussenstand: data.showTussenstand ?? true,
         showStatistieken: data.showStatistieken ?? true,
+        wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
         rulesText: data.rulesText ?? "",
         termsText: data.termsText ?? "",
         privacyText: data.privacyText ?? "",
@@ -211,6 +216,29 @@ export default function InstellingenClient() {
                 </div>
                 <span className="text-xs text-slate-500">— wordt getoond bij het indienen</span>
               </div>
+            </div>
+            <div className="space-y-3 border-t border-slate-800 pt-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Winterstop / Team aanpassen</p>
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.wijzigingsvensterOpen}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, wijzigingsvensterOpen: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                </label>
+                <span className="text-sm font-medium text-slate-300">Wijzigingsvenster open</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.wijzigingsvensterOpen ? "bg-amber-900/40 text-amber-400 border border-amber-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
+                  {settingsForm.wijzigingsvensterOpen ? "Open" : "Gesloten"}
+                </span>
+              </div>
+              {settingsForm.wijzigingsvensterOpen && (
+                <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2 ml-14">
+                  Deelnemers kunnen nu via <strong>/team-aanpassen</strong> hun opstelling en aanvoerder wijzigen via een e-maillink.
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <label className="relative inline-flex items-center cursor-pointer">
