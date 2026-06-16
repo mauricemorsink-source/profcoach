@@ -190,7 +190,7 @@ export default function InstellingenClient() {
                   />
                   <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
                 </label>
-                <span className="text-sm font-medium text-slate-300">Inschrijven zonder account (via kladopstelling)</span>
+                <span className="text-sm font-medium text-slate-300">Inschrijven zonder account (via Team indienen)</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${!settingsForm.requireLogin ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
                   {!settingsForm.requireLogin ? "Aan" : "Uit"}
                 </span>

@@ -54,7 +54,7 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("profcoach_klad_slots");
+      const raw = localStorage.getItem("profcoach_team_slots");
       if (raw) {
         const parsed: (string | null)[] = JSON.parse(raw);
         setMyTeamIds(new Set(parsed.filter(Boolean) as string[]));
@@ -138,12 +138,12 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
               </tr>
             </thead>
             <tbody>
-              {/* Spelers in mijn kladopstelling bovenaan */}
+              {/* Spelers in mijn opstelling bovenaan */}
               {hasTeam && inTeam.length > 0 && (
                 <>
                   <tr>
                     <td colSpan={4} className="px-4 py-1.5 bg-cyan-900/10 border-y border-cyan-500/15">
-                      <span className="text-[10px] font-bold text-cyan-600 uppercase tracking-widest">In jouw kladopstelling</span>
+                      <span className="text-[10px] font-bold text-cyan-600 uppercase tracking-widest">In jouw opstelling</span>
                     </td>
                   </tr>
                   {inTeam.map((p) => (
@@ -175,7 +175,7 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
         {/* Tip */}
         {hasTeam && (
           <p className="text-xs text-slate-600 mt-3 text-center">
-            Spelers uit jouw opgeslagen kladopstelling staan bovenaan.
+            Spelers uit jouw opgeslagen opstelling staan bovenaan.
           </p>
         )}
       </div>

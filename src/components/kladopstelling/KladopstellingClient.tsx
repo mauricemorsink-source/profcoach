@@ -6,8 +6,8 @@ import { buildSlots } from "@/components/team/formationSlots";
 import { validateTeam, CLUB_LABEL } from "@/components/team/validate";
 import Pitch from "@/components/team/Pitch";
 
-const KLAD_SLOTS_KEY = "profcoach_klad_slots";
-const KLAD_FORMATION_KEY = "profcoach_klad_formation";
+const SLOTS_KEY = "profcoach_team_slots";
+const FORMATION_KEY = "profcoach_team_formation";
 
 const POSITION_LABEL: Record<string, string> = {
   GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
@@ -126,8 +126,8 @@ export default function KladopstellingClient({
       if (playersRes.ok) setPlayers(await playersRes.json());
       if (predConfigRes.ok) setPredPointsConfig(await predConfigRes.json());
 
-      const savedFormation = localStorage.getItem(KLAD_FORMATION_KEY);
-      const savedSlots = localStorage.getItem(KLAD_SLOTS_KEY);
+      const savedFormation = localStorage.getItem(FORMATION_KEY);
+      const savedSlots = localStorage.getItem(SLOTS_KEY);
       if (savedFormation && formations.find((f) => f.id === savedFormation)) {
         setFormationId(savedFormation);
       }
@@ -143,11 +143,11 @@ export default function KladopstellingClient({
   }, []);
 
   useEffect(() => {
-    if (!loading) localStorage.setItem(KLAD_SLOTS_KEY, JSON.stringify(slotValues));
+    if (!loading) localStorage.setItem(SLOTS_KEY, JSON.stringify(slotValues));
   }, [slotValues, loading]);
 
   useEffect(() => {
-    if (!loading) localStorage.setItem(KLAD_FORMATION_KEY, formationId);
+    if (!loading) localStorage.setItem(FORMATION_KEY, formationId);
   }, [formationId, loading]);
 
   function handleFormationChange(newId: string) {
@@ -247,8 +247,8 @@ export default function KladopstellingClient({
         setSubmitError(data.error ?? "Er is een fout opgetreden");
       } else {
         setSubmitted(true);
-        localStorage.removeItem(KLAD_SLOTS_KEY);
-        localStorage.removeItem(KLAD_FORMATION_KEY);
+        localStorage.removeItem(SLOTS_KEY);
+        localStorage.removeItem(FORMATION_KEY);
       }
     } catch {
       setSubmitError("Verbindingsfout. Probeer het opnieuw.");
@@ -422,7 +422,7 @@ export default function KladopstellingClient({
         {/* Header */}
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <div className="flex-1">
-            <h1 className="text-xl font-black text-white">Kladopstelling</h1>
+            <h1 className="text-xl font-black text-white">Team indienen</h1>
             <p className="text-slate-500 text-xs mt-0.5">Werk je team uit en puzzel oneindig tot je jouw ideale opstelling hebt samengesteld</p>
           </div>
           {(!canSubmitPublic || step === 1) && (
