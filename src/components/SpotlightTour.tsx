@@ -107,9 +107,9 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
     tooltipTop = top - 14 - TH;
     showBelow = false;
   } else {
-    // Geen ruimte boven of onder: toon bovenaan het scherm
-    tooltipTop = MARGIN;
-    showBelow = true;
+    // Geen ruimte boven of onder: toon onderaan het scherm
+    tooltipTop = vh - TH - MARGIN;
+    showBelow = false;
   }
 
   // Pijltje: positie relatief aan tooltip
