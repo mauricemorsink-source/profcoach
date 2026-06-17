@@ -735,8 +735,8 @@ export default function KladopstellingClient({
 
       {/* Speler picker modal */}
       {showPickerModal && activeSlot && (
-        <div className={`fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4 ${showTour ? "z-[94]" : "z-50"}`}>
-          <div data-tour="tour-picker" className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85dvh] flex flex-col">
+        <div className={`fixed inset-0 bg-black/70 flex items-start justify-center ${showTour ? "z-[94]" : "z-50"}`}>
+          <div data-tour="tour-picker" className="bg-slate-900 neon-border w-full sm:max-w-md rounded-b-2xl sm:rounded-2xl max-h-[85dvh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-wide">{activeSlot.label}</p>

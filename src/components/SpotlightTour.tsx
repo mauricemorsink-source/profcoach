@@ -89,9 +89,31 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
   const vh = window.innerHeight;
   const vw = window.innerWidth;
 
-  const showBelow = bottom + 210 < vh;
-  const tooltipLeft = Math.max(12, Math.min(left, vw - 312));
-  const arrowLeft = Math.min(Math.max(left - tooltipLeft + w / 2 - 6, 16), 248);
+  // Tooltip afmetingen (geschat)
+  const TW = 288; // w-72
+  const TH = 190;
+  const MARGIN = 10;
+
+  // Horizontaal: gecentreerd op het spotlight-element, geklemd binnen viewport
+  const tooltipLeft = Math.max(MARGIN, Math.min(left + w / 2 - TW / 2, vw - TW - MARGIN));
+
+  // Verticaal: liever onder, anders boven, anders zo laag mogelijk
+  let tooltipTop: number;
+  let showBelow: boolean;
+  if (bottom + 14 + TH <= vh - MARGIN) {
+    tooltipTop = bottom + 14;
+    showBelow = true;
+  } else if (top - 14 - TH >= MARGIN) {
+    tooltipTop = top - 14 - TH;
+    showBelow = false;
+  } else {
+    // Geen ruimte boven of onder: toon bovenaan het scherm
+    tooltipTop = MARGIN;
+    showBelow = true;
+  }
+
+  // Pijltje: positie relatief aan tooltip
+  const arrowLeft = Math.min(Math.max(left + w / 2 - tooltipLeft - 6, 12), TW - 24);
 
   return (
     <>
@@ -113,8 +135,8 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
 
       {/* Tooltip */}
       <div
-        className="fixed z-[96] w-72 bg-slate-900 border border-cyan-500/40 rounded-2xl p-4 shadow-2xl"
-        style={showBelow ? { top: bottom + 14, left: tooltipLeft } : { bottom: vh - top + 14, left: tooltipLeft }}
+        className="fixed z-[96] bg-slate-900 border border-cyan-500/40 rounded-2xl p-4 shadow-2xl"
+        style={{ top: tooltipTop, left: tooltipLeft, width: TW }}
       >
         {/* Pijltje */}
         <div
