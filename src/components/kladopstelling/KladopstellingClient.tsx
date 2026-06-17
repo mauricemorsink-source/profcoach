@@ -460,7 +460,7 @@ export default function KladopstellingClient({
       {showTour && step === 1 && (
         <SpotlightTour
           steps={TOUR_STEPS}
-          onDone={() => setShowTour(false)}
+          onDone={() => { setShowTour(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
           onStepEnter={handleTourStepEnter}
           onStepLeave={handleTourStepLeave}
         />

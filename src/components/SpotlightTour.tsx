@@ -19,46 +19,42 @@ interface Props {
   onStepLeave?: (index: number) => void;
 }
 
-function getElementRect(target: string): DOMRect | null {
+function readRect(target: string): DOMRect | null {
   const el = document.querySelector(`[data-tour="${target}"]`);
-  if (!el) return null;
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
-  return el.getBoundingClientRect();
+  return el ? el.getBoundingClientRect() : null;
 }
 
 export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
-  // Scrollblokkering
+  // Scroll- en layout-shift blokkering
   useEffect(() => {
-    const prev = document.body.style.overflow;
+    const scrollbarW = window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    if (scrollbarW > 0) document.body.style.paddingRight = `${scrollbarW}px`;
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
+    };
   }, []);
 
-  // Step enter + rect ophalen
+  // Eén rect-meting per stap, na één vaste delay zodat renders klaar zijn
   useEffect(() => {
+    setRect(null);
     onStepEnter?.(stepIdx);
-
-    let frame: number;
-    const t1 = setTimeout(() => {
-      setRect(getElementRect(steps[stepIdx].target));
-      frame = requestAnimationFrame(() => {
-        const t2 = setTimeout(() => {
-          setRect(getElementRect(steps[stepIdx].target));
-        }, 350);
-        return () => clearTimeout(t2);
-      });
-    }, 60);
-
-    return () => { clearTimeout(t1); cancelAnimationFrame(frame); };
+    const t = setTimeout(() => {
+      setRect(readRect(steps[stepIdx].target));
+    }, 180);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx]);
 
-  // Resize
+  // Resize: rect bijwerken
   useEffect(() => {
-    const update = () => setRect(getElementRect(steps[stepIdx].target));
+    const update = () => setRect(readRect(steps[stepIdx].target));
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, [stepIdx, steps]);
@@ -66,7 +62,6 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
   function next() {
     onStepLeave?.(stepIdx);
     if (stepIdx < steps.length - 1) {
-      setRect(null);
       setStepIdx((i) => i + 1);
     } else {
       finish();
@@ -90,18 +85,15 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
   const vh = window.innerHeight;
   const vw = window.innerWidth;
 
-  // Tooltip afmetingen (geschat)
-  const TW = 288; // w-72
-  const TH = 190;
-  const MARGIN = 10;
+  const TW = 288;
+  const TH = 195;
+  const MARGIN = 12;
 
-  const step = steps[stepIdx];
-  const fixedBottom = step.tooltipPosition === "fixed-bottom";
+  const currentStep = steps[stepIdx];
+  const fixedBottom = currentStep.tooltipPosition === "fixed-bottom";
 
-  // Horizontaal: gecentreerd op het spotlight-element, geklemd binnen viewport
   const tooltipLeft = Math.max(MARGIN, Math.min(left + w / 2 - TW / 2, vw - TW - MARGIN));
 
-  // Verticaal
   let tooltipTop: number;
   let showBelow: boolean;
   if (fixedBottom) {
@@ -114,22 +106,22 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
     tooltipTop = top - 14 - TH;
     showBelow = false;
   } else {
+    // Geen ruimte: onderaan scherm
     tooltipTop = vh - TH - MARGIN;
     showBelow = false;
   }
 
-  // Pijltje: positie relatief aan tooltip (alleen bij auto-positionering)
   const arrowLeft = Math.min(Math.max(left + w / 2 - tooltipLeft - 6, 12), TW - 24);
 
   return (
     <>
-      {/* Vier backdrop-vakken (blokkeren klikken én zicht) */}
+      {/* Vier backdrop-vakken rondom het spotlight (blokkeren zicht én klikken) */}
       <div className="fixed inset-0 z-[90]">
         <div className="absolute bg-black/75" style={{ top: 0, left: 0, right: 0, height: Math.max(0, top) }} />
         <div className="absolute bg-black/75" style={{ top: bottom, left: 0, right: 0, bottom: 0 }} />
         <div className="absolute bg-black/75" style={{ top, left: 0, width: Math.max(0, left), height: h }} />
         <div className="absolute bg-black/75" style={{ top, left: right, right: 0, height: h }} />
-        {/* Transparante klikblokkering over het spotlight-gat */}
+        {/* Transparante klikblokkering in het spotlight-gat */}
         <div className="absolute" style={{ top, left, width: w, height: h }} />
       </div>
 
@@ -144,18 +136,21 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
         className="fixed z-[96] bg-slate-900 border border-cyan-500/40 rounded-2xl p-4 shadow-2xl"
         style={{ top: tooltipTop, left: tooltipLeft, width: TW }}
       >
-        {/* Pijltje (alleen bij auto-positie) */}
         {!fixedBottom && (
           <div
-            className={`absolute w-3 h-3 bg-slate-900 rotate-45 ${showBelow ? "border-t border-l border-cyan-500/40 -top-1.5" : "border-b border-r border-cyan-500/40 -bottom-1.5"}`}
+            className={`absolute w-3 h-3 bg-slate-900 rotate-45 ${
+              showBelow
+                ? "border-t border-l border-cyan-500/40 -top-1.5"
+                : "border-b border-r border-cyan-500/40 -bottom-1.5"
+            }`}
             style={{ left: arrowLeft }}
           />
         )}
         <div className="flex items-center justify-between mb-1.5">
-          <p className="text-sm font-bold text-white">{steps[stepIdx].title}</p>
+          <p className="text-sm font-bold text-white">{currentStep.title}</p>
           <span className="text-xs text-slate-500">{stepIdx + 1}/{steps.length}</span>
         </div>
-        <p className="text-sm text-slate-400 leading-relaxed mb-4">{steps[stepIdx].body}</p>
+        <p className="text-sm text-slate-400 leading-relaxed mb-4">{currentStep.body}</p>
         <div className="flex items-center justify-between">
           <button onClick={finish} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
             Overslaan
