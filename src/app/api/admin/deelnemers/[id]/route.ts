@@ -35,6 +35,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params;
-  await prisma.teamEntry.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.teamEntryPlayer.deleteMany({ where: { teamEntryId: id } }),
+    prisma.teamEntry.delete({ where: { id } }),
+  ]);
   return NextResponse.json({ ok: true });
 }

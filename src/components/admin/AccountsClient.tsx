@@ -31,6 +31,12 @@ export default function AccountsClient() {
   const [loginLink, setLoginLink] = useState<string | null>(null);
   const [linkLoading, setLinkLoading] = useState(false);
 
+  // Nieuw account
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: "", email: "", password: "", role: "MANAGER", managedTeam: "ONE" });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+
   async function load() {
     const res = await fetch("/api/admin/users");
     if (res.ok) {
@@ -60,6 +66,28 @@ export default function AccountsClient() {
     await load();
   }
 
+  async function createAccount() {
+    setCreating(true);
+    setCreateError("");
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: createForm.name,
+        email: createForm.email,
+        password: createForm.password,
+        role: createForm.role,
+        managedTeam: createForm.role === "MANAGER" ? createForm.managedTeam : null,
+      }),
+    });
+    const data = await res.json();
+    setCreating(false);
+    if (!res.ok) { setCreateError(data.error ?? "Aanmaken mislukt"); return; }
+    setShowCreate(false);
+    setCreateForm({ name: "", email: "", password: "", role: "MANAGER", managedTeam: "ONE" });
+    await load();
+  }
+
   async function generateLink() {
     if (!modal) return;
     setLinkLoading(true);
@@ -83,7 +111,12 @@ export default function AccountsClient() {
     <section className="bg-slate-900 neon-border rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-white">Accounts</h2>
-        <span className="text-xs text-slate-500">Admin &amp; manager logins</span>
+        <button
+          onClick={() => { setCreateError(""); setShowCreate(true); }}
+          className="px-3 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold transition-colors neon-glow-sm"
+        >
+          + Nieuw account
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -115,10 +148,65 @@ export default function AccountsClient() {
                 </td>
               </tr>
             ))}
+            {accounts.length === 0 && (
+              <tr><td colSpan={4} className="py-4 text-slate-500 text-sm">Geen accounts gevonden.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
 
+      {/* Nieuw account modal */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Nieuw account aanmaken</h3>
+              <button onClick={() => setShowCreate(false)} className="text-slate-500 hover:text-slate-300 text-xl leading-none">×</button>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className={LABEL}>Naam</label>
+                <input type="text" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} className={INPUT} placeholder="Jan Janssen" />
+              </div>
+              <div>
+                <label className={LABEL}>E-mailadres *</label>
+                <input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} className={INPUT} placeholder="jan@voorbeeld.nl" />
+              </div>
+              <div>
+                <label className={LABEL}>Wachtwoord *</label>
+                <input type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} className={INPUT} placeholder="Tijdelijk wachtwoord" />
+                <p className="text-xs text-slate-600 mt-1">De gebruiker moet dit bij eerste inlog wijzigen.</p>
+              </div>
+              <div>
+                <label className={LABEL}>Rol</label>
+                <select value={createForm.role} onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })} className={SELECT}>
+                  <option value="ADMIN">Admin</option>
+                  <option value="MANAGER">Manager</option>
+                </select>
+              </div>
+              {createForm.role === "MANAGER" && (
+                <div>
+                  <label className={LABEL}>Elftal</label>
+                  <select value={createForm.managedTeam} onChange={(e) => setCreateForm({ ...createForm, managedTeam: e.target.value })} className={SELECT}>
+                    {TEAMS.map((t) => <option key={t} value={t}>{TEAM_LABEL[t]}</option>)}
+                  </select>
+                </div>
+              )}
+              {createError && <p className="text-red-400 text-sm bg-red-900/20 border border-red-500/20 rounded-lg px-3 py-2">{createError}</p>}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowCreate(false)} className={BTN_SECONDARY}>Annuleer</button>
+              <button onClick={createAccount} disabled={creating || !createForm.email || !createForm.password} className={BTN_PRIMARY}>
+                {creating ? "Aanmaken..." : "Account aanmaken"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bewerk modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-md p-6">
