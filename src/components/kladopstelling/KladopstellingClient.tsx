@@ -134,7 +134,7 @@ export default function KladopstellingClient({
     },
   ];
 
-  const canSubmitPublic = !requireLogin && registrationOpen;
+  const canSubmitPublic = registrationOpen;
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -468,47 +468,51 @@ export default function KladopstellingClient({
       <div className="max-w-3xl mx-auto px-4 py-8 pb-16">
 
         {/* Header */}
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <div className="flex-1">
+        <div className="mb-5 space-y-3">
+          {/* Rij 1: titel over volle breedte */}
+          <div>
             <h1 className="text-xl font-black text-white">Team indienen</h1>
             <p className="text-slate-500 text-xs mt-0.5">Werk je team uit en puzzel oneindig tot je jouw ideale opstelling hebt samengesteld</p>
           </div>
-          {(!canSubmitPublic || step === 1) && (
-            <div data-tour="tour-formation">
-              <select
-                value={formationId}
-                onChange={(e) => handleFormationChange(e.target.value)}
-                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-              >
-                {formations.map((f) => <option key={f.id} value={f.id}>{f.code}</option>)}
-              </select>
+          {/* Rij 2: formatie + tellers + leegmaken + uitleg */}
+          <div className="flex flex-wrap items-center gap-2">
+            {step === 1 && (
+              <div data-tour="tour-formation">
+                <select
+                  value={formationId}
+                  onChange={(e) => handleFormationChange(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                >
+                  {formations.map((f) => <option key={f.id} value={f.id}>{f.code}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="flex gap-2 text-sm">
+              <span className="bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-slate-300">
+                {validation.selectedCount} / 11
+              </span>
+              <span className={`px-3 py-1 rounded-full border font-medium ${validation.totalValue > budget ? "bg-red-900/40 text-red-400 border-red-500/30" : "bg-green-900/40 text-green-400 border-green-500/30"}`}>
+                €{validation.totalValue} / {budget}
+              </span>
             </div>
-          )}
-          <div className="flex gap-2 text-sm flex-wrap">
-            <span className="bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-slate-300">
-              {validation.selectedCount} / 11
-            </span>
-            <span className={`px-3 py-1 rounded-full border font-medium ${validation.totalValue > budget ? "bg-red-900/40 text-red-400 border-red-500/30" : "bg-green-900/40 text-green-400 border-green-500/30"}`}>
-              €{validation.totalValue} / {budget}
-            </span>
-          </div>
-          {step === 1 && (
-            <>
-              <button
-                onClick={() => setShowTour(true)}
-                className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600"
-                title="Uitleg"
-              >
-                ? Uitleg
-              </button>
+            {step === 1 && (
               <button
                 onClick={handleReset}
                 className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600"
               >
                 Leegmaken
               </button>
-            </>
-          )}
+            )}
+            {step === 1 && (
+              <button
+                onClick={() => setShowTour(true)}
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600 shrink-0"
+                title="Uitleg"
+              >
+                ? Uitleg
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Stap-indicator */}
