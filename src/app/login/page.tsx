@@ -83,10 +83,6 @@ function LoginForm() {
         {loading ? "Inloggen..." : "Inloggen"}
       </button>
 
-      <p className="text-center text-sm text-slate-500">
-        Nog geen account?{" "}
-        <Link href="/register" className="text-cyan-400 hover:text-cyan-300 font-medium">Registreren</Link>
-      </p>
     </form>
   );
 }

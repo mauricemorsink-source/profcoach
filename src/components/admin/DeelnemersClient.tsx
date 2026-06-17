@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AdminTeamEditModal from "./AdminTeamEditModal";
 
 type TeamPlayer = {
   slotIndex: number;
-  player: { name: string; position: string; clubTeam: string };
+  player: { id: string; name: string; position: string; clubTeam: string };
 };
 
 type Prediction = {
@@ -26,7 +27,7 @@ type Deelnemer = {
   bonusPoints: number;
   captainSlot: number | null;
   createdAt: string;
-  formation: { code: string } | null;
+  formation: { id: string; code: string } | null;
   players: TeamPlayer[];
   prediction: Prediction | null;
 };
@@ -51,6 +52,7 @@ export default function DeelnemersClient() {
   const [saveError, setSaveError] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
   const [betaaldFilter, setBetaaldFilter] = useState<"alle" | "betaald" | "nietbetaald">("alle");
+  const [teamEditTarget, setTeamEditTarget] = useState<Deelnemer | null>(null);
 
   async function load() {
     setLoading(true);
@@ -194,6 +196,32 @@ export default function DeelnemersClient() {
       </section>
 
       {/* Modal */}
+      {teamEditTarget && (
+        <AdminTeamEditModal
+          deelnemerId={teamEditTarget.id}
+          deelnemerNaam={
+            teamEditTarget.voornaam || teamEditTarget.achternaam
+              ? `${teamEditTarget.voornaam ?? ""} ${teamEditTarget.achternaam ?? ""}`.trim()
+              : "Deelnemer"
+          }
+          initialFormationId={teamEditTarget.formation?.id ?? null}
+          initialSlots={(() => {
+            const slots: (string | null)[] = Array(11).fill(null);
+            for (const tp of teamEditTarget.players) {
+              slots[tp.slotIndex] = tp.player.id;
+            }
+            return slots;
+          })()}
+          initialCaptainSlot={teamEditTarget.captainSlot}
+          onClose={() => setTeamEditTarget(null)}
+          onSaved={async () => {
+            setTeamEditTarget(null);
+            setModal(null);
+            await load();
+          }}
+        />
+      )}
+
       {modal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
@@ -211,7 +239,10 @@ export default function DeelnemersClient() {
 
             {/* Team */}
             <div className="mb-5 pb-5 border-b border-slate-800">
-              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Team</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Team</p>
+                <button onClick={() => setTeamEditTarget(modal)} className={BTN_SMALL}>Team bewerken</button>
+              </div>
               {modal.players.length === 0 ? (
                 <p className="text-slate-500 text-sm">Geen spelers.</p>
               ) : (
