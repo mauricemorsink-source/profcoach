@@ -130,6 +130,7 @@ model TeamEntry {
   telefoonnummer String?
   whatsappGroep  Boolean           @default(false)
   betaaldAkkoord Boolean           @default(false)
+  betaald        Boolean           @default(false)
   season         Season            @relation(fields: [seasonId], references: [id])
   formation      Formation         @relation(fields: [formationId], references: [id])
   user           User?             @relation(fields: [userId], references: [id])

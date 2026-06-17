@@ -26,9 +26,9 @@ const TAB_SECTIONS = [
     ],
   },
   {
-    heading: "Accounts",
+    heading: "Deelnemers",
     tabs: [
-      { href: "/admin/gebruikers", label: "Gebruikers" },
+      { href: "/admin/gebruikers", label: "Deelnemers" },
     ],
   },
 ];

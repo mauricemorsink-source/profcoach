@@ -1,5 +1,5 @@
-import GebruikersClient from "@/components/admin/GebruikersClient";
+import DeelnemersClient from "@/components/admin/DeelnemersClient";
 
-export default function GebruikersPage() {
-  return <GebruikersClient />;
+export default function DeelnemersPage() {
+  return <DeelnemersClient />;
 }
