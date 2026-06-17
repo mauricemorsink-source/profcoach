@@ -27,3 +27,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   return NextResponse.json(entry);
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  await prisma.teamEntry.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

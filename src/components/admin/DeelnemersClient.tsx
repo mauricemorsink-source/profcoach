@@ -53,6 +53,8 @@ export default function DeelnemersClient() {
   const [saveMsg, setSaveMsg] = useState("");
   const [betaaldFilter, setBetaaldFilter] = useState<"alle" | "betaald" | "nietbetaald">("alle");
   const [teamEditTarget, setTeamEditTarget] = useState<Deelnemer | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -96,7 +98,20 @@ export default function DeelnemersClient() {
     await load();
   }
 
+  async function deleteDeelnemer() {
+    if (!modal) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/deelnemers/${modal.id}`, { method: "DELETE" });
+    setDeleting(false);
+    if (res.ok) {
+      setModal(null);
+      setDeleteConfirm(false);
+      await load();
+    }
+  }
+
   function openModal(d: Deelnemer) {
+    setDeleteConfirm(false);
     setForm({
       voornaam: d.voornaam ?? "",
       achternaam: d.achternaam ?? "",
@@ -358,9 +373,28 @@ export default function DeelnemersClient() {
               {saveMsg && <p className="text-green-400 text-sm">{saveMsg}</p>}
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setModal(null)} className={BTN_SECONDARY}>Sluiten</button>
-              <button onClick={save} disabled={saving} className={BTN_PRIMARY}>{saving ? "Opslaan..." : "Opslaan"}</button>
+            <div className="flex items-center justify-between mt-6">
+              <div>
+                {!deleteConfirm ? (
+                  <button onClick={() => setDeleteConfirm(true)} className="px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20 border border-red-500/20 rounded-lg transition-colors">
+                    Verwijderen
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-400">Zeker weten?</span>
+                    <button onClick={deleteDeelnemer} disabled={deleting} className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white rounded-lg font-semibold disabled:opacity-50 transition-colors">
+                      {deleting ? "Verwijderen..." : "Ja, verwijder"}
+                    </button>
+                    <button onClick={() => setDeleteConfirm(false)} className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-300 transition-colors">
+                      Annuleer
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setModal(null)} className={BTN_SECONDARY}>Sluiten</button>
+                <button onClick={save} disabled={saving} className={BTN_PRIMARY}>{saving ? "Opslaan..." : "Opslaan"}</button>
+              </div>
             </div>
           </div>
         </div>
