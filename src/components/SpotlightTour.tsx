@@ -129,9 +129,10 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
         <div className="absolute bg-black/75" style={{ top: bottom, left: 0, right: 0, bottom: 0 }} />
         <div className="absolute bg-black/75" style={{ top, left: 0, width: Math.max(0, left), height: h }} />
         <div className="absolute bg-black/75" style={{ top, left: right, right: 0, height: h }} />
-        {/* Klikblokkering in het spotlight-gat */}
-        <div className="absolute" style={{ top, left, width: w, height: h }} />
       </div>
+
+      {/* Klikblokkering in het spotlight-gat — boven picker (z-94) maar onder tooltip (z-96) */}
+      <div className="fixed z-[95]" style={{ top, left, width: w, height: h }} />
 
       {/* Highlight rand */}
       <div
