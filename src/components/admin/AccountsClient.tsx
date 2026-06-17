@@ -1,0 +1,179 @@
+"use client";
+
+import { useState, useEffect } from "react";
+
+type Account = {
+  id: string;
+  name: string | null;
+  email: string;
+  role: "ADMIN" | "MANAGER";
+  managedTeam: string | null;
+};
+
+const TEAMS = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
+const TEAM_LABEL: Record<string, string> = {
+  ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
+  FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
+};
+const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 transition-colors";
+const LABEL = "block text-sm font-medium text-slate-400 mb-1";
+const SELECT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40 transition-colors";
+const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
+const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700";
+const BTN_SMALL = "px-3 py-1.5 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors";
+
+export default function AccountsClient() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [modal, setModal] = useState<Account | null>(null);
+  const [form, setForm] = useState({ name: "", email: "", role: "MANAGER", managedTeam: "ONE" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [loginLink, setLoginLink] = useState<string | null>(null);
+  const [linkLoading, setLinkLoading] = useState(false);
+
+  async function load() {
+    const res = await fetch("/api/admin/users");
+    if (res.ok) {
+      const all = await res.json();
+      setAccounts(all.filter((u: Account) => u.role === "ADMIN" || u.role === "MANAGER"));
+    }
+  }
+
+  async function save() {
+    if (!modal) return;
+    setSaving(true);
+    setError("");
+    const res = await fetch(`/api/admin/users/${modal.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.name,
+        email: form.email,
+        role: form.role,
+        managedTeam: form.role === "MANAGER" ? form.managedTeam : null,
+      }),
+    });
+    const data = await res.json();
+    setSaving(false);
+    if (!res.ok) { setError(data.error ?? "Opslaan mislukt"); return; }
+    setModal(null);
+    await load();
+  }
+
+  async function generateLink() {
+    if (!modal) return;
+    setLinkLoading(true);
+    setLoginLink(null);
+    const res = await fetch(`/api/admin/users/${modal.id}/login-link`, { method: "POST" });
+    const data = await res.json();
+    setLinkLoading(false);
+    if (res.ok) setLoginLink(data.link);
+  }
+
+  function openModal(a: Account) {
+    setForm({ name: a.name ?? "", email: a.email, role: a.role, managedTeam: a.managedTeam ?? "ONE" });
+    setError("");
+    setLoginLink(null);
+    setModal(a);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  return (
+    <section className="bg-slate-900 neon-border rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-white">Accounts</h2>
+        <span className="text-xs text-slate-500">Admin &amp; manager logins</span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-slate-500 border-b border-slate-800">
+              <th className="pb-2 font-semibold">Naam</th>
+              <th className="pb-2 font-semibold">Rol</th>
+              <th className="pb-2 font-semibold hidden sm:table-cell">E-mail</th>
+              <th className="pb-2 font-semibold text-right">Acties</th>
+            </tr>
+          </thead>
+          <tbody>
+            {accounts.map((a) => (
+              <tr key={a.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+                <td className="py-2 font-medium text-white">{a.name ?? <span className="text-slate-500 italic">Geen naam</span>}</td>
+                <td className="py-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                    a.role === "ADMIN"
+                      ? "bg-purple-900/40 text-purple-400 border-purple-500/30"
+                      : "bg-blue-900/40 text-blue-400 border-blue-500/30"
+                  }`}>
+                    {a.role === "ADMIN" ? "Admin" : `Manager${a.managedTeam ? ` · ${TEAM_LABEL[a.managedTeam] ?? a.managedTeam}` : ""}`}
+                  </span>
+                </td>
+                <td className="py-2 text-slate-400 text-xs hidden sm:table-cell">{a.email}</td>
+                <td className="py-2 text-right">
+                  <button onClick={() => openModal(a)} className={BTN_SMALL}>Bewerken</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {modal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">{modal.name ?? modal.email}</h3>
+              <button onClick={() => setModal(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none">×</button>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className={LABEL}>Naam</label>
+                <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={INPUT} />
+              </div>
+              <div>
+                <label className={LABEL}>E-mailadres</label>
+                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={INPUT} />
+              </div>
+              <div>
+                <label className={LABEL}>Rol</label>
+                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className={SELECT}>
+                  <option value="ADMIN">Admin</option>
+                  <option value="MANAGER">Manager</option>
+                </select>
+              </div>
+              {form.role === "MANAGER" && (
+                <div>
+                  <label className={LABEL}>Elftal</label>
+                  <select value={form.managedTeam} onChange={(e) => setForm({ ...form, managedTeam: e.target.value })} className={SELECT}>
+                    {TEAMS.map((t) => <option key={t} value={t}>{TEAM_LABEL[t]}</option>)}
+                  </select>
+                </div>
+              )}
+              {error && <p className="text-red-400 text-sm bg-red-900/20 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
+            </div>
+
+            <div className="border-t border-slate-800 pt-4 mb-5">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-2">Inloglink</p>
+              <button onClick={generateLink} disabled={linkLoading} className={BTN_SMALL}>
+                {linkLoading ? "Genereren..." : "Genereer eenmalige inloglink"}
+              </button>
+              {loginLink && (
+                <div className="mt-3 flex gap-2">
+                  <input readOnly value={loginLink} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-cyan-400 font-mono focus:outline-none" />
+                  <button onClick={() => navigator.clipboard.writeText(loginLink)} className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-lg">Kopieer</button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setModal(null)} className={BTN_SECONDARY}>Annuleer</button>
+              <button onClick={save} disabled={saving} className={BTN_PRIMARY}>{saving ? "Opslaan..." : "Opslaan"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
