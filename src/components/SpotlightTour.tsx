@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 export const TOUR_KEY = "profcoach_tour_seen_v1";
 const PAD = 10;
-const SCROLL_DURATION = 450; // ms: wacht tot smooth scroll klaar is
+const TOTAL_DELAY = 600; // ms: React render + smooth scroll
 
 export interface TourStep {
   target: string;
@@ -40,22 +40,21 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
     };
   }, []);
 
-  // Per stap: eerst scrollen naar element, dan meten
+  // Per stap: trigger stap-callback, probeer te scrollen (element bestaat misschien nog niet),
+  // wacht altijd TOTAL_DELAY ms zodat React kan renderen én scroll afloopt, dan meten.
   useEffect(() => {
     setRect(null);
     onStepEnter?.(stepIdx);
 
     const target = steps[stepIdx].target;
+
+    // Scroll alleen als element al in DOM staat (bij dynamische elementen zoals de picker nog niet)
     const el = document.querySelector(`[data-tour="${target}"]`);
-    if (!el) return;
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    // Scroll naar element (werkt omdat we geen overflow:hidden gebruiken)
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    // Wacht tot scroll klaar is, dan meten
     const t = setTimeout(() => {
       setRect(readRect(target));
-    }, SCROLL_DURATION);
+    }, TOTAL_DELAY);
 
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
