@@ -211,10 +211,10 @@ export default function InstellingenClient() {
                     value={settingsForm.inschrijfgeld}
                     onChange={(e) => setSettingsForm({ ...settingsForm, inschrijfgeld: Number(e.target.value) })}
                     className="w-24 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-                    placeholder="0,00"
+                    placeholder="15.00"
                   />
                 </div>
-                <span className="text-xs text-slate-500">— wordt getoond bij het indienen</span>
+                <span className="text-xs text-slate-500">in euro&apos;s (bijv. 15.00) — wordt getoond bij het indienen</span>
               </div>
             </div>
             <div className="space-y-3 border-t border-slate-800 pt-4">

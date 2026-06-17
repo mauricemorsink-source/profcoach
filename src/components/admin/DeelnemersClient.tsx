@@ -193,10 +193,9 @@ export default function DeelnemersClient() {
                         : <span className="text-slate-600 text-xs">—</span>}
                     </td>
                     <td className="py-2">
-                      <button onClick={() => toggleBetaald(d)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${d.betaald ? "bg-green-500" : "bg-slate-600"}`}>
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${d.betaald ? "translate-x-6" : "translate-x-1"}`} />
-                      </button>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${d.betaald ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"}`}>
+                        {d.betaald ? "Betaald" : "Niet betaald"}
+                      </span>
                     </td>
                     <td className="py-2 text-right">
                       <button onClick={() => openModal(d)} className={BTN_SMALL}>Details</button>

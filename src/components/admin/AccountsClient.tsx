@@ -26,6 +26,9 @@ export default function AccountsClient() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [modal, setModal] = useState<Account | null>(null);
   const [form, setForm] = useState({ name: "", email: "", role: "MANAGER", managedTeam: "ONE" });
+  const [newPassword, setNewPassword] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMsg, setPwMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loginLink, setLoginLink] = useState<string | null>(null);
@@ -98,9 +101,25 @@ export default function AccountsClient() {
     if (res.ok) setLoginLink(data.link);
   }
 
+  async function savePassword() {
+    if (!modal || !newPassword.trim()) return;
+    setPwSaving(true);
+    setPwMsg("");
+    const res = await fetch(`/api/admin/users/${modal.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    setPwSaving(false);
+    if (res.ok) { setNewPassword(""); setPwMsg("Wachtwoord gewijzigd"); }
+    else { const d = await res.json(); setPwMsg(d.error ?? "Mislukt"); }
+  }
+
   function openModal(a: Account) {
     setForm({ name: a.name ?? "", email: a.email, role: a.role, managedTeam: a.managedTeam ?? "ONE" });
     setError("");
+    setNewPassword("");
+    setPwMsg("");
     setLoginLink(null);
     setModal(a);
   }
@@ -240,6 +259,25 @@ export default function AccountsClient() {
                 </div>
               )}
               {error && <p className="text-red-400 text-sm bg-red-900/20 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
+            </div>
+
+            <div className="border-t border-slate-800 pt-4 mb-5">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-2">Wachtwoord wijzigen</p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setPwMsg(""); }}
+                  placeholder="Nieuw wachtwoord"
+                  className={INPUT + " flex-1"}
+                />
+                <button onClick={savePassword} disabled={pwSaving || !newPassword.trim()} className={BTN_PRIMARY}>
+                  {pwSaving ? "..." : "Opslaan"}
+                </button>
+              </div>
+              {pwMsg && (
+                <p className={`text-xs mt-1.5 ${pwMsg === "Wachtwoord gewijzigd" ? "text-green-400" : "text-red-400"}`}>{pwMsg}</p>
+              )}
             </div>
 
             <div className="border-t border-slate-800 pt-4 mb-5">

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getSession, hashPassword } from "@/lib/auth";
 
 export async function PATCH(
   req: Request,
@@ -13,7 +13,16 @@ export async function PATCH(
 
   const { userId } = await params;
   const body = await req.json();
-  const { role, managedTeam, isParticipant, name, email, betaald } = body;
+  const { role, managedTeam, isParticipant, name, email, betaald, password } = body;
+
+  if (password !== undefined) {
+    if (!password?.trim()) return NextResponse.json({ error: "Wachtwoord mag niet leeg zijn" }, { status: 400 });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashPassword(password), mustChangePassword: false },
+    });
+    return NextResponse.json({ ok: true });
+  }
 
   if (role && !["ADMIN", "USER", "MANAGER"].includes(role)) {
     return NextResponse.json({ error: "Ongeldige rol" }, { status: 400 });

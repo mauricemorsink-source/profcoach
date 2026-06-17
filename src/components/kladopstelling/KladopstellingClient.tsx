@@ -143,10 +143,13 @@ export default function KladopstellingClient({
     () => validateTeam(slotValues, playersById, formation, budget, captainEnabled, captainSlot, slots),
     [slotValues, playersById, formation, budget, captainEnabled, captainSlot, slots]
   );
-  const teamValid = useMemo(
-    () => validateTeam(slotValues, playersById, formation, budget, false, null, slots).allValid,
+  const stepOneValidation = useMemo(
+    () => validateTeam(slotValues, playersById, formation, budget, false, null, slots),
     [slotValues, playersById, formation, budget, slots]
   );
+  const teamValid = stepOneValidation.allValid;
+  const hasMismatch = stepOneValidation.rules.some((r) => r.key === "positions" && !r.met);
+  const predValid = predTopScorerId !== null && predAssistKoningId !== null && predYellowCards.trim() !== "" && predTotalGoals.trim() !== "";
 
   useEffect(() => {
     async function init() {
@@ -258,11 +261,18 @@ export default function KladopstellingClient({
     scrollTop();
   }
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_RE = /^(\+31|0)[1-9][0-9]{7,8}$|^(\+31|0)6[0-9]{8}$/;
+
+  function normalizePhone(p: string) { return p.replace(/[\s\-().]/g, ""); }
+
   async function handleSubmit() {
     if (!personInfo.voornaam.trim()) { setSubmitError("Voornaam is verplicht"); return; }
     if (!personInfo.achternaam.trim()) { setSubmitError("Achternaam is verplicht"); return; }
     if (!personInfo.email.trim()) { setSubmitError("Mailadres is verplicht"); return; }
+    if (!EMAIL_RE.test(personInfo.email.trim())) { setSubmitError("Vul een geldig e-mailadres in (bijv. jan@voorbeeld.nl)"); return; }
     if (!personInfo.telefoonnummer.trim()) { setSubmitError("Telefoonnummer is verplicht"); return; }
+    if (!PHONE_RE.test(normalizePhone(personInfo.telefoonnummer))) { setSubmitError("Vul een geldig telefoonnummer in (bijv. 06 12345678 of +31 6 12345678)"); return; }
     if (!betaaldAkkoord) { setSubmitError("Je moet akkoord gaan met het inschrijfgeld"); return; }
     setSubmitting(true);
     setSubmitError(null);
@@ -445,10 +455,10 @@ export default function KladopstellingClient({
           </div>
 
           <button
-            onClick={() => { setSubmitted(false); handleReset(); setPersonInfo({ voornaam: "", achternaam: "", email: "", telefoonnummer: "", whatsappGroep: false }); setBetaaldAkkoord(false); }}
+            onClick={() => { window.location.href = "/"; }}
             className={BTN_SECONDARY + " w-full"}
           >
-            Terug naar begin
+            Terug naar de homepage
           </button>
         </div>
       </div>
@@ -529,29 +539,25 @@ export default function KladopstellingClient({
         {step === 1 && (
           <>
             {/* Validatie checklist */}
-            {(() => {
-              const v = validateTeam(slotValues, playersById, formation, budget, false, null, slots);
-              const hasMismatch = v.rules.some(r => r.key === "positions" && !r.met);
-              return (
-                <div data-tour="tour-validation" className={`mb-5 rounded-2xl border p-4 transition-colors ${v.allValid ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/20"}`}>
-                  {hasMismatch && (
-                    <div className="flex items-start gap-2 mb-3 bg-red-900/30 border border-red-500/40 rounded-xl px-3 py-2.5">
-                      <span className="text-red-400 text-base shrink-0 mt-0.5">⚠</span>
-                      <p className="text-red-300 text-xs font-medium">Eén of meer spelers staan op een verkeerde positie door een formatiewijziging.</p>
+            <div className="mb-5">
+              <div data-tour="tour-validation" className={`rounded-2xl border p-4 transition-colors ${stepOneValidation.allValid ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/20"}`}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
+                  {stepOneValidation.rules.map((rule) => (
+                    <div key={rule.key} className="flex items-center gap-1.5 text-xs">
+                      <span className={rule.met ? "text-green-400" : "text-red-400"}>{rule.met ? "✓" : "✗"}</span>
+                      <span className="text-slate-400 truncate">{rule.label}:</span>
+                      <span className={`font-bold shrink-0 ${rule.met ? "text-green-400" : "text-red-400"}`}>{rule.display}</span>
                     </div>
-                  )}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
-                    {v.rules.map((rule) => (
-                      <div key={rule.key} className="flex items-center gap-1.5 text-xs">
-                        <span className={rule.met ? "text-green-400" : "text-red-400"}>{rule.met ? "✓" : "✗"}</span>
-                        <span className="text-slate-400 truncate">{rule.label}:</span>
-                        <span className={`font-bold shrink-0 ${rule.met ? "text-green-400" : "text-red-400"}`}>{rule.display}</span>
-                      </div>
-                    ))}
-                  </div>
+                  ))}
                 </div>
-              );
-            })()}
+              </div>
+              {hasMismatch && (
+                <div className="flex items-start gap-2 mt-3 bg-amber-900/20 border border-amber-500/30 rounded-xl px-4 py-3">
+                  <span className="text-amber-400 shrink-0 mt-0.5">⚠</span>
+                  <p className="text-amber-200 text-sm">Doordat je de formatie hebt gewijzigd, staan één of meerdere spelers op een onjuiste positie. Klik op de speler op het veld om hem te vervangen.</p>
+                </div>
+              )}
+            </div>
 
             <div data-tour="tour-pitch">
               <Pitch
@@ -613,11 +619,16 @@ export default function KladopstellingClient({
                   );
                 })}
               </div>
-              {captainSlot === null && <p className="text-xs text-amber-400/70 mt-3">Nog geen aanvoerder gekozen — kies een speler hierboven</p>}
+              {captainSlot === null && (
+                <div className="flex items-center gap-2 mt-3 bg-amber-900/20 border border-amber-500/30 rounded-xl px-3 py-2.5">
+                  <span className="text-amber-400 shrink-0">!</span>
+                  <p className="text-amber-300 text-xs font-medium">Je moet een aanvoerder kiezen om verder te gaan.</p>
+                </div>
+              )}
             </div>
             <div className="flex gap-3 mt-4">
               <button onClick={goPrev} className={BTN_SECONDARY}>← Vorige</button>
-              <button onClick={goNext} className={BTN_PRIMARY + " ml-auto"}>Volgende stap →</button>
+              <button onClick={goNext} disabled={captainSlot === null} className={BTN_PRIMARY + " ml-auto"}>Volgende stap →</button>
             </div>
           </>
         )}
@@ -659,9 +670,12 @@ export default function KladopstellingClient({
                   className={INPUT} />
               </div>
             </div>
+            {!predValid && (
+              <p className="text-xs text-amber-400 mt-3">Vul alle voorspellingen in om verder te gaan.</p>
+            )}
             <div className="flex gap-3 mt-4">
               <button onClick={goPrev} className={BTN_SECONDARY}>← Vorige</button>
-              <button onClick={goNext} className={BTN_PRIMARY + " ml-auto"}>Volgende stap →</button>
+              <button onClick={goNext} disabled={!predValid} className={BTN_PRIMARY + " ml-auto"}>Volgende stap →</button>
             </div>
           </>
         )}

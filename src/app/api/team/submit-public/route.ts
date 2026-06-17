@@ -35,10 +35,16 @@ export async function POST(req: Request) {
     totalGoals?: number | null;
   };
 
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const PHONE_RE = /^(\+31|0)[1-9][0-9]{7,8}$|^(\+31|0)6[0-9]{8}$/;
+  const normalizePhone = (p: string) => p.replace(/[\s\-().]/g, "");
+
   if (!voornaam?.trim()) return NextResponse.json({ error: "Voornaam is verplicht" }, { status: 400 });
   if (!achternaam?.trim()) return NextResponse.json({ error: "Achternaam is verplicht" }, { status: 400 });
   if (!email?.trim()) return NextResponse.json({ error: "Mailadres is verplicht" }, { status: 400 });
+  if (!EMAIL_RE.test(email.trim())) return NextResponse.json({ error: "Vul een geldig e-mailadres in" }, { status: 400 });
   if (!telefoonnummer?.trim()) return NextResponse.json({ error: "Telefoonnummer is verplicht" }, { status: 400 });
+  if (!PHONE_RE.test(normalizePhone(telefoonnummer))) return NextResponse.json({ error: "Vul een geldig telefoonnummer in" }, { status: 400 });
   if (!betaaldAkkoord) return NextResponse.json({ error: "Je moet akkoord gaan met het inschrijfgeld" }, { status: 400 });
   if (!Array.isArray(slots) || slots.length !== 11) {
     return NextResponse.json({ error: "Ongeldige teamsamenstelling" }, { status: 400 });
@@ -46,6 +52,13 @@ export async function POST(req: Request) {
 
   const season = await prisma.season.findFirst({ where: { isActive: true } });
   if (!season) return NextResponse.json({ error: "Geen actief seizoen gevonden" }, { status: 400 });
+
+  const duplicate = await prisma.teamEntry.findFirst({
+    where: { seasonId: season.id, email: email.trim().toLowerCase() },
+  });
+  if (duplicate) {
+    return NextResponse.json({ error: "Dit e-mailadres is al gebruikt voor een inschrijving dit seizoen. Neem contact op als je je team wilt wijzigen." }, { status: 409 });
+  }
 
   const formation = await prisma.formation.findUnique({ where: { id: formationId } });
   if (!formation) return NextResponse.json({ error: "Ongeldige formatie" }, { status: 400 });
