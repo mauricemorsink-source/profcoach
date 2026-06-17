@@ -125,6 +125,7 @@ export default function KladopstellingClient({
       target: "tour-picker-search",
       title: "Speler kiezen uit de lijst",
       body: "Typ een naam of elftal om te zoeken. Klik op een speler om hem toe te voegen aan die positie.",
+      tooltipPosition: "fixed-bottom" as const,
     },
     {
       target: "tour-next",

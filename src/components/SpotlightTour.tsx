@@ -9,6 +9,7 @@ export interface TourStep {
   target: string;
   title: string;
   body: string;
+  tooltipPosition?: "auto" | "fixed-bottom";
 }
 
 interface Props {
@@ -94,25 +95,30 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
   const TH = 190;
   const MARGIN = 10;
 
+  const step = steps[stepIdx];
+  const fixedBottom = step.tooltipPosition === "fixed-bottom";
+
   // Horizontaal: gecentreerd op het spotlight-element, geklemd binnen viewport
   const tooltipLeft = Math.max(MARGIN, Math.min(left + w / 2 - TW / 2, vw - TW - MARGIN));
 
-  // Verticaal: liever onder, anders boven, anders zo laag mogelijk
+  // Verticaal
   let tooltipTop: number;
   let showBelow: boolean;
-  if (bottom + 14 + TH <= vh - MARGIN) {
+  if (fixedBottom) {
+    tooltipTop = vh - TH - MARGIN;
+    showBelow = false;
+  } else if (bottom + 14 + TH <= vh - MARGIN) {
     tooltipTop = bottom + 14;
     showBelow = true;
   } else if (top - 14 - TH >= MARGIN) {
     tooltipTop = top - 14 - TH;
     showBelow = false;
   } else {
-    // Geen ruimte boven of onder: toon onderaan het scherm
     tooltipTop = vh - TH - MARGIN;
     showBelow = false;
   }
 
-  // Pijltje: positie relatief aan tooltip
+  // Pijltje: positie relatief aan tooltip (alleen bij auto-positionering)
   const arrowLeft = Math.min(Math.max(left + w / 2 - tooltipLeft - 6, 12), TW - 24);
 
   return (
@@ -138,11 +144,13 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
         className="fixed z-[96] bg-slate-900 border border-cyan-500/40 rounded-2xl p-4 shadow-2xl"
         style={{ top: tooltipTop, left: tooltipLeft, width: TW }}
       >
-        {/* Pijltje */}
-        <div
-          className={`absolute w-3 h-3 bg-slate-900 rotate-45 ${showBelow ? "border-t border-l border-cyan-500/40 -top-1.5" : "border-b border-r border-cyan-500/40 -bottom-1.5"}`}
-          style={{ left: arrowLeft }}
-        />
+        {/* Pijltje (alleen bij auto-positie) */}
+        {!fixedBottom && (
+          <div
+            className={`absolute w-3 h-3 bg-slate-900 rotate-45 ${showBelow ? "border-t border-l border-cyan-500/40 -top-1.5" : "border-b border-r border-cyan-500/40 -bottom-1.5"}`}
+            style={{ left: arrowLeft }}
+          />
+        )}
         <div className="flex items-center justify-between mb-1.5">
           <p className="text-sm font-bold text-white">{steps[stepIdx].title}</p>
           <span className="text-xs text-slate-500">{stepIdx + 1}/{steps.length}</span>
