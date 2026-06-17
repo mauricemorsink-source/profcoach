@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 
 export const TOUR_KEY = "profcoach_tour_seen_v1";
 const PAD = 10;
+const SCROLL_DURATION = 450; // ms: wacht tot smooth scroll klaar is
 
 export interface TourStep {
   target: string;
@@ -28,31 +29,39 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
   const [stepIdx, setStepIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
-  // Scroll- en layout-shift blokkering
+  // Blokkeer gebruikersscroll via wheel + touchmove, maar laat programmatisch scrollen intact
   useEffect(() => {
-    const scrollbarW = window.innerWidth - document.documentElement.clientWidth;
-    const prevOverflow = document.body.style.overflow;
-    const prevPaddingRight = document.body.style.paddingRight;
-    document.body.style.overflow = "hidden";
-    if (scrollbarW > 0) document.body.style.paddingRight = `${scrollbarW}px`;
+    const prevent = (e: Event) => e.preventDefault();
+    document.addEventListener("wheel", prevent, { passive: false });
+    document.addEventListener("touchmove", prevent, { passive: false });
     return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.paddingRight = prevPaddingRight;
+      document.removeEventListener("wheel", prevent);
+      document.removeEventListener("touchmove", prevent);
     };
   }, []);
 
-  // Eén rect-meting per stap, na één vaste delay zodat renders klaar zijn
+  // Per stap: eerst scrollen naar element, dan meten
   useEffect(() => {
     setRect(null);
     onStepEnter?.(stepIdx);
+
+    const target = steps[stepIdx].target;
+    const el = document.querySelector(`[data-tour="${target}"]`);
+    if (!el) return;
+
+    // Scroll naar element (werkt omdat we geen overflow:hidden gebruiken)
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    // Wacht tot scroll klaar is, dan meten
     const t = setTimeout(() => {
-      setRect(readRect(steps[stepIdx].target));
-    }, 180);
+      setRect(readRect(target));
+    }, SCROLL_DURATION);
+
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx]);
 
-  // Resize: rect bijwerken
+  // Resize: opnieuw meten
   useEffect(() => {
     const update = () => setRect(readRect(steps[stepIdx].target));
     window.addEventListener("resize", update);
@@ -106,7 +115,6 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
     tooltipTop = top - 14 - TH;
     showBelow = false;
   } else {
-    // Geen ruimte: onderaan scherm
     tooltipTop = vh - TH - MARGIN;
     showBelow = false;
   }
@@ -115,13 +123,13 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
 
   return (
     <>
-      {/* Vier backdrop-vakken rondom het spotlight (blokkeren zicht én klikken) */}
+      {/* Vier backdrop-vakken rondom het spotlight */}
       <div className="fixed inset-0 z-[90]">
         <div className="absolute bg-black/75" style={{ top: 0, left: 0, right: 0, height: Math.max(0, top) }} />
         <div className="absolute bg-black/75" style={{ top: bottom, left: 0, right: 0, bottom: 0 }} />
         <div className="absolute bg-black/75" style={{ top, left: 0, width: Math.max(0, left), height: h }} />
         <div className="absolute bg-black/75" style={{ top, left: right, right: 0, height: h }} />
-        {/* Transparante klikblokkering in het spotlight-gat */}
+        {/* Klikblokkering in het spotlight-gat */}
         <div className="absolute" style={{ top, left, width: w, height: h }} />
       </div>
 
