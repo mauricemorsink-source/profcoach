@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { buildSlots } from "@/components/team/formationSlots";
-import { CLUB_LABEL } from "@/components/team/validate";
+import { CLUB_LABEL, validateTeam } from "@/components/team/validate";
 import type { Formation, Player, SlotDef } from "@/components/team/types";
 
 const SELECT = "flex-1 bg-slate-800 border text-white rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40 transition-colors";
@@ -45,6 +45,7 @@ export default function AdminTeamEditModal({
 }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [formations, setFormations] = useState<Formation[]>([]);
+  const [budget, setBudget] = useState(1750);
   const [loading, setLoading] = useState(true);
   const [formationId, setFormationId] = useState(initialFormationId ?? "");
   const [slotValues, setSlotValues] = useState<(string | null)[]>(initialSlots);
@@ -58,6 +59,7 @@ export default function AdminTeamEditModal({
         const [meta, playerList] = await Promise.all([metaRes.json(), playersRes.json()]);
         setFormations(meta.formations ?? []);
         setPlayers(playerList);
+        setBudget(meta.budget ?? 1750);
         if (!initialFormationId && meta.formations?.length) {
           setFormationId(meta.formations[0].id);
         }
@@ -105,8 +107,11 @@ export default function AdminTeamEditModal({
     setSlotValues(newSlots);
   }
 
-  const selectedCount = slotValues.filter(Boolean).length;
-  const totalValue = slotValues.reduce((sum, id) => sum + (id ? (playersById[id]?.value ?? 0) : 0), 0);
+  const validation = useMemo(
+    () => formation ? validateTeam(slotValues, playersById, formation, budget, false, null, slots) : null,
+    [slotValues, playersById, formation, budget, slots]
+  );
+  const selectedCount = validation?.selectedCount ?? 0;
 
   async function save() {
     setSaving(true);
@@ -205,9 +210,22 @@ export default function AdminTeamEditModal({
           </div>
         </div>
 
-        <div className="text-xs text-slate-500 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 mb-4">
-          Totale waarde: <span className="text-white font-semibold">€ {(totalValue / 100).toFixed(0)}</span>
-        </div>
+        {/* Validatiechecklist */}
+        {validation && (
+          <div className="mb-4 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-3">
+            <p className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-2">Controle</p>
+            <div className="space-y-1">
+              {validation.rules.map((rule) => (
+                <div key={rule.key} className="flex items-center justify-between text-xs">
+                  <span className={rule.met ? "text-slate-400" : "text-red-400"}>{rule.label}</span>
+                  <span className={`font-semibold ${rule.met ? "text-green-400" : "text-red-400"}`}>
+                    {rule.met ? "✓" : "✗"} {rule.display}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <p className="text-red-400 text-sm bg-red-900/20 border border-red-500/20 rounded-lg px-3 py-2 mb-4">{error}</p>
@@ -215,7 +233,7 @@ export default function AdminTeamEditModal({
 
         <div className="flex justify-end gap-3">
           <button onClick={onClose} className={BTN_SECONDARY}>Annuleer</button>
-          <button onClick={save} disabled={saving || selectedCount < 11} className={BTN_PRIMARY}>
+          <button onClick={save} disabled={saving || !validation?.allValid} className={BTN_PRIMARY}>
             {saving ? "Opslaan..." : "Opslaan"}
           </button>
         </div>
