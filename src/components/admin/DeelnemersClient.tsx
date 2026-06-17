@@ -177,8 +177,8 @@ export default function DeelnemersClient() {
                     </td>
                     <td className="py-2">
                       <button onClick={() => toggleBetaald(d)}
-                        className={`w-9 h-5 rounded-full transition-colors relative ${d.betaald ? "bg-green-500" : "bg-slate-700"}`}>
-                        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${d.betaald ? "translate-x-4" : "translate-x-0.5"}`} />
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${d.betaald ? "bg-green-500" : "bg-slate-600"}`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${d.betaald ? "translate-x-6" : "translate-x-1"}`} />
                       </button>
                     </td>
                     <td className="py-2 text-right">
@@ -288,21 +288,28 @@ export default function DeelnemersClient() {
 
               <div className="flex items-center gap-3 pt-1">
                 <button type="button" onClick={() => toggleBetaald(modal)}
-                  className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${modal.betaald ? "bg-green-500" : "bg-slate-700"}`}>
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${modal.betaald ? "translate-x-5" : "translate-x-0.5"}`} />
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${modal.betaald ? "bg-green-500" : "bg-slate-600"}`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${modal.betaald ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
                 <div>
                   <span className="text-sm font-medium text-slate-300">Betaald</span>
-                  <p className="text-xs text-slate-600">Deelnamekosten ontvangen</p>
+                  <p className="text-xs text-slate-500">
+                    {modal.betaald ? "Deelnamekosten ontvangen" : "Deelnamekosten nog niet ontvangen"}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setForm({ ...form, whatsappGroep: !form.whatsappGroep })}
-                  className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${form.whatsappGroep ? "bg-cyan-600" : "bg-slate-700"}`}>
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${form.whatsappGroep ? "translate-x-5" : "translate-x-0.5"}`} />
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${form.whatsappGroep ? "bg-green-500" : "bg-slate-600"}`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.whatsappGroep ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
-                <span className="text-sm font-medium text-slate-300">WhatsApp-groep</span>
+                <div>
+                  <span className="text-sm font-medium text-slate-300">WhatsApp-groep</span>
+                  <p className="text-xs text-slate-500">
+                    {form.whatsappGroep ? "Wil toegevoegd worden aan de WhatsApp-groep" : "Wil niet toegevoegd worden aan de WhatsApp-groep"}
+                  </p>
+                </div>
               </div>
 
               <div>
