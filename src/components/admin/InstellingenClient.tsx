@@ -210,6 +210,7 @@ export default function InstellingenClient() {
                     step="0.01"
                     value={settingsForm.inschrijfgeld}
                     onChange={(e) => setSettingsForm({ ...settingsForm, inschrijfgeld: Number(e.target.value) })}
+                    onFocus={(e) => e.target.select()}
                     className="w-24 bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
                     placeholder="15.00"
                   />

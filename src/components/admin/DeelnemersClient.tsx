@@ -94,7 +94,7 @@ export default function DeelnemersClient() {
     });
     setSaving(false);
     if (!res.ok) { setSaveError("Opslaan mislukt"); return; }
-    setSaveMsg("Opgeslagen");
+    setModal(null);
     await load();
   }
 

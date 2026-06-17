@@ -24,7 +24,7 @@ export default async function DeelnemersPage() {
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
   let deelnemers: {
-    userId: string; userName: string; totalPoints: number; prevPoints: number; delta: number;
+    id: string; userName: string; totalPoints: number; prevPoints: number; delta: number;
   }[] = [];
 
   if (season) {
@@ -34,7 +34,13 @@ export default async function DeelnemersPage() {
     });
 
     const teamEntries = await prisma.teamEntry.findMany({
-      where: { seasonId: season.id, userId: { not: null }, user: { isParticipant: true } },
+      where: {
+        seasonId: season.id,
+        OR: [
+          { userId: null },
+          { user: { isParticipant: true } },
+        ],
+      },
       include: {
         user: { select: { id: true, name: true } },
         players: { select: { playerId: true, slotIndex: true } },
@@ -46,7 +52,6 @@ export default async function DeelnemersPage() {
     const captainBonusPerWin = settings?.captainBonusPerWin ?? 5;
 
     deelnemers = teamEntries
-      .filter((te) => te.user !== null)
       .map((te) => {
         const captainPlayerId = captainActive && te.captainSlot !== null
           ? te.players.find((p) => p.slotIndex === te.captainSlot)?.playerId ?? null
@@ -64,9 +69,14 @@ export default async function DeelnemersPage() {
           }
         }
         totalPoints += te.bonusPoints ?? 0;
+
+        const userName = te.user?.name
+          ?? [te.voornaam, te.achternaam].filter(Boolean).join(" ")
+          || "Anoniem";
+
         return {
-          userId: te.user!.id,
-          userName: te.user!.name ?? "Anoniem",
+          id: te.id,
+          userName,
           totalPoints,
           prevPoints,
           delta: isFinite(totalPoints - prevPoints) ? totalPoints - prevPoints : 0,

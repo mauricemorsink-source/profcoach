@@ -552,9 +552,9 @@ export default function KladopstellingClient({
                 </div>
               </div>
               {hasMismatch && (
-                <div className="flex items-start gap-2 mt-3 bg-amber-900/20 border border-amber-500/30 rounded-xl px-4 py-3">
-                  <span className="text-amber-400 shrink-0 mt-0.5">⚠</span>
-                  <p className="text-amber-200 text-sm">Doordat je de formatie hebt gewijzigd, staan één of meerdere spelers op een onjuiste positie. Klik op de speler op het veld om hem te vervangen.</p>
+                <div className="flex items-start gap-2 mt-3 bg-red-900/20 border border-red-500/30 rounded-xl px-4 py-3">
+                  <span className="text-red-400 shrink-0 mt-0.5">⚠</span>
+                  <p className="text-red-300 text-sm">Doordat je de formatie hebt gewijzigd, staan één of meerdere spelers op een onjuiste positie. Klik op de speler op het veld om hem te vervangen.</p>
                 </div>
               )}
             </div>

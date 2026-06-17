@@ -1392,6 +1392,7 @@ export default function WedstrijdenClient() {
                       onChange={(e) =>
                         setEditMatchForm({ ...editMatchForm, thuisGoals: Number(e.target.value) })
                       }
+                      onFocus={(e) => e.target.select()}
                       className={INPUT}
                       min="0"
                     />
@@ -1404,6 +1405,7 @@ export default function WedstrijdenClient() {
                       onChange={(e) =>
                         setEditMatchForm({ ...editMatchForm, uitGoals: Number(e.target.value) })
                       }
+                      onFocus={(e) => e.target.select()}
                       className={INPUT}
                       min="0"
                     />
@@ -1530,6 +1532,7 @@ export default function WedstrijdenClient() {
                                 min={0}
                                 readOnly={editMatchReadOnly}
                                 onChange={(e) => updatePerfField(p.playerId, "goals", Number(e.target.value))}
+                                onFocus={(e) => e.target.select()}
                                 className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`}
                               />
                             </td>
@@ -1542,6 +1545,7 @@ export default function WedstrijdenClient() {
                                 onChange={(e) =>
                                   updatePerfField(p.playerId, "penaltyGoals", Number(e.target.value))
                                 }
+                                onFocus={(e) => e.target.select()}
                                 className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`}
                               />
                             </td>
@@ -1554,6 +1558,7 @@ export default function WedstrijdenClient() {
                                 onChange={(e) =>
                                   updatePerfField(p.playerId, "assists", Number(e.target.value))
                                 }
+                                onFocus={(e) => e.target.select()}
                                 className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`}
                               />
                             </td>
@@ -1566,6 +1571,7 @@ export default function WedstrijdenClient() {
                                 onChange={(e) =>
                                   updatePerfField(p.playerId, "ownGoals", Number(e.target.value))
                                 }
+                                onFocus={(e) => e.target.select()}
                                 className={`w-10 text-white text-center rounded px-1 py-0.5 text-xs ${editMatchReadOnly ? "bg-slate-800 opacity-60" : "bg-slate-700"}`}
                               />
                             </td>

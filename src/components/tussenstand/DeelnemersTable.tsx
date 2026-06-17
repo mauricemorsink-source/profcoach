@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Deelnemer = {
-  userId: string;
+  id: string;
   userName: string;
   totalPoints: number;
   prevPoints: number;
@@ -60,7 +60,7 @@ export default function DeelnemersTable({ deelnemers }: { deelnemers: Deelnemer[
               const rank = deelnemers.indexOf(d) + 1;
               return (
                 <tr
-                  key={d.userId}
+                  key={d.id}
                   className={`border-b border-slate-800/60 ${rank === 1 && !query ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}
                 >
                   <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-slate-500 font-medium text-sm">{rank}</td>
