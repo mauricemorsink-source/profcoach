@@ -122,7 +122,7 @@ export default function KladopstellingClient({
       body: "Klik op een positie op het veld om een speler te kiezen. Klik 'Volgende' om te zien hoe de spelerslijst eruitziet.",
     },
     {
-      target: "tour-picker-search",
+      target: "tour-picker",
       title: "Speler kiezen uit de lijst",
       body: "Typ een naam of elftal om te zoeken. Klik op een speler om hem toe te voegen aan die positie.",
       tooltipPosition: "fixed-bottom" as const,
@@ -752,7 +752,7 @@ export default function KladopstellingClient({
                 <button onClick={() => { setShowPickerModal(false); setSelectedSlot(null); }} className="text-slate-500 hover:text-white text-xl leading-none w-8 h-8 flex items-center justify-center transition-colors">×</button>
               </div>
             </div>
-            <div className="px-5 pt-3 pb-2" data-tour="tour-picker-search">
+            <div className="px-5 pt-3 pb-2">
               <input type="text" autoFocus placeholder="Zoek op naam of elftal..." value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
             </div>
