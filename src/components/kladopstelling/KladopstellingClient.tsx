@@ -5,7 +5,7 @@ import type { Formation, Player, SlotDef } from "@/components/team/types";
 import { buildSlots } from "@/components/team/formationSlots";
 import { validateTeam, CLUB_LABEL } from "@/components/team/validate";
 import Pitch from "@/components/team/Pitch";
-import SpotlightTour, { TOUR_KEY } from "@/components/SpotlightTour";
+import SpotlightTour, { TOUR_KEY, type TourStep } from "@/components/SpotlightTour";
 
 const SLOTS_KEY = "profcoach_team_slots";
 const FORMATION_KEY = "profcoach_team_formation";
@@ -105,6 +105,34 @@ export default function KladopstellingClient({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [showTour, setShowTour] = useState(false);
 
+  const TOUR_STEPS: TourStep[] = [
+    {
+      target: "tour-formation",
+      title: "Kies je formatie",
+      body: "Begin met het kiezen van een formatie. Dit bepaalt hoeveel verdedigers, middenvelders en aanvallers je team heeft.",
+    },
+    {
+      target: "tour-validation",
+      title: "Budget & teamregels",
+      body: "Hier zie je of je team aan alle eisen voldoet: 11 spelers, binnen budget, en minimaal 1 en maximaal 2 spelers per elftal.",
+    },
+    {
+      target: "tour-pitch",
+      title: "Speler toevoegen",
+      body: "Klik op een positie op het veld om een speler te kiezen. Klik 'Volgende' om te zien hoe de spelerslijst eruitziet.",
+    },
+    {
+      target: "tour-picker",
+      title: "Speler kiezen uit de lijst",
+      body: "Alle beschikbare spelers voor die positie verschijnen hier. Zoek op naam of elftal. Spelers die al in je team staan zijn gemarkeerd als 'Elders'.",
+    },
+    {
+      target: "tour-next",
+      title: "Naar de volgende stap",
+      body: "Zodra alle regels groen zijn en je 11 spelers hebt gekozen, klik je hier om verder te gaan met je inschrijving.",
+    },
+  ];
+
   const canSubmitPublic = !requireLogin && registrationOpen;
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
@@ -144,6 +172,14 @@ export default function KladopstellingClient({
     }
     init();
   }, []);
+
+  function handleTourStepEnter(i: number) {
+    if (i === 3) { setSelectedSlot(0); setShowPickerModal(true); }
+  }
+
+  function handleTourStepLeave(i: number) {
+    if (i === 3) { setShowPickerModal(false); setSelectedSlot(null); }
+  }
 
   useEffect(() => {
     if (!loading) localStorage.setItem(SLOTS_KEY, JSON.stringify(slotValues));
@@ -420,7 +456,14 @@ export default function KladopstellingClient({
 
   return (
     <div className="min-h-screen bg-[#060b14]">
-      {showTour && step === 1 && <SpotlightTour onDone={() => setShowTour(false)} />}
+      {showTour && step === 1 && (
+        <SpotlightTour
+          steps={TOUR_STEPS}
+          onDone={() => setShowTour(false)}
+          onStepEnter={handleTourStepEnter}
+          onStepLeave={handleTourStepLeave}
+        />
+      )}
       <div className="max-w-3xl mx-auto px-4 py-8 pb-16">
 
         {/* Header */}
@@ -430,13 +473,15 @@ export default function KladopstellingClient({
             <p className="text-slate-500 text-xs mt-0.5">Werk je team uit en puzzel oneindig tot je jouw ideale opstelling hebt samengesteld</p>
           </div>
           {(!canSubmitPublic || step === 1) && (
-            <select
-              value={formationId}
-              onChange={(e) => handleFormationChange(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-            >
-              {formations.map((f) => <option key={f.id} value={f.id}>{f.code}</option>)}
-            </select>
+            <div data-tour="tour-formation">
+              <select
+                value={formationId}
+                onChange={(e) => handleFormationChange(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+              >
+                {formations.map((f) => <option key={f.id} value={f.id}>{f.code}</option>)}
+              </select>
+            </div>
           )}
           <div className="flex gap-2 text-sm flex-wrap">
             <span className="bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-slate-300">
@@ -690,8 +735,8 @@ export default function KladopstellingClient({
 
       {/* Speler picker modal */}
       {showPickerModal && activeSlot && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85dvh] flex flex-col">
+        <div className={`fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4 ${showTour ? "z-[94]" : "z-50"}`}>
+          <div data-tour="tour-picker" className="bg-slate-900 neon-border w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85dvh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
               <div>
                 <p className="text-xs text-slate-500 uppercase tracking-wide">{activeSlot.label}</p>
