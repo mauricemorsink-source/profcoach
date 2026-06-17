@@ -5,6 +5,7 @@ import type { Formation, Player, SlotDef } from "@/components/team/types";
 import { buildSlots } from "@/components/team/formationSlots";
 import { validateTeam, CLUB_LABEL } from "@/components/team/validate";
 import Pitch from "@/components/team/Pitch";
+import SpotlightTour, { TOUR_KEY } from "@/components/SpotlightTour";
 
 const SLOTS_KEY = "profcoach_team_slots";
 const FORMATION_KEY = "profcoach_team_formation";
@@ -102,6 +103,7 @@ export default function KladopstellingClient({
 
   // Stap
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [showTour, setShowTour] = useState(false);
 
   const canSubmitPublic = !requireLogin && registrationOpen;
 
@@ -138,6 +140,7 @@ export default function KladopstellingClient({
         } catch { /* negeer */ }
       }
       setLoading(false);
+      if (!localStorage.getItem(TOUR_KEY)) setShowTour(true);
     }
     init();
   }, []);
@@ -417,6 +420,7 @@ export default function KladopstellingClient({
 
   return (
     <div className="min-h-screen bg-[#060b14]">
+      {showTour && step === 1 && <SpotlightTour onDone={() => setShowTour(false)} />}
       <div className="max-w-3xl mx-auto px-4 py-8 pb-16">
 
         {/* Header */}
@@ -443,12 +447,21 @@ export default function KladopstellingClient({
             </span>
           </div>
           {step === 1 && (
-            <button
-              onClick={handleReset}
-              className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600"
-            >
-              Leegmaken
-            </button>
+            <>
+              <button
+                onClick={() => setShowTour(true)}
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600"
+                title="Uitleg"
+              >
+                ? Uitleg
+              </button>
+              <button
+                onClick={handleReset}
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-600"
+              >
+                Leegmaken
+              </button>
+            </>
           )}
         </div>
 
@@ -470,7 +483,7 @@ export default function KladopstellingClient({
               const v = validateTeam(slotValues, playersById, formation, budget, false, null, slots);
               const hasMismatch = v.rules.some(r => r.key === "positions" && !r.met);
               return (
-                <div className={`mb-5 rounded-2xl border p-4 transition-colors ${v.allValid ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/20"}`}>
+                <div data-tour="tour-validation" className={`mb-5 rounded-2xl border p-4 transition-colors ${v.allValid ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/20"}`}>
                   {hasMismatch && (
                     <div className="flex items-start gap-2 mb-3 bg-red-900/30 border border-red-500/40 rounded-xl px-3 py-2.5">
                       <span className="text-red-400 text-base shrink-0 mt-0.5">⚠</span>
@@ -490,19 +503,21 @@ export default function KladopstellingClient({
               );
             })()}
 
-            <Pitch
-              slots={slots}
-              selectedSlot={selectedSlot}
-              playersById={playersById}
-              slotValues={slotValues}
-              onSlotClick={handleSlotClick}
-              locked={false}
-              captainSlot={null}
-            />
+            <div data-tour="tour-pitch">
+              <Pitch
+                slots={slots}
+                selectedSlot={selectedSlot}
+                playersById={playersById}
+                slotValues={slotValues}
+                onSlotClick={handleSlotClick}
+                locked={false}
+                captainSlot={null}
+              />
+            </div>
 
             <div className="mt-4 flex gap-3 flex-wrap">
               {canSubmitPublic ? (
-                <button onClick={goNext} disabled={!teamValid} className={BTN_PRIMARY + " ml-auto"}>
+                <button data-tour="tour-next" onClick={goNext} disabled={!teamValid} className={BTN_PRIMARY + " ml-auto"}>
                   Volgende stap →
                 </button>
               ) : (
