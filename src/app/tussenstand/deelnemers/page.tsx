@@ -71,8 +71,7 @@ export default async function DeelnemersPage() {
         totalPoints += te.bonusPoints ?? 0;
 
         const userName = te.user?.name
-          ?? [te.voornaam, te.achternaam].filter(Boolean).join(" ")
-          || "Anoniem";
+          ?? ([te.voornaam, te.achternaam].filter(Boolean).join(" ") || "Anoniem");
 
         return {
           id: te.id,
