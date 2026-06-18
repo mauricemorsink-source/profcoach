@@ -10,18 +10,15 @@ type Player = {
   value: number;
 };
 
+type SortKey = "position" | "clubTeam" | "value";
+type SortDir = "asc" | "desc";
+
 const CLUB_LABEL: Record<string, string> = {
-  ONE: "Rietmolen 1",
-  TWO: "Rietmolen 2",
-  THREE: "Rietmolen 3",
-  FOUR: "Rietmolen 4",
-  FIVE: "Rietmolen 5",
-  DAMES: "Rietmolen VR1",
+  ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
+  FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
 
-const POSITION_LABEL: Record<string, string> = {
-  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
-};
+const POSITION_LABEL: Record<string, string> = { GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN" };
 
 const POSITION_COLOR: Record<string, string> = {
   GK:  "text-amber-400 bg-amber-900/30 border-amber-500/30",
@@ -46,10 +43,17 @@ const CLUBS = [
   ...CLUB_ORDER.map((c) => ({ value: c, label: CLUB_LABEL[c] })),
 ];
 
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <span className="ml-1 text-slate-700">↕</span>;
+  return <span className="ml-1 text-cyan-400">{dir === "asc" ? "↑" : "↓"}</span>;
+}
+
 export default function SpelerslijstClient({ players }: { players: Player[] }) {
   const [search, setSearch] = useState("");
   const [filterPos, setFilterPos] = useState("");
   const [filterClub, setFilterClub] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [myTeamIds, setMyTeamIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -62,27 +66,53 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
     } catch { /* negeer */ }
   }, []);
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return players
-      .filter((p) => {
-        if (filterPos && p.position !== filterPos) return false;
-        if (filterClub && p.clubTeam !== filterClub) return false;
-        if (q && !p.name.toLowerCase().includes(q) && !(CLUB_LABEL[p.clubTeam] ?? "").toLowerCase().includes(q)) return false;
-        return true;
-      })
-      .sort((a, b) => {
+    const list = players.filter((p) => {
+      if (filterPos && p.position !== filterPos) return false;
+      if (filterClub && p.clubTeam !== filterClub) return false;
+      if (q && !p.name.toLowerCase().includes(q) && !(CLUB_LABEL[p.clubTeam] ?? "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    list.sort((a, b) => {
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortKey === "position") {
+        const diff = POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position);
+        if (diff !== 0) return diff * dir;
+      } else if (sortKey === "clubTeam") {
+        const diff = CLUB_ORDER.indexOf(a.clubTeam) - CLUB_ORDER.indexOf(b.clubTeam);
+        if (diff !== 0) return diff * dir;
+      } else if (sortKey === "value") {
+        if (a.value !== b.value) return (a.value - b.value) * dir;
+      } else {
+        // standaard: elftal → positie → naam
         const clubDiff = CLUB_ORDER.indexOf(a.clubTeam) - CLUB_ORDER.indexOf(b.clubTeam);
         if (clubDiff !== 0) return clubDiff;
         const posDiff = POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position);
         if (posDiff !== 0) return posDiff;
-        return a.name.localeCompare(b.name, "nl");
-      });
-  }, [players, search, filterPos, filterClub]);
+      }
+      return a.name.localeCompare(b.name, "nl");
+    });
+
+    return list;
+  }, [players, search, filterPos, filterClub, sortKey, sortDir]);
 
   const inTeam = filtered.filter((p) => myTeamIds.has(p.id));
   const notInTeam = filtered.filter((p) => !myTeamIds.has(p.id));
   const hasTeam = myTeamIds.size > 0;
+
+  const thClass = (key: SortKey) =>
+    `px-3 py-3 font-semibold cursor-pointer select-none hover:text-slate-300 transition-colors ${sortKey === key ? "text-cyan-400" : ""}`;
 
   return (
     <div className="min-h-screen bg-[#060b14]">
@@ -124,6 +154,14 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
         <p className="text-xs text-slate-600 mb-4">
           {filtered.length} speler{filtered.length !== 1 ? "s" : ""}
           {(search || filterPos || filterClub) ? " gevonden" : " totaal"}
+          {sortKey && (
+            <button
+              onClick={() => setSortKey(null)}
+              className="ml-2 text-slate-500 hover:text-slate-300 underline transition-colors"
+            >
+              sortering wissen
+            </button>
+          )}
         </p>
 
         {/* Tabel */}
@@ -132,13 +170,18 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-800 bg-slate-800/50">
                 <th className="px-4 py-3 font-semibold">Naam</th>
-                <th className="px-3 py-3 font-semibold">Pos</th>
-                <th className="px-3 py-3 font-semibold hidden sm:table-cell">Elftal</th>
-                <th className="px-4 py-3 font-semibold text-right">€</th>
+                <th className={thClass("position")} onClick={() => toggleSort("position")}>
+                  Pos <SortIcon active={sortKey === "position"} dir={sortDir} />
+                </th>
+                <th className={`${thClass("clubTeam")} hidden sm:table-cell`} onClick={() => toggleSort("clubTeam")}>
+                  Elftal <SortIcon active={sortKey === "clubTeam"} dir={sortDir} />
+                </th>
+                <th className={`${thClass("value")} text-right px-4`} onClick={() => toggleSort("value")}>
+                  € <SortIcon active={sortKey === "value"} dir={sortDir} />
+                </th>
               </tr>
             </thead>
             <tbody>
-              {/* Spelers in mijn opstelling bovenaan */}
               {hasTeam && inTeam.length > 0 && (
                 <>
                   <tr>
@@ -172,7 +215,6 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
           </table>
         </div>
 
-        {/* Tip */}
         {hasTeam && (
           <p className="text-xs text-slate-600 mt-3 text-center">
             Spelers uit jouw opgeslagen opstelling staan bovenaan.
