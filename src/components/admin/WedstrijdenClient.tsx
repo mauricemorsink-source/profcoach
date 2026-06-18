@@ -354,14 +354,11 @@ export default function WedstrijdenClient() {
       );
   }
 
-  async function saveAll() {
-    if (!editingMatch) return;
-    setEditMatchSaving(true);
-    setEditMatchError("");
+  async function saveMatchAndPerfs(matchId: string): Promise<boolean> {
     const homeAway = editMatchForm.homeAway;
     const goalsScored = homeAway === "HOME" ? Number(editMatchForm.thuisGoals) : Number(editMatchForm.uitGoals);
     const goalsConceded = homeAway === "HOME" ? Number(editMatchForm.uitGoals) : Number(editMatchForm.thuisGoals);
-    const res = await fetch(`/api/admin/matches/${editingMatch.id}`, {
+    const res = await fetch(`/api/admin/matches/${matchId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -375,23 +372,47 @@ export default function WedstrijdenClient() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setEditMatchSaving(false);
       setEditMatchError(data.error || "Opslaan mislukt");
-      return;
+      return false;
     }
     const performances = Object.entries(editPerfsData).map(([playerId, d]) => ({ playerId, ...d }));
     if (performances.length > 0) {
-      const perfRes = await fetch(`/api/admin/matches/${editingMatch.id}/performances`, {
+      const perfRes = await fetch(`/api/admin/matches/${matchId}/performances`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ performances }),
       });
       if (!perfRes.ok) {
-        setEditMatchSaving(false);
         setEditMatchError("Prestaties opslaan mislukt");
-        return;
+        return false;
       }
     }
+    return true;
+  }
+
+  async function saveAll() {
+    if (!editingMatch) return;
+    setEditMatchSaving(true);
+    setEditMatchError("");
+    const ok = await saveMatchAndPerfs(editingMatch.id);
+    setEditMatchSaving(false);
+    if (!ok) return;
+    setEditingMatch(null);
+    await loadAdminMatches();
+  }
+
+  async function approveFromModal(status: "APPROVED" | "REJECTED") {
+    if (!editingMatch) return;
+    const matchId = editingMatch.id;
+    setEditMatchSaving(true);
+    setEditMatchError("");
+    const ok = await saveMatchAndPerfs(matchId);
+    if (!ok) { setEditMatchSaving(false); return; }
+    await fetch(`/api/admin/matches/${matchId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
     setEditMatchSaving(false);
     setEditingMatch(null);
     await loadAdminMatches();
@@ -1599,7 +1620,7 @@ export default function WedstrijdenClient() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3 mt-6 flex-wrap">
               {editMatchReadOnly ? (
                 <button onClick={closeEditMatch} className={BTN_SECONDARY}>
                   Sluiten
@@ -1609,6 +1630,15 @@ export default function WedstrijdenClient() {
                   <button onClick={closeEditMatch} className={BTN_SECONDARY}>
                     Annuleer
                   </button>
+                  {editingMatch.status === "PENDING" && (
+                    <button
+                      onClick={() => approveFromModal("APPROVED")}
+                      disabled={editMatchSaving}
+                      className="px-4 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors"
+                    >
+                      {editMatchSaving ? "Bezig..." : "Goedkeuren"}
+                    </button>
+                  )}
                   <button onClick={saveAll} disabled={editMatchSaving} className={BTN_PRIMARY}>
                     {editMatchSaving ? "Opslaan..." : "Opslaan"}
                   </button>
