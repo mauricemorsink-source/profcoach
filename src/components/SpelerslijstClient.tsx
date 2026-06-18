@@ -201,7 +201,7 @@ function PlayerRow({ player, inTeam }: { player: Player; inTeam: boolean }) {
         {CLUB_LABEL[player.clubTeam] ?? player.clubTeam}
       </td>
       <td className="px-4 py-2.5 text-right font-bold text-cyan-400">
-        {player.value}
+        €{player.value}
       </td>
     </tr>
   );

@@ -2,6 +2,14 @@
 
 import type { Player, SlotDef } from "./types";
 
+const POSITION_LABEL: Record<string, string> = { GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN" };
+const POSITION_COLOR: Record<string, string> = {
+  GK:  "text-amber-600 bg-amber-100 border-amber-300",
+  DEF: "text-blue-600 bg-blue-100 border-blue-300",
+  MID: "text-green-600 bg-green-100 border-green-300",
+  ATT: "text-red-600 bg-red-100 border-red-300",
+};
+
 interface PlayerPickerProps {
   players: Player[];
   activeSlot: SlotDef | null;
@@ -65,7 +73,12 @@ export default function PlayerPicker({
             >
               <div>
                 <div className="font-semibold text-gray-800">{player.name}</div>
-                <div className="text-sm text-gray-500">{player.clubTeam} · {player.position}</div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[player.position] ?? "text-gray-500 bg-gray-100 border-gray-300"}`}>
+                    {POSITION_LABEL[player.position] ?? player.position}
+                  </span>
+                  <span className="text-sm text-gray-500">{player.clubTeam}</span>
+                </div>
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className="font-bold text-green-600">€{player.value}</span>

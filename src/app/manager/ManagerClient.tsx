@@ -12,8 +12,12 @@ const CLUB_LABEL: Record<string, string> = {
   FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
 
-const POSITION_LABEL: Record<string, string> = {
-  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
+const POSITION_LABEL: Record<string, string> = { GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN" };
+const POSITION_COLOR: Record<string, string> = {
+  GK:  "text-amber-400 bg-amber-900/30 border-amber-500/40",
+  DEF: "text-blue-400 bg-blue-900/30 border-blue-500/40",
+  MID: "text-green-400 bg-green-900/30 border-green-500/40",
+  ATT: "text-red-400 bg-red-900/30 border-red-500/40",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -183,7 +187,11 @@ function PerfRow({
           )}
         </div>
       </td>
-      <td className="px-3 py-2.5 text-slate-500 text-xs">{POSITION_LABEL[p.position] ?? p.position}</td>
+      <td className="px-3 py-2.5">
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[p.position] ?? "text-slate-400"}`}>
+          {POSITION_LABEL[p.position] ?? p.position}
+        </span>
+      </td>
       <td className="px-3 py-2.5 text-center">
         <input
           type="checkbox"
@@ -600,8 +608,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   </span>
                 </div>
 
-                <div className="bg-slate-900 neon-border rounded-xl overflow-auto max-h-[60vh]">
-                  <table className="w-full text-sm">
+                <div className="bg-slate-900 neon-border rounded-xl overflow-x-auto overflow-y-auto max-h-[60vh]">
+                  <table className="w-full text-sm min-w-[540px]">
                     <thead>{perfTableHeader}</thead>
                     <tbody>
                       {perfs.map((p) => (
@@ -786,7 +794,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     <div>
                       <p className="text-slate-400 text-xs mb-3">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
                       <div className="overflow-x-auto -mx-5 px-5">
-                        <table className="w-full text-sm min-w-[400px]">
+                        <table className="w-full text-sm min-w-[540px]">
                           <thead>
                             <tr className="text-left text-slate-500 border-b border-slate-700/50 text-xs">
                               <th className="py-2 font-medium">Speler</th>
@@ -820,7 +828,11 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                     <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
                                   )}
                                 </td>
-                                <td className="px-2 py-2 text-slate-500 text-xs">{POSITION_LABEL[p.position]}</td>
+                                <td className="px-2 py-2">
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[p.position] ?? "text-slate-400"}`}>
+                                    {POSITION_LABEL[p.position] ?? p.position}
+                                  </span>
+                                </td>
                                 <td className="px-2 py-2 text-center">
                                   <input type="checkbox" checked={p.played} onChange={(e) => updateAddPerf(p.playerId, "played", e.target.checked)} className="accent-cyan-500 w-4 h-4 cursor-pointer" />
                                 </td>

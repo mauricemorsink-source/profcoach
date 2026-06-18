@@ -74,8 +74,12 @@ type AdminMatch = {
 
 const TEAMS = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
 
-const POSITION_LABEL: Record<string, string> = {
-  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
+const POSITION_LABEL: Record<string, string> = { GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN" };
+const POSITION_COLOR: Record<string, string> = {
+  GK:  "text-amber-400 bg-amber-900/30 border-amber-500/40",
+  DEF: "text-blue-400 bg-blue-900/30 border-blue-500/40",
+  MID: "text-green-400 bg-green-900/30 border-green-500/40",
+  ATT: "text-red-400 bg-red-900/30 border-red-500/40",
 };
 
 const TEAM_LABEL: Record<string, string> = {
@@ -894,8 +898,8 @@ export default function WedstrijdenClient() {
             </div>
 
             {/* Desktop: tabel */}
-            <div className="hidden md:block">
-              <table className="w-full text-sm">
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm min-w-[700px]">
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-800">
                     <th className="pb-2 w-8">
@@ -1509,7 +1513,7 @@ export default function WedstrijdenClient() {
                 <p className="text-slate-500 text-sm mb-4">Nog geen prestaties ingevoerd.</p>
               ) : (
                 <div className="overflow-x-auto -mx-6 px-6">
-                  <table className="w-full text-sm min-w-[420px]">
+                  <table className="w-full text-sm min-w-[540px]">
                     <thead>
                       <tr className="text-left text-slate-500 border-b border-slate-800">
                         <th className="pb-2 font-semibold">Speler</th>
@@ -1538,10 +1542,12 @@ export default function WedstrijdenClient() {
                             className={`border-b border-slate-800/60 ${!ed.played ? "opacity-40" : ""}`}
                           >
                             <td className="py-1.5 font-medium text-white">
-                              {p.player.name}
-                              <span className="text-slate-500 text-xs ml-1">
-                                {POSITION_LABEL[p.player.position] ?? p.player.position}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {p.player.name}
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[p.player.position] ?? "text-slate-400"}`}>
+                                  {POSITION_LABEL[p.player.position] ?? p.player.position}
+                                </span>
+                              </div>
                             </td>
                             <td className="py-1.5 text-center">
                               <input
@@ -1686,7 +1692,7 @@ export default function WedstrijdenClient() {
                           FLEX
                         </span>
                       )}
-                      <span className="text-xs text-slate-500">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[conflict.player.position] ?? "text-slate-400"}`}>
                         {POSITION_LABEL[conflict.player.position] ?? conflict.player.position}
                       </span>
                     </div>
