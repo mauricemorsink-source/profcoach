@@ -69,20 +69,31 @@ export async function POST(req: Request) {
     }
   }
 
+  function pickTopN(list: PlayerEntry[], n: number): PlayerEntry[] {
+    if (list.length <= n) return list;
+    const sorted = [...list].sort((a, b) => b.points - a.points);
+    const cutoff = sorted[n - 1].points;
+    const above = sorted.filter((p) => p.points > cutoff);
+    const tied = sorted.filter((p) => p.points === cutoff);
+    // Fisher-Yates shuffle zodat gelijkspelers random worden geselecteerd
+    for (let i = tied.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tied[i], tied[j]] = [tied[j], tied[i]];
+    }
+    return [...above, ...tied.slice(0, n - above.length)];
+  }
+
   const byPosition: Record<string, PlayerEntry[]> = { GK: [], DEF: [], MID: [], ATT: [] };
   for (const entry of playerMap.values()) {
     const pos = entry.position as keyof typeof byPosition;
     byPosition[pos]?.push(entry);
   }
-  for (const list of Object.values(byPosition)) {
-    list.sort((a, b) => b.points - a.points);
-  }
 
   const players = [
-    ...byPosition.GK.slice(0, 1),
-    ...byPosition.DEF.slice(0, formation.defenders),
-    ...byPosition.MID.slice(0, formation.midfielders),
-    ...byPosition.ATT.slice(0, formation.attackers),
+    ...pickTopN(byPosition.GK, 1),
+    ...pickTopN(byPosition.DEF, formation.defenders),
+    ...pickTopN(byPosition.MID, formation.midfielders),
+    ...pickTopN(byPosition.ATT, formation.attackers),
   ];
 
   return NextResponse.json({
