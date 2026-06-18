@@ -83,6 +83,12 @@ const TEAM_LABEL: Record<string, string> = {
   FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
 
+function getOpponent(name: string, clubTeam: string): string {
+  const label = TEAM_LABEL[clubTeam] ?? clubTeam;
+  const parts = name.split(" - ");
+  return parts.find((p) => p.trim() !== label) ?? name;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Ingediend",
   APPROVED: "Goedgekeurd",
@@ -719,7 +725,7 @@ export default function WedstrijdenClient() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-medium text-white text-sm truncate">{m.name}</p>
+                            <p className="font-medium text-white text-sm truncate">{getOpponent(m.name, m.clubTeam)}</p>
                             <p className="text-xs text-slate-500 mt-0.5">
                               {TEAM_LABEL[m.clubTeam]} ·{" "}
                               {new Date(m.matchDate).toLocaleDateString("nl-NL", {
@@ -955,10 +961,10 @@ export default function WedstrijdenClient() {
                           })}
                         </td>
                         <td className="py-2 text-slate-400 whitespace-nowrap">
-                          {m.homeAway === "AWAY" ? m.name : TEAM_LABEL[m.clubTeam] ?? m.clubTeam}
+                          {m.homeAway === "AWAY" ? getOpponent(m.name, m.clubTeam) : TEAM_LABEL[m.clubTeam] ?? m.clubTeam}
                         </td>
                         <td className="py-2 font-medium text-white whitespace-nowrap">
-                          {m.homeAway === "HOME" ? m.name : TEAM_LABEL[m.clubTeam] ?? m.clubTeam}
+                          {m.homeAway === "HOME" ? getOpponent(m.name, m.clubTeam) : TEAM_LABEL[m.clubTeam] ?? m.clubTeam}
                         </td>
                         <td className="py-2 text-slate-400 whitespace-nowrap">
                           {m.homeAway === "AWAY"
