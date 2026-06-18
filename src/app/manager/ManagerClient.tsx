@@ -839,6 +839,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                     <option value="1y">🟡 1× geel</option>
                                     <option value="2y">🟡🟡 2× geel</option>
                                     <option value="r">🔴 Direct rood</option>
+                                    <option value="1yr">🟡🔴 Geel + direct rood</option>
                                   </select>
                                 </td>
                                 <td className="px-2 py-2 text-center">

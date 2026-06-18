@@ -1737,6 +1737,7 @@ export default function WedstrijdenClient() {
                                 {m.goals > 0 && <span>{m.goals} ⚽</span>}
                                 {m.assists > 0 && <span>{m.assists} 🅰</span>}
                                 {m.yellowCards === 1 && !m.redCard && <span>🟡</span>}
+                                {m.yellowCards === 1 && m.redCard && <span>🟡🔴</span>}
                                 {m.yellowCards >= 2 && m.redCard && <span>🟡🟡 🔴</span>}
                                 {m.redCard && m.yellowCards === 0 && <span>🔴</span>}
                                 {m.ownGoals > 0 && <span>{m.ownGoals} ED</span>}
