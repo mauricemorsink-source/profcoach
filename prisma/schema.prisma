@@ -122,8 +122,10 @@ model TeamEntry {
   userId         String?
   locked         Boolean           @default(false)
   captainSlot    Int?
-  bonusPoints    Int               @default(0)
-  createdAt      DateTime          @default(now())
+  bonusPoints       Int               @default(0)
+  captainPoints     Int               @default(0)
+  prevCaptainPoints Int               @default(0)
+  createdAt         DateTime          @default(now())
   voornaam       String?
   achternaam     String?
   email          String?

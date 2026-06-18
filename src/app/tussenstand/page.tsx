@@ -54,19 +54,14 @@ export default async function TussenstandPage({
       },
       include: {
         user: { select: { id: true, name: true, email: true } },
-        players: { select: { playerId: true, slotIndex: true } },
+        players: { select: { playerId: true } },
       },
     });
 
     const statsMap = new Map(allStats.map((s) => [s.playerId, s]));
-    const captainActive = settings?.captainEnabled ?? false;
-    const captainBonusPerWin = settings?.captainBonusPerWin ?? 5;
 
     deelnemers = teamEntries
       .map((te) => {
-        const captainPlayerId = captainActive && te.captainSlot !== null
-          ? te.players.find((p) => p.slotIndex === te.captainSlot)?.playerId ?? null
-          : null;
         let totalPoints = 0;
         let prevPoints = 0;
         for (const p of te.players) {
@@ -74,12 +69,10 @@ export default async function TussenstandPage({
           if (stat) {
             totalPoints += stat.totalPoints;
             prevPoints += stat.prevPoints;
-            if (p.playerId === captainPlayerId) {
-              totalPoints += captainBonusPerWin * (stat.wins ?? 0);
-            }
           }
         }
-        totalPoints += te.bonusPoints ?? 0;
+        totalPoints += (te.bonusPoints ?? 0) + (te.captainPoints ?? 0);
+        prevPoints  += te.prevCaptainPoints ?? 0;
         const userName = te.user?.name
           ?? ([te.voornaam, te.achternaam].filter(Boolean).join(" ") || "Anoniem");
         return { id: te.id, userName, totalPoints, prevPoints, delta: isFinite(totalPoints - prevPoints) ? totalPoints - prevPoints : 0 };

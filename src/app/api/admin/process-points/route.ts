@@ -118,6 +118,13 @@ export async function POST(req: Request) {
       WHERE "seasonId" = ${season.id}
     `;
 
+    // Snapshot prevCaptainPoints voor alle TeamEntries van dit seizoen
+    await prisma.$executeRaw`
+      UPDATE "TeamEntry"
+      SET "prevCaptainPoints" = "captainPoints"
+      WHERE "seasonId" = ${season.id}
+    `;
+
     // Huidige stats ophalen voor de betrokken spelers
     const playerIds = Array.from(totalDeltas.keys());
     const currentStats = await prisma.playerSeasonStats.findMany({
@@ -158,6 +165,26 @@ export async function POST(req: Request) {
           matchesPlayed: { increment: delta.matchesPlayed },
         },
       });
+    }
+
+    // Aanvoerdersbonus berekenen per TeamEntry (op basis van wins in deze batch)
+    if (settings?.captainEnabled) {
+      const captainBonusPerWin = settings.captainBonusPerWin ?? 5;
+      const teamEntries = await prisma.teamEntry.findMany({
+        where: { seasonId: season.id, captainSlot: { not: null } },
+        include: { players: { select: { playerId: true, slotIndex: true } } },
+      });
+
+      for (const te of teamEntries) {
+        const captainPlayer = te.players.find((p) => p.slotIndex === te.captainSlot);
+        if (!captainPlayer) continue;
+        const captainDelta = totalDeltas.get(captainPlayer.playerId);
+        if (!captainDelta || captainDelta.wins === 0) continue;
+        await prisma.teamEntry.update({
+          where: { id: te.id },
+          data: { captainPoints: { increment: captainBonusPerWin * captainDelta.wins } },
+        });
+      }
     }
 
     // APPROVED → PROCESSED
