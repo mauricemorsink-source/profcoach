@@ -89,8 +89,8 @@ const LABEL = "block text-sm font-medium text-slate-400 mb-1";
 const SELECT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
 const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700";
-const BTN_DANGER = "px-3 py-1.5 text-xs bg-red-900/40 text-red-400 rounded hover:bg-red-900/60 font-medium border border-red-500/30 transition-colors";
-const BTN_SMALL = "px-3 py-1.5 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors";
+const BTN_DANGER = "px-3 py-2 text-xs bg-red-900/40 text-red-400 rounded hover:bg-red-900/60 font-medium border border-red-500/30 transition-colors";
+const BTN_SMALL = "px-3 py-2 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors";
 
 export default function SpelersClient() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -298,13 +298,13 @@ export default function SpelersClient() {
         </div>
 
         {selectedIds.size > 0 && (
-          <div className="flex items-center gap-3 mb-3 px-3 py-2 bg-red-900/20 border border-red-500/30 rounded-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 px-3 py-2.5 bg-red-900/20 border border-red-500/30 rounded-lg">
             <span className="text-sm font-medium text-red-400">
               {selectedIds.size} speler{selectedIds.size !== 1 ? "s" : ""} geselecteerd
             </span>
-            <div className="flex-1" />
+            <div className="flex-1 hidden sm:block" />
             {confirmBulk ? (
-              <>
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-red-400">Zeker weten?</span>
                 <button onClick={bulkDelete} disabled={bulkDeleting} className={BTN_DANGER + " disabled:opacity-50"}>
                   {bulkDeleting ? "Bezig..." : "Ja, verwijder"}
@@ -312,16 +312,16 @@ export default function SpelersClient() {
                 <button onClick={() => setConfirmBulk(false)} className={BTN_SMALL}>
                   Annuleer
                 </button>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="flex items-center gap-2 flex-wrap">
                 <button onClick={() => setConfirmBulk(true)} className={BTN_DANGER}>
                   Verwijder selectie
                 </button>
                 <button onClick={() => setSelectedIds(new Set())} className={BTN_SMALL}>
                   Deselecteer
                 </button>
-              </>
+              </div>
             )}
           </div>
         )}

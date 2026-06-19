@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { Player, Formation, Season, SlotDef } from "./types";
 import { buildSlots } from "./formationSlots";
 
@@ -83,6 +83,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   const [predPointsConfig, setPredPointsConfig] = useState<{ showPointsToParticipants: boolean; topScorerPoints: number; assistKoningPoints: number; yellowCardsPoints: number; totalGoalsPoints: number } | null>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [downloading, setDownloading] = useState(false);
+  const pitchRef = useRef<HTMLDivElement>(null);
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -356,17 +357,26 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   }
 
   async function handleDownloadImage() {
-    if (!teamEntryId) return;
+    const el = pitchRef.current;
+    if (!el) return;
     setDownloading(true);
     try {
-      const res = await fetch(`/api/team/share-image?teamEntryId=${teamEntryId}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Mijn Profcoach inzending.png";
-      a.click();
-      URL.revokeObjectURL(url);
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(el, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mijn-team.png";
+        a.click();
+        URL.revokeObjectURL(url);
+      }, "image/png");
     } finally {
       setDownloading(false);
     }
@@ -522,15 +532,23 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
 
       {/* Team ingediend banner */}
       {locked && (
-        <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+        <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="text-green-400 font-bold text-sm">Team ingediend</p>
             <p className="text-slate-400 text-xs mt-0.5">{hasPrediction ? "Voorspellingen ingediend." : "Vul ook je bonusvoorspellingen in."}</p>
           </div>
-          <div className="flex gap-2 shrink-0 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             {!hasPrediction && !readOnly && (
               <button onClick={() => setShowPredictionModal(true)} className={BTN_PRIMARY + " shrink-0"}>Voorspellingen invullen</button>
             )}
+            <button onClick={handleDownloadImage} disabled={downloading} className={BTN_SECONDARY + " shrink-0"}>
+              <span className="flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="shrink-0">
+                  <path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {downloading ? "Laden..." : "Download opstelling"}
+              </span>
+            </button>
             {!readOnly && (
               <button onClick={handleUnlock} disabled={unlocking} className={BTN_SECONDARY + " shrink-0"}>
                 {unlocking ? "Bezig..." : "Terugtrekken"}
@@ -580,8 +598,10 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
             );
           })()}
 
-          <Pitch slots={slots} selectedSlot={selectedSlot} playersById={playersById} slotValues={slotValues}
-            onSlotClick={handleSlotClick} locked={locked || readOnly || step !== 1} captainSlot={captainEnabled ? captainSlot : null} />
+          <div ref={pitchRef}>
+            <Pitch slots={slots} selectedSlot={selectedSlot} playersById={playersById} slotValues={slotValues}
+              onSlotClick={handleSlotClick} locked={locked || readOnly || step !== 1} captainSlot={captainEnabled ? captainSlot : null} />
+          </div>
 
           {!locked && !readOnly && step === 1 && (() => {
             const v = validateTeam(slotValues, playersById, formation, budget, false, null, slots);
@@ -721,7 +741,12 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
       {/* ── STAP 4: Overzicht + indienen ── */}
       {!locked && !readOnly && step === 4 && (
         <>
-          <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
+          <div ref={pitchRef}>
+            <Pitch slots={slots} selectedSlot={null} playersById={playersById} slotValues={slotValues}
+              onSlotClick={() => {}} locked captainSlot={captainEnabled ? captainSlot : null} />
+          </div>
+
+          <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5 mt-4">
             <div>
               <p className="text-base font-bold text-white mb-0.5">Controleer je inschrijving</p>
               <p className="text-slate-500 text-xs">Kijk alles na en dien je team in. Dit kan daarna niet meer worden gewijzigd.</p>
@@ -733,7 +758,8 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Jouw team</p>
                 <span className="text-xs text-slate-600">{formation?.code}</span>
               </div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[360px] text-sm">
                 <thead>
                   <tr className="text-left text-slate-600 border-b border-slate-800">
                     <th className="pb-1.5 font-semibold">Naam</th>
@@ -762,6 +788,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
                     })}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Voorspellingen */}
@@ -786,7 +813,12 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
           <div className="flex gap-3 mt-4 flex-wrap">
             <button onClick={goPrev} className={BTN_SECONDARY}>← Vorige</button>
             <button onClick={handleDownloadImage} disabled={downloading} className={BTN_SECONDARY}>
-              {downloading ? "Downloaden..." : "Opslaan als afbeelding"}
+              <span className="flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" className="shrink-0">
+                  <path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {downloading ? "Laden..." : "Download opstelling"}
+              </span>
             </button>
             <button onClick={handleFinalSubmit} disabled={saving} className={BTN_PRIMARY + " ml-auto"}>
               {saving ? "Bezig..." : "Team indienen"}

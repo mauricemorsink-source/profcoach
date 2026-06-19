@@ -51,7 +51,7 @@ function SlotCard({
     <div
       onClick={locked ? undefined : onClick}
       className={`
-        relative rounded-xl border-2 text-center px-1.5 py-2 sm:px-2 sm:py-2 w-[68px] h-[92px] sm:w-[100px] sm:h-[112px] overflow-hidden transition-all select-none
+        relative rounded-xl border-2 text-center px-1 py-2 sm:px-2 sm:py-2 w-[60px] h-[88px] sm:w-[100px] sm:h-[112px] overflow-hidden transition-all select-none
         ${locked
           ? "cursor-default opacity-70 border-white/20 bg-black/30"
           : isActive

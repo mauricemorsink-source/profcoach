@@ -41,7 +41,8 @@ export default function AdminNav() {
   return (
     <>
       {/* Mobile/tablet: horizontale scrollbare tabstrip */}
-      <div className="lg:hidden shrink-0 bg-slate-900 border-b border-slate-800 overflow-x-auto">
+      <div className="lg:hidden shrink-0 bg-slate-900 border-b border-slate-800 overflow-x-auto relative">
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-900 to-transparent z-10" />
         <div className="flex min-w-max px-3 py-2 gap-1">
           {ALL_TABS.map((tab) => {
             const active = pathname.startsWith(tab.href);

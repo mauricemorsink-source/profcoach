@@ -60,14 +60,23 @@ export default async function HomePage() {
 
       <div className="relative z-10 text-center mb-10">
         <div className="flex justify-center mb-6">
-          <Image
-            src="/file-removebg-preview.png"
-            alt="ProfCoach"
-            width={220}
-            height={220}
-            className="object-contain drop-shadow-[0_0_40px_rgba(34,211,238,0.6)]"
-            style={{ maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 55%, transparent 100%)", WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 55%, transparent 100%)" }}
-          />
+          <div className="relative">
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                inset: "-80px",
+                background: "radial-gradient(ellipse at 50% 50%, rgba(34,211,238,0.22) 0%, rgba(34,211,238,0.06) 45%, transparent 70%)",
+                filter: "blur(24px)",
+              }}
+            />
+            <Image
+              src="/file-removebg-preview.png"
+              alt="ProfCoach"
+              width={220}
+              height={220}
+              className="relative object-contain"
+            />
+          </div>
         </div>
         <p className="text-slate-400 text-lg">
           Stel jouw droomteam samen en strijd om de beste opstelling

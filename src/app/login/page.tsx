@@ -89,9 +89,9 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-8"
+    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-4 sm:p-8"
       style={{ background: "radial-gradient(ellipse at 50% 30%, rgba(14,40,80,0.7) 0%, #060b14 70%)" }}>
-      <div className="bg-slate-900 neon-border rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+      <div className="bg-slate-900 neon-border rounded-2xl p-6 sm:p-8 w-full max-w-sm shadow-2xl">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-black text-white">Inloggen</h1>
           <p className="text-slate-500 text-sm mt-1">Welkom terug bij ProfCoach</p>

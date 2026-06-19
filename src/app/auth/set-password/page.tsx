@@ -45,7 +45,7 @@ export default function SetPasswordPage() {
 
   return (
     <div
-      className="min-h-[calc(100vh-56px)] flex items-center justify-center p-8"
+      className="min-h-[calc(100vh-56px)] flex items-center justify-center p-4 sm:p-8"
       style={{ background: "radial-gradient(ellipse at 50% 30%, rgba(14,40,80,0.7) 0%, #060b14 70%)" }}
     >
       <div className="bg-slate-900 neon-border rounded-2xl p-8 max-w-sm w-full">
@@ -79,12 +79,14 @@ export default function SetPasswordPage() {
             />
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-400 bg-red-900/20 border border-red-500/30 px-3 py-2 rounded-lg">{error}</p>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black font-bold rounded-lg text-sm transition-colors"
+            className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-bold rounded-lg text-sm transition-colors neon-glow-sm"
           >
             {loading ? "Opslaan..." : "Wachtwoord instellen"}
           </button>
