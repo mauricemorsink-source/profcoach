@@ -27,6 +27,10 @@ const POSITION_COLOR: Record<string, string> = {
   ATT: "text-red-400 bg-red-900/30 border-red-500/30",
 };
 
+const CLUB_SHORT: Record<string, string> = {
+  ONE: "R1", TWO: "R2", THREE: "R3", FOUR: "R4", FIVE: "R5", DAMES: "VR1",
+};
+
 const CLUB_ORDER = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
 const POS_ORDER  = ["GK", "DEF", "MID", "ATT"];
 
@@ -173,7 +177,7 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
                 <th className={thClass("position")} onClick={() => toggleSort("position")}>
                   Pos <SortIcon active={sortKey === "position"} dir={sortDir} />
                 </th>
-                <th className={`${thClass("clubTeam")} hidden sm:table-cell`} onClick={() => toggleSort("clubTeam")}>
+                <th className={thClass("clubTeam")} onClick={() => toggleSort("clubTeam")}>
                   Elftal <SortIcon active={sortKey === "clubTeam"} dir={sortDir} />
                 </th>
                 <th className={`${thClass("value")} text-right px-4`} onClick={() => toggleSort("value")}>
@@ -239,8 +243,9 @@ function PlayerRow({ player, inTeam }: { player: Player; inTeam: boolean }) {
           {POSITION_LABEL[player.position] ?? player.position}
         </span>
       </td>
-      <td className="px-3 py-2.5 text-slate-400 text-xs hidden sm:table-cell">
-        {CLUB_LABEL[player.clubTeam] ?? player.clubTeam}
+      <td className="px-3 py-2.5 text-slate-400 text-xs">
+        <span className="sm:hidden">{CLUB_SHORT[player.clubTeam] ?? player.clubTeam}</span>
+        <span className="hidden sm:inline">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</span>
       </td>
       <td className="px-4 py-2.5 text-right font-bold text-cyan-400">
         €{player.value}

@@ -608,7 +608,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   </span>
                 </div>
 
-                <div className="bg-slate-900 neon-border rounded-xl overflow-x-auto overflow-y-auto max-h-[60vh]">
+                <div className="relative">
+                  <div className="bg-slate-900 neon-border rounded-xl overflow-x-auto overflow-y-auto max-h-[60vh]">
                   <table className="w-full text-sm min-w-[540px]">
                     <thead>{perfTableHeader}</thead>
                     <tbody>
@@ -624,6 +625,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                       ))}
                     </tbody>
                   </table>
+                </div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-900 to-transparent rounded-r-xl sm:hidden" />
                 </div>
 
                 {(matchDetail.match.status === "PENDING" || matchDetail.match.status === "APPROVED" || matchDetail.match.status === "REJECTED") && (
@@ -793,6 +796,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   ) : (
                     <div>
                       <p className="text-slate-400 text-xs mb-3">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
+                      <div className="relative">
                       <div className="overflow-x-auto -mx-5 px-5">
                         <table className="w-full text-sm min-w-[540px]">
                           <thead>
@@ -863,6 +867,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-950 to-transparent sm:hidden" />
                       </div>
 
                       {/* Gastspeler */}
@@ -957,7 +963,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                               <div className="flex-1 flex items-center gap-2 min-w-0">
                                 <span className="text-white text-sm font-medium truncate">{p.playerName}</span>
                                 {p.isGuest && <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded shrink-0">GAST</span>}
-                                <span className="text-slate-500 text-xs shrink-0">{POSITION_LABEL[p.position]}</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${POSITION_COLOR[p.position] ?? "text-slate-400"}`}>{POSITION_LABEL[p.position]}</span>
                               </div>
                               <div className="flex gap-2 text-xs shrink-0">
                                 {p.goals > 0 && <span className="text-white">⚽ {p.goals}</span>}

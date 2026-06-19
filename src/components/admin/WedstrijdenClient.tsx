@@ -1512,6 +1512,7 @@ export default function WedstrijdenClient() {
               {editingMatch.performances.length === 0 ? (
                 <p className="text-slate-500 text-sm mb-4">Nog geen prestaties ingevoerd.</p>
               ) : (
+                <div className="relative">
                 <div className="overflow-x-auto -mx-6 px-6">
                   <table className="w-full text-sm min-w-[540px]">
                     <thead>
@@ -1627,6 +1628,8 @@ export default function WedstrijdenClient() {
                       })}
                     </tbody>
                   </table>
+                </div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-900 to-transparent sm:hidden" />
                 </div>
               )}
             </div>
