@@ -14,8 +14,8 @@ export default function SetPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError("Wachtwoord moet minimaal 6 tekens zijn.");
+    if (password.length < 8) {
+      setError("Wachtwoord moet minimaal 8 tekens zijn.");
       return;
     }
     if (password !== confirm) {
@@ -62,9 +62,9 @@ export default function SetPasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-cyan-500"
-              placeholder="Minimaal 6 tekens"
+              placeholder="Minimaal 8 tekens"
             />
           </div>
           <div>

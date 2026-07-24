@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { rateLimit, getIp } from "@/lib/rateLimit";
 
 const teamInclude = {
   formation: true,
@@ -11,6 +12,14 @@ const teamInclude = {
 };
 
 export async function POST(req: Request) {
+  const { ok, retryAfterSec } = rateLimit(`team-save:${getIp(req)}`, { max: 30, windowMs: 60 * 1000 });
+  if (!ok) {
+    return NextResponse.json({ error: "Te veel verzoeken. Probeer het later opnieuw." }, {
+      status: 429,
+      headers: { "Retry-After": String(retryAfterSec) },
+    });
+  }
+
   const body = await req.json();
   const { teamEntryId, formationId, slots, captainSlot } = body as {
     teamEntryId: string;

@@ -73,20 +73,11 @@ export default async function NavBar() {
                 Uitloggen
               </button>
             </form>
-          ) : requireLogin ? (
-            <div className="flex gap-1">
-              <Link href="/login" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 whitespace-nowrap transition-colors">
-                Inloggen
-              </Link>
-              <Link href="/register" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
-                Registreren
-              </Link>
-            </div>
-          ) : (
+          ) : !requireLogin ? (
             <Link href="/team-indienen" className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
               Team indienen
             </Link>
-          )}
+          ) : null}
         </div>
 
         {/* Mobile: hamburger menu */}

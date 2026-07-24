@@ -77,20 +77,11 @@ export default function MobileMenu({ session, requireLogin }: { session: Session
                     Uitloggen
                   </button>
                 </form>
-              ) : requireLogin ? (
-                <div className="space-y-0.5">
-                  <Link href="/login" onClick={() => setOpen(false)} className="flex items-center px-3 py-3 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                    Inloggen
-                  </Link>
-                  <Link href="/register" onClick={() => setOpen(false)} className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
-                    Registreren
-                  </Link>
-                </div>
-              ) : (
+              ) : !requireLogin ? (
                 <Link href="/team-indienen" onClick={() => setOpen(false)} className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
                   Team indienen
                 </Link>
-              )}
+              ) : null}
             </div>
 
           </div>

@@ -116,10 +116,10 @@ export default async function ShareTeamPage({
         {/* CTA */}
         <div className="mt-5">
           <Link
-            href="/register"
+            href="/login"
             className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition-colors neon-glow-sm"
           >
-            Maak jouw eigen team
+            Log in om deel te nemen
           </Link>
         </div>
       </div>

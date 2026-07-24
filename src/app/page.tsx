@@ -111,10 +111,6 @@ export default async function HomePage() {
               <Link href="/team-indienen" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
                 Team samenstellen
               </Link>
-            ) : registrationOpen ? (
-              <Link href="/register" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
-                Deelnemen
-              </Link>
             ) : (
               <div className="w-full text-center py-3 px-6 bg-slate-800/50 text-slate-500 font-bold rounded-xl text-lg border border-slate-700/50 cursor-not-allowed">
                 Inschrijving gesloten
@@ -127,12 +123,6 @@ export default async function HomePage() {
             <Link href="/spelregels" className="block w-full text-center py-2.5 px-6 text-slate-400 hover:text-white text-sm font-medium transition-colors">
               Spelregels
             </Link>
-            {requireLogin && (
-              <p className="text-center text-sm text-slate-500 pt-1">
-                Al een account?{" "}
-                <Link href="/login" className="text-cyan-400 hover:text-cyan-300 font-medium">Inloggen</Link>
-              </p>
-            )}
           </>
         )}
       </div>

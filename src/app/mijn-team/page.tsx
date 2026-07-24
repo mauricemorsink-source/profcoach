@@ -1,7 +1,11 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import TeamBuilder from "@/components/team/TeamBuilder";
 
 export default async function MijnTeamPage() {
+  const session = await getSession();
+  if (!session) redirect("/login");
   const [season, formations, settings] = await Promise.all([
     prisma.season.findFirst({ where: { isActive: true } }),
     prisma.formation.findMany({ orderBy: { code: "asc" } }),
