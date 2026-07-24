@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { marked } from "marked";
+import { parseMarkdown } from "@/lib/markdown";
 
 export default async function PrivacyPage() {
   const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
-  const text = settings?.privacyText ?? "";
-  const html = text ? marked.parse(text, { breaks: true }) as string : "";
+  const html = parseMarkdown(settings?.privacyText ?? "");
 
   return (
     <div

@@ -64,7 +64,7 @@ export default function DeelnemersTable({ deelnemers }: { deelnemers: Deelnemer[
                   className={`border-b border-slate-800/60 ${rank === 1 && !query ? "bg-cyan-500/5" : "hover:bg-slate-800/30"}`}
                 >
                   <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-slate-500 font-medium text-sm">{rank}</td>
-                  <td className="px-2 sm:px-4 py-2.5 sm:py-3 font-semibold text-white">{d.userName}</td>
+                  <td className="px-2 sm:px-4 py-2.5 sm:py-3 font-semibold text-white max-w-[180px] truncate">{d.userName}</td>
                   <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-right font-bold text-cyan-400">{d.totalPoints}</td>
                   <td className="px-2 sm:px-4 py-2.5 sm:py-3 text-right"><Delta value={d.delta} /></td>
                 </tr>

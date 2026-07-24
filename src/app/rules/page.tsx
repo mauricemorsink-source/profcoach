@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { marked } from "marked";
+import { parseMarkdown } from "@/lib/markdown";
 
 export default async function RulesPage() {
   const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
-  const rulesText = settings?.rulesText ?? "";
-  const rulesHtml = rulesText
-    ? marked.parse(rulesText, { breaks: true }) as string
-    : "";
+  const rulesHtml = parseMarkdown(settings?.rulesText ?? "");
 
   return (
     <div

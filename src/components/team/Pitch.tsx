@@ -71,7 +71,7 @@ function SlotCard({
       </div>
       {player ? (
         <>
-          <div className="text-[10px] sm:text-[11px] font-bold text-white leading-tight">{nameLine1}</div>
+          <div className="text-[10px] sm:text-[11px] font-bold text-white leading-tight truncate">{nameLine1}</div>
           {nameLine2 && (
             <div className="text-[10px] sm:text-[11px] font-bold text-white leading-tight truncate">{nameLine2}</div>
           )}

@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEditLink } from "@/lib/email";
 import { randomBytes } from "crypto";
+import { rateLimit, getIp } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
+  const { ok, retryAfterSec } = rateLimit(`edit-request:${getIp(req)}`, { max: 3, windowMs: 60 * 60 * 1000 });
+  if (!ok) {
+    return NextResponse.json({ error: "Te veel aanvragen. Probeer het over een uur opnieuw." }, {
+      status: 429,
+      headers: { "Retry-After": String(retryAfterSec) },
+    });
+  }
+
   const { email } = await req.json();
 
   if (!email || typeof email !== "string") {

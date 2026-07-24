@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
   const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
   if (!settings) {
     return NextResponse.json({ error: "Instellingen niet gevonden" }, { status: 404 });

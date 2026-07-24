@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, setSessionCookie } from "@/lib/auth";
+import { rateLimit, getIp } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
+  const { ok, retryAfterSec } = rateLimit(`login:${getIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
+  if (!ok) {
+    return NextResponse.json({ error: "Te veel pogingen. Probeer het later opnieuw." }, {
+      status: 429,
+      headers: { "Retry-After": String(retryAfterSec) },
+    });
+  }
+
   try {
     const body = await req.json();
     const { email, password, rememberMe = true } = body;

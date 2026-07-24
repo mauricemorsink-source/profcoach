@@ -6,8 +6,12 @@ import { NextRequest } from "next/server";
 const COOKIE_NAME = "profcoach_session";
 
 const authSecretValue = process.env.AUTH_SECRET ?? process.env.JWT_SECRET;
-if (!authSecretValue && process.env.NODE_ENV === "production") {
-  throw new Error("AUTH_SECRET environment variable is not set");
+if (process.env.NODE_ENV === "production") {
+  if (!authSecretValue) throw new Error("AUTH_SECRET environment variable is not set");
+  if (authSecretValue.length < 32) throw new Error("AUTH_SECRET must be at least 32 characters");
+  if (authSecretValue.includes("profcoach-super-secret") || authSecretValue.includes("fallback")) {
+    throw new Error("AUTH_SECRET appears to be a default/test value — set a strong random secret in production");
+  }
 }
 const SECRET = new TextEncoder().encode(
   authSecretValue ?? "profcoach-fallback-secret"

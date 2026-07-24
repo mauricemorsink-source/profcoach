@@ -1542,10 +1542,10 @@ export default function WedstrijdenClient() {
                             key={p.playerId}
                             className={`border-b border-slate-800/60 ${!ed.played ? "opacity-40" : ""}`}
                           >
-                            <td className="py-1.5 font-medium text-white">
-                              <div className="flex items-center gap-1.5">
-                                {p.player.name}
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[p.player.position] ?? "text-slate-400"}`}>
+                            <td className="py-1.5 font-medium text-white max-w-[160px]">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="truncate">{p.player.name}</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${POSITION_COLOR[p.player.position] ?? "text-slate-400"}`}>
                                   {POSITION_LABEL[p.player.position] ?? p.player.position}
                                 </span>
                               </div>

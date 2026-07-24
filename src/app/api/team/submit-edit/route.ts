@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   const { token, formationId, slots, captainSlot } = await req.json();
 
-  if (!token || !formationId || !Array.isArray(slots)) {
+  if (!token || !formationId || !Array.isArray(slots) || slots.length !== 11) {
     return NextResponse.json({ error: "Ongeldige invoer" }, { status: 400 });
   }
 
