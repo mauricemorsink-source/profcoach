@@ -78,3 +78,33 @@ export async function POST(req: Request) {
 
   return NextResponse.json(user, { status: 201 });
 }
+
+export async function DELETE(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const { ids } = body as { ids: string[] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: "Geen accounts opgegeven" }, { status: 400 });
+  }
+
+  const targetIds = ids.filter((id) => id !== session.userId);
+  if (targetIds.length === 0) {
+    return NextResponse.json({ error: "Je kunt je eigen account niet verwijderen" }, { status: 400 });
+  }
+
+  const remainingAdmins = await prisma.user.count({
+    where: { role: "ADMIN", id: { notIn: targetIds } },
+  });
+  if (remainingAdmins === 0) {
+    return NextResponse.json({ error: "Er moet minstens één admin overblijven" }, { status: 400 });
+  }
+
+  const result = await prisma.user.deleteMany({ where: { id: { in: targetIds } } });
+
+  return NextResponse.json({ deleted: result.count });
+}

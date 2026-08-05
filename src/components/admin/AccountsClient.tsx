@@ -21,6 +21,7 @@ const SELECT = "w-full bg-slate-800 border border-slate-700 text-white rounded-l
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
 const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700";
 const BTN_SMALL = "px-3 py-1.5 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors";
+const BTN_DANGER = "px-3 py-1.5 text-xs bg-red-900/40 text-red-400 rounded hover:bg-red-900/60 font-medium border border-red-500/30 transition-colors";
 
 export default function AccountsClient() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -34,6 +35,12 @@ export default function AccountsClient() {
   const [loginLink, setLoginLink] = useState<string | null>(null);
   const [linkLoading, setLinkLoading] = useState(false);
 
+  // Bulk verwijderen
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkError, setBulkError] = useState("");
+
   // Nieuw account
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", email: "", password: "", role: "MANAGER", managedTeam: "ONE" });
@@ -46,6 +53,40 @@ export default function AccountsClient() {
       const all = await res.json();
       setAccounts(all.filter((u: Account) => u.role === "ADMIN" || u.role === "MANAGER"));
     }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const allSelected = accounts.length > 0 && accounts.every((a) => selectedIds.has(a.id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      accounts.forEach((a) => (allSelected ? next.delete(a.id) : next.add(a.id)));
+      return next;
+    });
+  }
+
+  async function bulkDelete() {
+    setBulkDeleting(true);
+    setBulkError("");
+    const res = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selectedIds) }),
+    });
+    const data = await res.json();
+    setBulkDeleting(false);
+    if (!res.ok) { setBulkError(data.error ?? "Verwijderen mislukt"); return; }
+    setSelectedIds(new Set());
+    setConfirmBulk(false);
+    await load();
   }
 
   async function save() {
@@ -138,10 +179,54 @@ export default function AccountsClient() {
         </button>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 px-3 py-2.5 bg-red-900/20 border border-red-500/30 rounded-lg">
+          <span className="text-sm font-medium text-red-400">
+            {selectedIds.size} account{selectedIds.size !== 1 ? "s" : ""} geselecteerd
+          </span>
+          <div className="flex-1 hidden sm:block" />
+          {confirmBulk ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-red-400">Zeker weten?</span>
+              <button onClick={bulkDelete} disabled={bulkDeleting} className={BTN_DANGER + " disabled:opacity-50"}>
+                {bulkDeleting ? "Bezig..." : "Ja, verwijder"}
+              </button>
+              <button onClick={() => setConfirmBulk(false)} className={BTN_SMALL}>
+                Annuleer
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setConfirmBulk(true)} className={BTN_DANGER}>
+                Verwijder selectie
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} className={BTN_SMALL}>
+                Deselecteer
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {bulkError && <p className="text-red-400 text-sm bg-red-900/20 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{bulkError}</p>}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 border-b border-slate-800">
+              <th className="pb-2 pr-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={accounts.length > 0 && accounts.every((a) => selectedIds.has(a.id))}
+                  ref={(el) => {
+                    if (el)
+                      el.indeterminate =
+                        accounts.some((a) => selectedIds.has(a.id)) &&
+                        !accounts.every((a) => selectedIds.has(a.id));
+                  }}
+                  onChange={toggleSelectAll}
+                  className="rounded accent-cyan-500"
+                />
+              </th>
               <th className="pb-2 font-semibold">Naam</th>
               <th className="pb-2 font-semibold">Rol</th>
               <th className="pb-2 font-semibold hidden sm:table-cell">E-mail</th>
@@ -150,7 +235,20 @@ export default function AccountsClient() {
           </thead>
           <tbody>
             {accounts.map((a) => (
-              <tr key={a.id} className="border-b border-slate-800/60 hover:bg-slate-800/30">
+              <tr
+                key={a.id}
+                className={`border-b border-slate-800/60 ${
+                  selectedIds.has(a.id) ? "bg-red-900/10" : "hover:bg-slate-800/30"
+                }`}
+              >
+                <td className="py-2 pr-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(a.id)}
+                    onChange={() => toggleSelect(a.id)}
+                    className="rounded accent-cyan-500"
+                  />
+                </td>
                 <td className="py-2 font-medium text-white">{a.name ?? <span className="text-slate-500 italic">Geen naam</span>}</td>
                 <td className="py-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
@@ -168,7 +266,7 @@ export default function AccountsClient() {
               </tr>
             ))}
             {accounts.length === 0 && (
-              <tr><td colSpan={4} className="py-4 text-slate-500 text-sm">Geen accounts gevonden.</td></tr>
+              <tr><td colSpan={5} className="py-4 text-slate-500 text-sm">Geen accounts gevonden.</td></tr>
             )}
           </tbody>
         </table>

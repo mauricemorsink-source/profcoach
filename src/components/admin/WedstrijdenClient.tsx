@@ -115,6 +115,7 @@ const SELECT = "w-full bg-slate-800 border border-slate-700 text-white rounded-l
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
 const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700";
 const BTN_SMALL = "px-3 py-1.5 text-xs bg-slate-800 text-slate-400 rounded hover:bg-slate-700 font-medium border border-slate-700 transition-colors";
+const BTN_DANGER = "px-3 py-1.5 text-xs bg-red-900/40 text-red-400 rounded hover:bg-red-900/60 font-medium border border-red-500/30 transition-colors";
 
 export default function WedstrijdenClient() {
   const [adminMatches, setAdminMatches] = useState<AdminMatch[]>([]);
@@ -172,6 +173,12 @@ export default function WedstrijdenClient() {
   const [processSelectedIds, setProcessSelectedIds] = useState<Set<string>>(new Set());
   const [isProcessingStuck, setIsProcessingStuck] = useState(false);
   const [resettingProcessing, setResettingProcessing] = useState(false);
+
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [deleteSelectedIds, setDeleteSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState("");
 
   async function loadAdminMatches() {
     setLoadingMatches(true);
@@ -244,6 +251,44 @@ export default function WedstrijdenClient() {
     const allSelected =
       processable.length > 0 && processable.every((m) => processSelectedIds.has(m.id));
     setProcessSelectedIds(allSelected ? new Set() : new Set(processable.map((m) => m.id)));
+  }
+
+  function toggleBulkDeleteMode() {
+    setBulkDeleteMode((v) => !v);
+    setDeleteSelectedIds(new Set());
+    setConfirmBulkDelete(false);
+    setBulkDeleteError("");
+    setProcessSelectedIds(new Set());
+  }
+
+  function toggleDeleteSelect(id: string) {
+    setDeleteSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllDeleteSelect() {
+    const allSelected = filteredMatches.length > 0 && filteredMatches.every((m) => deleteSelectedIds.has(m.id));
+    setDeleteSelectedIds(allSelected ? new Set() : new Set(filteredMatches.map((m) => m.id)));
+  }
+
+  async function bulkDeleteMatches() {
+    setBulkDeleting(true);
+    setBulkDeleteError("");
+    const res = await fetch("/api/admin/matches", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(deleteSelectedIds) }),
+    });
+    const data = await res.json();
+    setBulkDeleting(false);
+    if (!res.ok) { setBulkDeleteError(data.error ?? "Verwijderen mislukt"); return; }
+    setDeleteSelectedIds(new Set());
+    setConfirmBulkDelete(false);
+    setBulkDeleteMode(false);
+    await loadAdminMatches();
   }
 
   function updatePerfField(playerId: string, field: string, value: boolean | number) {
@@ -556,15 +601,23 @@ export default function WedstrijdenClient() {
       <section className="bg-slate-900 neon-border rounded-2xl p-6 flex-1 min-w-0">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white">Wedstrijden</h2>
-          <button
-            onClick={() => {
-              loadAdminMatches();
-              loadPublishMoments();
-            }}
-            className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
-          >
-            Vernieuwen
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleBulkDeleteMode}
+              className={bulkDeleteMode ? BTN_SECONDARY : "text-sm text-slate-500 hover:text-slate-300 transition-colors"}
+            >
+              {bulkDeleteMode ? "Annuleer selectie" : "Bulk verwijderen"}
+            </button>
+            <button
+              onClick={() => {
+                loadAdminMatches();
+                loadPublishMoments();
+              }}
+              className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Vernieuwen
+            </button>
+          </div>
         </div>
 
         {/* Wachtrij banner */}
@@ -695,6 +748,47 @@ export default function WedstrijdenClient() {
           </div>
         )}
 
+        {/* Actiebalk voor bulk verwijderen */}
+        {bulkDeleteMode && deleteSelectedIds.size > 0 && (
+          <div className="flex items-center gap-3 bg-red-900/20 border border-red-500/30 rounded-xl px-4 py-2.5 mb-3 flex-wrap">
+            <div className="flex-1">
+              <span className="text-sm text-red-400">
+                {deleteSelectedIds.size} wedstrijd{deleteSelectedIds.size !== 1 ? "en" : ""} geselecteerd
+              </span>
+              {Array.from(deleteSelectedIds).some(
+                (id) => adminMatches.find((m) => m.id === id)?.status === "PROCESSED"
+              ) && (
+                <p className="text-xs text-amber-400 mt-0.5">
+                  Verwerkte wedstrijden worden omgezet naar &apos;Correctie&apos; i.p.v. verwijderd.
+                </p>
+              )}
+            </div>
+            {confirmBulkDelete ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-red-400">Zeker weten?</span>
+                <button onClick={bulkDeleteMatches} disabled={bulkDeleting} className={BTN_DANGER + " disabled:opacity-50"}>
+                  {bulkDeleting ? "Bezig..." : "Ja, verwijder"}
+                </button>
+                <button onClick={() => setConfirmBulkDelete(false)} className={BTN_SMALL}>
+                  Annuleer
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={() => setConfirmBulkDelete(true)} className={BTN_DANGER}>
+                  Verwijder selectie
+                </button>
+                <button onClick={() => setDeleteSelectedIds(new Set())} className={BTN_SECONDARY}>
+                  Deselecteer
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {bulkDeleteError && (
+          <p className="text-red-400 text-sm bg-red-900/20 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{bulkDeleteError}</p>
+        )}
+
         {loadingMatches ? (
           <p className="text-slate-500 text-sm py-4">Laden...</p>
         ) : filteredMatches.length === 0 ? (
@@ -710,13 +804,24 @@ export default function WedstrijdenClient() {
                     key={m.id}
                     id={`match-${m.id}`}
                     className={`bg-slate-800/50 rounded-xl p-3 border transition-colors ${
-                      isProcessable && processSelectedIds.has(m.id)
+                      bulkDeleteMode
+                        ? deleteSelectedIds.has(m.id)
+                          ? "border-red-500/50 bg-red-500/5"
+                          : "border-slate-700"
+                        : isProcessable && processSelectedIds.has(m.id)
                         ? "border-cyan-500/50 bg-cyan-500/5"
                         : "border-slate-700"
                     }`}
                   >
                     <div className="flex items-start gap-2 mb-2">
-                      {isProcessable ? (
+                      {bulkDeleteMode ? (
+                        <input
+                          type="checkbox"
+                          checked={deleteSelectedIds.has(m.id)}
+                          onChange={() => toggleDeleteSelect(m.id)}
+                          className="mt-0.5 accent-red-500 shrink-0"
+                        />
+                      ) : isProcessable ? (
                         <input
                           type="checkbox"
                           checked={processSelectedIds.has(m.id)}
@@ -903,29 +1008,44 @@ export default function WedstrijdenClient() {
                 <thead>
                   <tr className="text-left text-slate-500 border-b border-slate-800">
                     <th className="pb-2 w-8">
-                      <input
-                        type="checkbox"
-                        checked={
-                          filteredMatches.filter(
-                            (m) => m.status === "APPROVED" || m.status === "CORRECTION"
-                          ).length > 0 &&
-                          filteredMatches
-                            .filter((m) => m.status === "APPROVED" || m.status === "CORRECTION")
-                            .every((m) => processSelectedIds.has(m.id))
-                        }
-                        ref={(el) => {
-                          if (el) {
-                            const p = filteredMatches.filter(
+                      {bulkDeleteMode ? (
+                        <input
+                          type="checkbox"
+                          checked={filteredMatches.length > 0 && filteredMatches.every((m) => deleteSelectedIds.has(m.id))}
+                          ref={(el) => {
+                            if (el)
+                              el.indeterminate =
+                                filteredMatches.some((m) => deleteSelectedIds.has(m.id)) &&
+                                !filteredMatches.every((m) => deleteSelectedIds.has(m.id));
+                          }}
+                          onChange={toggleAllDeleteSelect}
+                          className="accent-red-500"
+                        />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredMatches.filter(
                               (m) => m.status === "APPROVED" || m.status === "CORRECTION"
-                            );
-                            el.indeterminate =
-                              p.some((m) => processSelectedIds.has(m.id)) &&
-                              !p.every((m) => processSelectedIds.has(m.id));
+                            ).length > 0 &&
+                            filteredMatches
+                              .filter((m) => m.status === "APPROVED" || m.status === "CORRECTION")
+                              .every((m) => processSelectedIds.has(m.id))
                           }
-                        }}
-                        onChange={toggleAllProcessSelect}
-                        className="accent-cyan-500"
-                      />
+                          ref={(el) => {
+                            if (el) {
+                              const p = filteredMatches.filter(
+                                (m) => m.status === "APPROVED" || m.status === "CORRECTION"
+                              );
+                              el.indeterminate =
+                                p.some((m) => processSelectedIds.has(m.id)) &&
+                                !p.every((m) => processSelectedIds.has(m.id));
+                            }
+                          }}
+                          onChange={toggleAllProcessSelect}
+                          className="accent-cyan-500"
+                        />
+                      )}
                     </th>
                     <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
                     <th className="pb-2 font-semibold whitespace-nowrap">Thuisploeg</th>
@@ -943,19 +1063,32 @@ export default function WedstrijdenClient() {
                         key={m.id}
                         id={`match-${m.id}`}
                         className={`border-b border-slate-800/60 ${
-                          isProcessable && processSelectedIds.has(m.id)
+                          bulkDeleteMode
+                            ? deleteSelectedIds.has(m.id)
+                              ? "bg-red-500/5"
+                              : "hover:bg-slate-800/30"
+                            : isProcessable && processSelectedIds.has(m.id)
                             ? "bg-cyan-500/5"
                             : "hover:bg-slate-800/30"
                         }`}
                       >
                         <td className="py-2">
-                          {isProcessable && (
+                          {bulkDeleteMode ? (
                             <input
                               type="checkbox"
-                              checked={processSelectedIds.has(m.id)}
-                              onChange={() => toggleProcessSelect(m.id)}
-                              className="accent-cyan-500"
+                              checked={deleteSelectedIds.has(m.id)}
+                              onChange={() => toggleDeleteSelect(m.id)}
+                              className="accent-red-500"
                             />
+                          ) : (
+                            isProcessable && (
+                              <input
+                                type="checkbox"
+                                checked={processSelectedIds.has(m.id)}
+                                onChange={() => toggleProcessSelect(m.id)}
+                                className="accent-cyan-500"
+                              />
+                            )
                           )}
                         </td>
                         <td className="py-2 text-slate-400 text-xs whitespace-nowrap">
