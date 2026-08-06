@@ -2,8 +2,36 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
 
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // API routes: CSRF-achtige Origin-check op mutating requests
+  if (pathname.startsWith("/api/")) {
+    // Cron routes: geen browser-Origin, eigen authenticatie via CRON_SECRET header
+    if (pathname.startsWith("/api/cron/")) {
+      return NextResponse.next();
+    }
+
+    if (MUTATING_METHODS.has(req.method)) {
+      const origin = req.headers.get("origin");
+      // Geen Origin header = server-to-server of same-origin form — toestaan
+      if (origin !== null) {
+        const host = req.headers.get("host");
+        try {
+          if (new URL(origin).host !== host) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+          }
+        } catch {
+          // Malformed Origin header
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+      }
+    }
+
+    return NextResponse.next();
+  }
 
   // Admin routes: vereisen ingelogde admin
   if (pathname.startsWith("/admin")) {
@@ -42,5 +70,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/play/:path*", "/manager/:path*"],
+  matcher: ["/api/:path*", "/admin/:path*", "/play/:path*", "/manager/:path*"],
 };
