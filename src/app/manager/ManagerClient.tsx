@@ -201,10 +201,10 @@ function PerfRow({
           className="accent-cyan-500 w-4 h-4 cursor-pointer"
         />
       </td>
-      <td className="px-3 py-2.5"><input type="number" min="0" value={p.goals} onChange={(e) => onChange("goals", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
-      <td className="px-3 py-2.5"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => onChange("penaltyGoals", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
-      <td className="px-3 py-2.5"><input type="number" min="0" value={p.assists} onChange={(e) => onChange("assists", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
-      <td className="px-3 py-2.5"><input type="number" min="0" value={p.ownGoals} onChange={(e) => onChange("ownGoals", Number(e.target.value))} disabled={!p.played || locked} className={numInputClass} /></td>
+      <td className="px-3 py-2.5"><input type="number" min="0" value={p.goals} onChange={(e) => onChange("goals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played || locked} className={numInputClass} /></td>
+      <td className="px-3 py-2.5"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => onChange("penaltyGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played || locked} className={numInputClass} /></td>
+      <td className="px-3 py-2.5"><input type="number" min="0" value={p.assists} onChange={(e) => onChange("assists", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played || locked} className={numInputClass} /></td>
+      <td className="px-3 py-2.5"><input type="number" min="0" value={p.ownGoals} onChange={(e) => onChange("ownGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played || locked} className={numInputClass} /></td>
       <td className="px-3 py-2.5">
         <select
           value={toCardValue(p.yellowCards, p.redCard)}
@@ -766,6 +766,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                               ? { ...addForm, goalsConceded: e.target.value }
                               : { ...addForm, goalsScored: e.target.value }
                           )}
+                          onFocus={(e) => e.target.select()}
                           className="w-full text-center text-2xl font-bold bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50"
                           placeholder="0"
                         />
@@ -786,6 +787,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                               ? { ...addForm, goalsScored: e.target.value }
                               : { ...addForm, goalsConceded: e.target.value }
                           )}
+                          onFocus={(e) => e.target.select()}
                           className="w-full text-center text-2xl font-bold bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50"
                           placeholder="0"
                         />
@@ -808,19 +810,19 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     <div>
                       <p className="text-slate-400 text-xs mb-3">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
                       <div className="relative">
-                      <div className="overflow-x-auto -mx-5 px-5">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh] -mx-5 px-5">
                         <table className="w-full text-sm min-w-[540px]">
                           <thead>
-                            <tr className="text-left text-slate-500 border-b border-slate-700/50 text-xs">
-                              <th className="py-2 font-medium">Speler</th>
-                              <th className="px-2 py-2 font-medium">Pos.</th>
-                              <th className="px-2 py-2 font-medium text-center">Mee</th>
-                              <th className="px-2 py-2 font-medium text-center">⚽</th>
-                              <th className="px-2 py-2 font-medium text-center">Pen</th>
-                              <th className="px-2 py-2 font-medium text-center">Ass</th>
-                              <th className="px-2 py-2 font-medium text-center">EG</th>
-                              <th className="px-2 py-2 font-medium text-center">Kaart</th>
-                              <th className="px-2 py-2 w-6"></th>
+                            <tr className="text-left text-slate-500 text-xs">
+                              <th className="py-2 font-medium sticky top-0 bg-slate-800 z-10">Speler</th>
+                              <th className="px-2 py-2 font-medium sticky top-0 bg-slate-800 z-10">Pos.</th>
+                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Mee</th>
+                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">⚽</th>
+                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Pen</th>
+                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Ass</th>
+                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">EG</th>
+                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Kaart</th>
+                              <th className="px-2 py-2 w-6 sticky top-0 bg-slate-800 z-10"></th>
                             </tr>
                           </thead>
                           <tbody>
@@ -851,10 +853,10 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                                 <td className="px-2 py-2 text-center">
                                   <input type="checkbox" checked={p.played} onChange={(e) => updateAddPerf(p.playerId, "played", e.target.checked)} className="accent-cyan-500 w-4 h-4 cursor-pointer" />
                                 </td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.goals} onChange={(e) => updateAddPerf(p.playerId, "goals", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => updateAddPerf(p.playerId, "penaltyGoals", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.assists} onChange={(e) => updateAddPerf(p.playerId, "assists", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.ownGoals} onChange={(e) => updateAddPerf(p.playerId, "ownGoals", Number(e.target.value))} disabled={!p.played} className={NUM_INPUT} /></td>
+                                <td className="px-2 py-2"><input type="number" min="0" value={p.goals} onChange={(e) => updateAddPerf(p.playerId, "goals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
+                                <td className="px-2 py-2"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => updateAddPerf(p.playerId, "penaltyGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
+                                <td className="px-2 py-2"><input type="number" min="0" value={p.assists} onChange={(e) => updateAddPerf(p.playerId, "assists", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
+                                <td className="px-2 py-2"><input type="number" min="0" value={p.ownGoals} onChange={(e) => updateAddPerf(p.playerId, "ownGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
                                 <td className="px-2 py-2">
                                   <select
                                     value={toCardValue(p.yellowCards, p.redCard)}
@@ -1012,6 +1014,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                             <div key={i} className="flex items-center gap-2">
                               <input type="number" min="0" value={s.goals}
                                 onChange={(e) => setExtraScorers(prev => prev.map((x, j) => j === i ? { ...x, goals: e.target.value } : x))}
+                                onFocus={(e) => e.target.select()}
                                 className="w-14 bg-slate-800 border border-slate-600 text-white rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-amber-500/50" />
                               <input type="text" value={s.description} placeholder="bijv. Eigen goal of Jan Jansen"
                                 onChange={(e) => setExtraScorers(prev => prev.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
