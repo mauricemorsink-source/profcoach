@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getContent } from "@/lib/content";
 import { parseMarkdown } from "@/lib/markdown";
 
 export default async function SpelregelsPage() {
-  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
-  const rulesHtml = parseMarkdown(settings?.rulesText ?? "");
+  const rulesText = await getContent("juridisch.spelregels");
+  const rulesHtml = parseMarkdown(rulesText);
 
   return (
     <div

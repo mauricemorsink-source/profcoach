@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getContentMap } from "@/lib/content";
 import KladopstellingClient from "@/components/kladopstelling/KladopstellingClient";
 
 export default async function TeamIndienen() {
-  const [formations, settings] = await Promise.all([
+  const [formations, settings, content] = await Promise.all([
     prisma.formation.findMany({ orderBy: { code: "asc" } }),
     prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
+    getContentMap(["meldingen.registratie_gesloten_titel", "meldingen.registratie_gesloten_tekst"]),
   ]);
 
   return (
@@ -17,6 +19,8 @@ export default async function TeamIndienen() {
       deadline={settings?.deadline?.toISOString() ?? null}
       captainEnabled={settings?.captainEnabled ?? false}
       captainBonusPerWin={settings?.captainBonusPerWin ?? 5}
+      registrationClosedTitle={content["meldingen.registratie_gesloten_titel"]}
+      registrationClosedText={content["meldingen.registratie_gesloten_tekst"]}
     />
   );
 }

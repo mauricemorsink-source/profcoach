@@ -5,10 +5,17 @@ import { usePathname } from "next/navigation";
 
 const TAB_SECTIONS = [
   {
+    heading: "Overzicht",
+    tabs: [
+      { href: "/admin", label: "Dashboard" },
+    ],
+  },
+  {
     heading: "Instellingen",
     tabs: [
       { href: "/admin/instellingen", label: "Spelinstellingen" },
       { href: "/admin/puntensysteem", label: "Puntensysteem" },
+      { href: "/admin/teksten", label: "Teksten" },
     ],
   },
   {
@@ -17,12 +24,6 @@ const TAB_SECTIONS = [
       { href: "/admin/wedstrijden", label: "Wedstrijden" },
       { href: "/admin/spelers", label: "Spelersbeheer" },
       { href: "/admin/totw", label: "Team of the Week" },
-    ],
-  },
-  {
-    heading: "Bonus",
-    tabs: [
-      { href: "/admin/bonusvragen", label: "Bonusvragen" },
     ],
   },
   {
@@ -36,17 +37,22 @@ const TAB_SECTIONS = [
 
 const ALL_TABS = TAB_SECTIONS.flatMap((s) => s.tabs);
 
+function isActive(pathname: string, href: string) {
+  if (href === "/admin") return pathname === "/admin";
+  return pathname.startsWith(href);
+}
+
 export default function AdminNav() {
   const pathname = usePathname();
 
   return (
     <>
-      {/* Mobile/tablet: horizontale scrollbare tabstrip */}
+      {/* Mobiel/tablet: horizontale scrollbare tabstrip */}
       <div className="lg:hidden shrink-0 bg-slate-900 border-b border-slate-800 overflow-x-auto relative">
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-900 to-transparent z-10" />
         <div className="flex min-w-max px-3 py-2 gap-1">
           {ALL_TABS.map((tab) => {
-            const active = pathname.startsWith(tab.href);
+            const active = isActive(pathname, tab.href);
             return (
               <Link
                 key={tab.href}
@@ -73,7 +79,7 @@ export default function AdminNav() {
               {section.heading}
             </p>
             {section.tabs.map((tab) => {
-              const active = pathname.startsWith(tab.href);
+              const active = isActive(pathname, tab.href);
               return (
                 <Link
                   key={tab.href}

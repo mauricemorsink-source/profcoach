@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getContent } from "@/lib/content";
 import { parseMarkdown } from "@/lib/markdown";
 
 export default async function PrivacyPage() {
-  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
-  const html = parseMarkdown(settings?.privacyText ?? "");
+  const privacyText = await getContent("juridisch.privacybeleid");
+  const html = parseMarkdown(privacyText);
 
   return (
     <div

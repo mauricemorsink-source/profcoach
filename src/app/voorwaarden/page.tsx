@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getContent } from "@/lib/content";
 import { parseMarkdown } from "@/lib/markdown";
 
 export default async function VoorwaardenPage() {
-  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
-  const html = parseMarkdown(settings?.termsText ?? "");
+  const termsText = await getContent("juridisch.voorwaarden");
+  const html = parseMarkdown(termsText);
 
   return (
     <div

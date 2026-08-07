@@ -13,9 +13,6 @@ type GameSettings = {
   showTussenstand: boolean;
   showStatistieken: boolean;
   wijzigingsvensterOpen: boolean;
-  rulesText: string;
-  termsText: string;
-  privacyText: string;
 };
 
 const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
@@ -35,9 +32,6 @@ export default function InstellingenClient() {
     showTussenstand: true,
     showStatistieken: true,
     wijzigingsvensterOpen: false,
-    rulesText: "",
-    termsText: "",
-    privacyText: "",
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -58,9 +52,6 @@ export default function InstellingenClient() {
         showTussenstand: data.showTussenstand ?? true,
         showStatistieken: data.showStatistieken ?? true,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
-        rulesText: data.rulesText ?? "",
-        termsText: data.termsText ?? "",
-        privacyText: data.privacyText ?? "",
       });
     }
   }
@@ -82,9 +73,6 @@ export default function InstellingenClient() {
         showTussenstand: settingsForm.showTussenstand,
         showStatistieken: settingsForm.showStatistieken,
         wijzigingsvensterOpen: settingsForm.wijzigingsvensterOpen,
-        rulesText: settingsForm.rulesText,
-        termsText: settingsForm.termsText,
-        privacyText: settingsForm.privacyText,
       }),
     });
     const data = await res.json();
@@ -104,9 +92,6 @@ export default function InstellingenClient() {
         showTussenstand: data.showTussenstand ?? true,
         showStatistieken: data.showStatistieken ?? true,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
-        rulesText: data.rulesText ?? "",
-        termsText: data.termsText ?? "",
-        privacyText: data.privacyText ?? "",
       });
       setSettingsMsg({ type: "ok", text: "Instellingen opgeslagen" });
     }
@@ -318,45 +303,6 @@ export default function InstellingenClient() {
                   </span>
                 </div>
               </div>
-            </div>
-            <div>
-              <label className={LABEL}>Spelregels</label>
-              <textarea
-                value={settingsForm.rulesText}
-                onChange={(e) => setSettingsForm({ ...settingsForm, rulesText: e.target.value })}
-                rows={12}
-                className={INPUT + " resize-y font-mono text-sm"}
-                placeholder={"## Spelregels\n\nSchrijf hier de spelregels in markdown-opmaak."}
-              />
-              <p className="text-xs text-slate-500 mt-1.5">
-                Markdown: <span className="text-slate-400 font-mono">## Koptekst</span> ·{" "}
-                <span className="text-slate-400 font-mono">**vet**</span> ·{" "}
-                <span className="text-slate-400 font-mono">- lijstitem</span>
-              </p>
-            </div>
-            <div>
-              <label className={LABEL}>
-                Algemene voorwaarden <span className="text-slate-600 font-normal">(/terms)</span>
-              </label>
-              <textarea
-                value={settingsForm.termsText}
-                onChange={(e) => setSettingsForm({ ...settingsForm, termsText: e.target.value })}
-                rows={8}
-                className={INPUT + " resize-y font-mono text-sm"}
-                placeholder={"## Algemene voorwaarden\n\nSchrijf hier de algemene voorwaarden in markdown-opmaak."}
-              />
-            </div>
-            <div>
-              <label className={LABEL}>
-                Privacybeleid <span className="text-slate-600 font-normal">(/privacy)</span>
-              </label>
-              <textarea
-                value={settingsForm.privacyText}
-                onChange={(e) => setSettingsForm({ ...settingsForm, privacyText: e.target.value })}
-                rows={8}
-                className={INPUT + " resize-y font-mono text-sm"}
-                placeholder={"## Privacybeleid\n\nSchrijf hier het privacybeleid in markdown-opmaak."}
-              />
             </div>
             {settingsMsg && (
               <p

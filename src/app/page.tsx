@@ -2,12 +2,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getContentMap } from "@/lib/content";
 import CountdownTimer from "@/components/CountdownTimer";
 import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
 
 export default async function HomePage() {
-  const session = await getSession();
-  const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
+  const [session, settings, content] = await Promise.all([
+    getSession(),
+    prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
+    getContentMap(["home.tagline", "meldingen.registratie_gesloten_titel", "meldingen.registratie_gesloten_tekst"]),
+  ]);
   const registrationOpen = settings?.registrationOpen ?? false;
   const requireLogin = settings?.requireLogin ?? true;
   const deadline = settings?.deadline ? new Date(settings.deadline) : null;
@@ -82,7 +86,7 @@ export default async function HomePage() {
           </div>
         </div>
         <p className="text-slate-400 text-lg">
-          Stel jouw droomteam samen en strijd om de beste opstelling
+          {content["home.tagline"]}
         </p>
       </div>
 
@@ -104,7 +108,11 @@ export default async function HomePage() {
               Mijn team
             </Link>
             {registrationClosed ? (
-              <RegistrationClosedNotice compact />
+              <RegistrationClosedNotice
+                compact
+                title={content["meldingen.registratie_gesloten_titel"]}
+                text={content["meldingen.registratie_gesloten_tekst"]}
+              />
             ) : (
               showCountdown && <CountdownTimer deadline={deadline!.toISOString()} />
             )}
@@ -115,7 +123,11 @@ export default async function HomePage() {
         ) : (
           <>
             {registrationClosed ? (
-              <RegistrationClosedNotice compact />
+              <RegistrationClosedNotice
+                compact
+                title={content["meldingen.registratie_gesloten_titel"]}
+                text={content["meldingen.registratie_gesloten_tekst"]}
+              />
             ) : !requireLogin ? (
               <Link href="/team-indienen" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
                 Team samenstellen

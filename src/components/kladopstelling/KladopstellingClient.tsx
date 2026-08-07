@@ -55,6 +55,8 @@ interface Props {
   deadline: string | null;
   captainEnabled: boolean;
   captainBonusPerWin: number;
+  registrationClosedTitle?: string;
+  registrationClosedText?: string;
 }
 
 interface PredPointsConfig {
@@ -75,6 +77,7 @@ interface PersonInfo {
 
 export default function KladopstellingClient({
   formations, budget, requireLogin, inschrijfgeld, registrationOpen, deadline, captainEnabled, captainBonusPerWin,
+  registrationClosedTitle, registrationClosedText,
 }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -582,7 +585,7 @@ export default function KladopstellingClient({
                 </button>
               ) : registrationClosed ? (
                 <div className="mt-4 w-full">
-                  <RegistrationClosedNotice />
+                  <RegistrationClosedNotice title={registrationClosedTitle} text={registrationClosedText} />
                 </div>
               ) : (
                 <div className="mt-4 w-full bg-cyan-900/20 border border-cyan-500/30 rounded-2xl px-5 py-5">

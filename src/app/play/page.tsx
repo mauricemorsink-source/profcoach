@@ -1,14 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { getContentMap } from "@/lib/content";
 import TeamBuilder from "@/components/team/TeamBuilder";
 import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
 
 export default async function PlayPage() {
   const session = await getSession();
-  const [season, formations, settings] = await Promise.all([
+  const [season, formations, settings, content] = await Promise.all([
     prisma.season.findFirst({ where: { isActive: true } }),
     prisma.formation.findMany({ orderBy: { code: "asc" } }),
     prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
+    getContentMap(["meldingen.registratie_gesloten_titel", "meldingen.registratie_gesloten_tekst"]),
   ]);
 
   if (!season) {
@@ -35,7 +37,10 @@ export default async function PlayPage() {
       <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-8"
         style={{ background: "#060b14" }}>
         <div className="w-full max-w-sm">
-          <RegistrationClosedNotice />
+          <RegistrationClosedNotice
+            title={content["meldingen.registratie_gesloten_titel"]}
+            text={content["meldingen.registratie_gesloten_tekst"]}
+          />
         </div>
       </div>
     );

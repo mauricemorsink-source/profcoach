@@ -68,15 +68,18 @@ model GameSettings {
   inschrijfgeld      Int       @default(0)
   captainEnabled     Boolean   @default(false)
   captainBonusPerWin Int       @default(5)
-  rulesText          String    @default("")
-  termsText          String    @default("")
-  privacyText        String    @default("")
   standingsUpdatedAt DateTime?
   isProcessing       Boolean   @default(false)
   showTussenstand       Boolean   @default(true)
   showStatistieken      Boolean   @default(true)
   wijzigingsvensterOpen Boolean   @default(false)
   updatedAt             DateTime  @updatedAt
+}
+
+model SiteContent {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model Season {

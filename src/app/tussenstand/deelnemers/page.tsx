@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { getContentMap } from "@/lib/content";
 import DeelnemersTable from "@/components/tussenstand/DeelnemersTable";
 
 export default async function DeelnemersPage() {
@@ -11,12 +12,11 @@ export default async function DeelnemersPage() {
   const isAdmin = session?.role === "ADMIN";
 
   if (!isAdmin && settings?.showTussenstand === false) {
+    const content = await getContentMap(["tussenstand.hidden_message", "meldingen.whatsapp_follow"]);
     return (
       <div className="bg-slate-900 neon-border rounded-2xl p-8 text-center">
-        <p className="text-slate-300 font-medium">De tussenstand is momenteel niet te bekijken.</p>
-        <p className="text-slate-500 text-sm mt-2">
-          Volg de updates op Whatsapp om op de hoogte van de tussenstand en alle statistieken te blijven.
-        </p>
+        <p className="text-slate-300 font-medium">{content["tussenstand.hidden_message"]}</p>
+        <p className="text-slate-500 text-sm mt-2">{content["meldingen.whatsapp_follow"]}</p>
       </div>
     );
   }
