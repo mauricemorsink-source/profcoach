@@ -1072,6 +1072,7 @@ export default function WedstrijdenClient() {
                 <tbody>
                   {filteredMatches.map((m) => {
                     const isProcessable = m.status === "APPROVED" || m.status === "CORRECTION";
+                    const isAway = m.homeAway === "AWAY";
                     return (
                       <tr
                         key={m.id}
@@ -1111,11 +1112,11 @@ export default function WedstrijdenClient() {
                             month: "short",
                           })}
                         </td>
-                        <td className="py-2 text-slate-400 whitespace-nowrap">
-                          {m.homeAway === "AWAY" ? getOpponent(m.name, m.clubTeam) : TEAM_LABEL[m.clubTeam] ?? m.clubTeam}
+                        <td className={`py-2 whitespace-nowrap ${isAway ? "text-slate-400" : "font-semibold text-white"}`}>
+                          {isAway ? getOpponent(m.name, m.clubTeam) : TEAM_LABEL[m.clubTeam] ?? m.clubTeam}
                         </td>
-                        <td className="py-2 font-medium text-white whitespace-nowrap">
-                          {m.homeAway === "HOME" ? getOpponent(m.name, m.clubTeam) : TEAM_LABEL[m.clubTeam] ?? m.clubTeam}
+                        <td className={`py-2 whitespace-nowrap ${isAway ? "font-semibold text-white" : "text-slate-400"}`}>
+                          {isAway ? TEAM_LABEL[m.clubTeam] ?? m.clubTeam : getOpponent(m.name, m.clubTeam)}
                         </td>
                         <td className="py-2 text-slate-400 whitespace-nowrap">
                           {m.homeAway === "AWAY"
