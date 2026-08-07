@@ -84,8 +84,11 @@ export function calculateMatchPoints(
     // Gele kaarten
     if (perf.yellowCards > 0) pts += perf.yellowCards * getPoints(configMap, "yellowCard", pos);
 
-    // Rode kaart
-    if (perf.redCard) pts += getPoints(configMap, "redCard", pos);
+    // Rode kaart: bij een tweede gele kaart (yellowCards >= 2) is de rode kaart het
+    // automatische gevolg van de kaarten-optelling, geen aparte overtreding — dus geen
+    // extra rodekaart-aftrek bovenop de gele kaarten. Bij een losse (directe of na één
+    // gele kaart) rode kaart telt de rodekaart-aftrek wel gewoon mee.
+    if (perf.redCard && perf.yellowCards < 2) pts += getPoints(configMap, "redCard", pos);
 
     // Nul houden (alleen van toepassing voor GK en DEF)
     if (cleanSheet && isApplicable(configMap, "cleanSheet", pos)) {

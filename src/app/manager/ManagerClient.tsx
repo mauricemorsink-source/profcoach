@@ -690,7 +690,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
 
       {/* Multi-step modal: wedstrijd toevoegen */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 neon-border rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
 
             {/* Modal header */}
@@ -868,7 +868,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                           </tbody>
                         </table>
                       </div>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-950 to-transparent sm:hidden" />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-900 to-transparent sm:hidden" />
                       </div>
 
                       {/* Gastspeler */}
