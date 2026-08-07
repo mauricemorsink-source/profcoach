@@ -277,6 +277,7 @@ export default function WedstrijdenClient() {
   async function bulkDeleteMatches() {
     setBulkDeleting(true);
     setBulkDeleteError("");
+    setPointsMsg(null);
     const res = await fetch("/api/admin/matches", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -288,6 +289,9 @@ export default function WedstrijdenClient() {
     setDeleteSelectedIds(new Set());
     setConfirmBulkDelete(false);
     setBulkDeleteMode(false);
+    if (data.playersReverted > 0) {
+      setPointsMsg({ type: "ok", text: `${data.deleted} wedstrijden verwijderd, ${data.playersReverted} spelers bijgewerkt` });
+    }
     await loadAdminMatches();
   }
 
@@ -476,9 +480,18 @@ export default function WedstrijdenClient() {
   async function deleteMatch(id: string) {
     setDeletingMatchId(id);
     setMatchMenuId(null);
+    setPointsMsg(null);
     const res = await fetch(`/api/admin/matches/${id}`, { method: "DELETE" });
+    const data = await res.json();
     setDeletingMatchId(null);
-    if (res.ok) await loadAdminMatches();
+    if (!res.ok) {
+      setPointsMsg({ type: "err", text: data.error || "Verwijderen mislukt" });
+      return;
+    }
+    if (data.playersReverted > 0) {
+      setPointsMsg({ type: "ok", text: `Wedstrijd verwijderd, ${data.playersReverted} spelers bijgewerkt` });
+    }
+    await loadAdminMatches();
   }
 
   async function createMoment() {
@@ -755,11 +768,12 @@ export default function WedstrijdenClient() {
               <span className="text-sm text-red-400">
                 {deleteSelectedIds.size} wedstrijd{deleteSelectedIds.size !== 1 ? "en" : ""} geselecteerd
               </span>
-              {Array.from(deleteSelectedIds).some(
-                (id) => adminMatches.find((m) => m.id === id)?.status === "PROCESSED"
-              ) && (
+              {Array.from(deleteSelectedIds).some((id) => {
+                const s = adminMatches.find((m) => m.id === id)?.status;
+                return s === "PROCESSED" || s === "CORRECTION";
+              }) && (
                 <p className="text-xs text-amber-400 mt-0.5">
-                  Verwerkte wedstrijden worden omgezet naar &apos;Correctie&apos; i.p.v. verwijderd.
+                  Verwerkte wedstrijden: punten worden eerst teruggedraaid, daarna verwijderd.
                 </p>
               )}
             </div>

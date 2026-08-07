@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { calculateMatchPoints, buildConfigMap } from "@/lib/points";
 
 export async function PATCH(
   req: Request,
@@ -65,18 +66,54 @@ export async function DELETE(
   }
 
   const { matchId } = await params;
-  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: { performances: { include: { player: { select: { position: true } } } } },
+  });
   if (!match) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
 
-  // PROCESSED match: soft-delete → CORRECTION (punten moeten teruggedraaid worden)
-  if (match.status === "PROCESSED") {
-    await prisma.match.update({ where: { id: matchId }, data: { status: "CORRECTION" } });
-    return NextResponse.json({ ok: true, correction: true });
+  let playersReverted = 0;
+
+  // PROCESSED of CORRECTION: punten meteen terugdraaien voordat de wedstrijd verdwijnt
+  if (match.status === "PROCESSED" || match.status === "CORRECTION") {
+    const season = await prisma.season.findFirst({ where: { isActive: true } });
+    if (!season) return NextResponse.json({ error: "Geen actief seizoen gevonden" }, { status: 400 });
+
+    const configs = await prisma.pointsConfig.findMany();
+    const configMap = buildConfigMap(configs);
+    const deltaMap = calculateMatchPoints(match, configMap);
+
+    for (const [playerId, delta] of deltaMap) {
+      const current = await prisma.playerSeasonStats.findUnique({
+        where: { playerId_seasonId: { playerId, seasonId: season.id } },
+      });
+      if (!current) continue;
+      await prisma.playerSeasonStats.update({
+        where: { playerId_seasonId: { playerId, seasonId: season.id } },
+        data: {
+          totalPoints:   { decrement: delta.points },
+          goals:         { decrement: delta.goals },
+          penaltyGoals:  { decrement: delta.penaltyGoals },
+          assists:       { decrement: delta.assists },
+          ownGoals:      { decrement: delta.ownGoals },
+          yellowCards:   { decrement: delta.yellowCards },
+          redCards:      { decrement: delta.redCards },
+          cleanSheets:   { decrement: delta.cleanSheets },
+          goalsConceded: { decrement: delta.goalsConceded },
+          wins:          { decrement: delta.wins },
+          draws:         { decrement: delta.draws },
+          matchesPlayed: { decrement: delta.matchesPlayed },
+        },
+      });
+    }
+    playersReverted = deltaMap.size;
+
+    await prisma.gameSettings.update({ where: { id: "singleton" }, data: { standingsUpdatedAt: new Date() } });
   }
 
-  // Overige statussen: hard delete
+  // Altijd hard delete: geen tussenstatus meer die punten kan "kwijtraken"
   await prisma.matchPerformance.deleteMany({ where: { matchId } });
   await prisma.match.delete({ where: { id: matchId } });
 
-  return NextResponse.json({ ok: true, correction: false });
+  return NextResponse.json({ ok: true, playersReverted });
 }
