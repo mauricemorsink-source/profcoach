@@ -716,7 +716,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
             </div>
 
             {/* Modal body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="flex-1 overflow-y-auto overflow-x-auto px-6 py-5">
 
               {/* Step 1: Match details */}
               {modalStep === 1 && (
@@ -809,9 +809,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                   ) : (
                     <div>
                       <p className="text-slate-400 text-xs mb-3">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
-                      <div className="relative">
-                      <div className="overflow-x-auto overflow-y-auto max-h-[60vh] -mx-5 px-5">
-                        <table className="w-full text-sm min-w-[540px]">
+                      <table className="w-full text-sm min-w-[540px]">
                           <thead>
                             <tr className="text-left text-slate-500 text-xs">
                               <th className="py-2 font-medium sticky top-0 bg-slate-800 z-10">Speler</th>
@@ -879,10 +877,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                               </tr>
                             ))}
                           </tbody>
-                        </table>
-                      </div>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-900 to-transparent sm:hidden" />
-                      </div>
+                      </table>
 
                       {/* Gastspeler */}
                       <div className="mt-4">
