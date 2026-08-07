@@ -517,8 +517,9 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                 <p className="text-slate-500 text-sm">Nog geen wedstrijden ingevoerd.</p>
               </div>
             ) : (
-              <div className="bg-slate-900 neon-border rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="bg-slate-900 neon-border rounded-xl relative overflow-hidden">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[520px]">
                   <thead>
                     <tr className="text-left text-slate-500 border-b border-slate-700/50 bg-slate-800/50">
                       <th className="px-3 py-3 font-medium text-xs sm:text-sm sm:px-4">Datum</th>
@@ -578,6 +579,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     ))}
                   </tbody>
                 </table>
+                </div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-900 to-transparent sm:hidden" />
               </div>
             )}
           </div>
@@ -723,7 +726,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     <input type="text" value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} className={INPUT} placeholder="Naam tegenstander" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
+                    <div className="min-w-0">
                       <label className={LABEL}>Thuis / Uit</label>
                       <select value={addForm.homeAway} onChange={(e) => setAddForm({ ...addForm, homeAway: e.target.value })} className={INPUT}>
                         <option value="HOME">Thuis</option>
@@ -731,9 +734,9 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                         <option value="NEUTRAL">Neutraal</option>
                       </select>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className={LABEL}>Datum & tijd</label>
-                      <input type="date" value={addForm.matchDate} onChange={(e) => setAddForm({ ...addForm, matchDate: e.target.value })} className={INPUT} />
+                      <input type="date" value={addForm.matchDate} onChange={(e) => setAddForm({ ...addForm, matchDate: e.target.value })} className={INPUT + " min-w-0 max-w-full"} />
                     </div>
                   </div>
                   {/* Score — visual home/away display */}
