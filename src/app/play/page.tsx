@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import TeamBuilder from "@/components/team/TeamBuilder";
+import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
 
 export default async function PlayPage() {
+  const session = await getSession();
   const [season, formations, settings] = await Promise.all([
     prisma.season.findFirst({ where: { isActive: true } }),
     prisma.formation.findMany({ orderBy: { code: "asc" } }),
@@ -21,6 +24,22 @@ export default async function PlayPage() {
   const captainBonusPerWin = settings?.captainBonusPerWin ?? 5;
   const deadline = settings?.deadline ? new Date(settings.deadline) : null;
   const isPastDeadline = deadline ? new Date() > deadline : false;
+  const registrationClosed = !(settings?.registrationOpen ?? false) || isPastDeadline;
+
+  const existingTeam = session
+    ? await prisma.teamEntry.findFirst({ where: { userId: session.userId, seasonId: season.id } })
+    : null;
+
+  if (!existingTeam && registrationClosed) {
+    return (
+      <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-8"
+        style={{ background: "#060b14" }}>
+        <div className="w-full max-w-sm">
+          <RegistrationClosedNotice />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-[calc(100vh-56px)] py-8"

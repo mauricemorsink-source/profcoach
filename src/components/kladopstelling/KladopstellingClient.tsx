@@ -6,6 +6,7 @@ import { buildSlots } from "@/components/team/formationSlots";
 import { validateTeam, CLUB_LABEL } from "@/components/team/validate";
 import Pitch from "@/components/team/Pitch";
 import SpotlightTour, { TOUR_KEY, type TourStep } from "@/components/SpotlightTour";
+import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
 
 const SLOTS_KEY = "profcoach_team_slots";
 const FORMATION_KEY = "profcoach_team_formation";
@@ -51,6 +52,7 @@ interface Props {
   requireLogin: boolean;
   inschrijfgeld: number;
   registrationOpen: boolean;
+  deadline: string | null;
   captainEnabled: boolean;
   captainBonusPerWin: number;
 }
@@ -72,7 +74,7 @@ interface PersonInfo {
 }
 
 export default function KladopstellingClient({
-  formations, budget, requireLogin, inschrijfgeld, registrationOpen, captainEnabled, captainBonusPerWin,
+  formations, budget, requireLogin, inschrijfgeld, registrationOpen, deadline, captainEnabled, captainBonusPerWin,
 }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +136,9 @@ export default function KladopstellingClient({
     },
   ];
 
-  const canSubmitPublic = registrationOpen;
+  const deadlinePassed = !!deadline && new Date(deadline) <= new Date();
+  const registrationClosed = !registrationOpen || deadlinePassed;
+  const canSubmitPublic = registrationOpen && !requireLogin && !deadlinePassed;
 
   const formation = formations.find((f) => f.id === formationId) ?? formations[0];
   const slots: SlotDef[] = useMemo(() => buildSlots(formation), [formation]);
@@ -576,6 +580,10 @@ export default function KladopstellingClient({
                 <button data-tour="tour-next" onClick={goNext} disabled={!teamValid} className={BTN_PRIMARY + " ml-auto"}>
                   Volgende stap →
                 </button>
+              ) : registrationClosed ? (
+                <div className="mt-4 w-full">
+                  <RegistrationClosedNotice />
+                </div>
               ) : (
                 <div className="mt-4 w-full bg-cyan-900/20 border border-cyan-500/30 rounded-2xl px-5 py-5">
                   <p className="text-white font-bold text-sm mb-1">Tevreden met je opstelling?</p>

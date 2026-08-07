@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import CountdownTimer from "@/components/CountdownTimer";
+import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
 
 export default async function HomePage() {
   const session = await getSession();
@@ -10,7 +11,9 @@ export default async function HomePage() {
   const registrationOpen = settings?.registrationOpen ?? false;
   const requireLogin = settings?.requireLogin ?? true;
   const deadline = settings?.deadline ? new Date(settings.deadline) : null;
-  const showCountdown = registrationOpen && deadline && deadline > new Date();
+  const deadlinePassed = !!deadline && deadline <= new Date();
+  const registrationClosed = !registrationOpen || deadlinePassed;
+  const showCountdown = !registrationClosed && !!deadline;
 
   return (
     <div className="relative min-h-[calc(100vh-56px)] flex flex-col items-center justify-center p-8 overflow-hidden bg-[#060b14]">
@@ -100,21 +103,27 @@ export default async function HomePage() {
             <Link href="/mijn-team" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
               Mijn team
             </Link>
-            {showCountdown && <CountdownTimer deadline={deadline!.toISOString()} />}
+            {registrationClosed ? (
+              <RegistrationClosedNotice compact />
+            ) : (
+              showCountdown && <CountdownTimer deadline={deadline!.toISOString()} />
+            )}
             <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
               Tussenstand
             </Link>
           </>
         ) : (
           <>
-            {registrationOpen && !requireLogin ? (
+            {registrationClosed ? (
+              <RegistrationClosedNotice compact />
+            ) : !requireLogin ? (
               <Link href="/team-indienen" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
                 Team samenstellen
               </Link>
             ) : (
-              <div className="w-full text-center py-3 px-6 bg-slate-800/50 text-slate-500 font-bold rounded-xl text-lg border border-slate-700/50 cursor-not-allowed">
-                Inschrijving gesloten
-              </div>
+              <Link href="/login" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
+                Inloggen om mee te doen
+              </Link>
             )}
             {showCountdown && <CountdownTimer deadline={deadline!.toISOString()} />}
             <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">

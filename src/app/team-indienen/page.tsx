@@ -14,6 +14,7 @@ export default async function TeamIndienen() {
       requireLogin={settings?.requireLogin ?? true}
       inschrijfgeld={settings?.inschrijfgeld ?? 0}
       registrationOpen={settings?.registrationOpen ?? false}
+      deadline={settings?.deadline?.toISOString() ?? null}
       captainEnabled={settings?.captainEnabled ?? false}
       captainBonusPerWin={settings?.captainBonusPerWin ?? 5}
     />
