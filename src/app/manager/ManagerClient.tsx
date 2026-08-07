@@ -736,7 +736,15 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     </div>
                     <div className="min-w-0">
                       <label className={LABEL}>Datum & tijd</label>
-                      <input type="date" value={addForm.matchDate} onChange={(e) => setAddForm({ ...addForm, matchDate: e.target.value })} className={INPUT + " min-w-0 max-w-full"} />
+                      <div className="w-full overflow-hidden rounded-lg">
+                        <input
+                          type="date"
+                          value={addForm.matchDate}
+                          onChange={(e) => setAddForm({ ...addForm, matchDate: e.target.value })}
+                          className={INPUT + " min-w-0"}
+                          style={{ width: "100%", boxSizing: "border-box" }}
+                        />
+                      </div>
                     </div>
                   </div>
                   {/* Score — visual home/away display */}
