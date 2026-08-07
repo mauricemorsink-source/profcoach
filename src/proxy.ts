@@ -54,6 +54,15 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Mijn team: vereist ingelogde gebruiker (alleen de builder zelf, niet de publieke share-pagina's onder /mijn-team/[id])
+  if (pathname === "/mijn-team") {
+    const session = await getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.redirect(new URL("/login?redirect=/mijn-team", req.url));
+    }
+    return NextResponse.next();
+  }
+
   // Manager route: vereist MANAGER of ADMIN rol
   if (pathname.startsWith("/manager")) {
     const session = await getSessionFromRequest(req);
@@ -70,5 +79,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/admin/:path*", "/play/:path*", "/manager/:path*"],
+  matcher: ["/api/:path*", "/admin/:path*", "/play/:path*", "/manager/:path*", "/mijn-team"],
 };
