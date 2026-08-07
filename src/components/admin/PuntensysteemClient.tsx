@@ -16,31 +16,46 @@ const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-
 export default function PuntensysteemClient() {
   const [pointsConfig, setPointsConfig] = useState<PointsConfig[]>([]);
   const [loadingPoints, setLoadingPoints] = useState(true);
+  const [captainBonusPerWin, setCaptainBonusPerWin] = useState(5);
   const [pointsSaving, setPointsSaving] = useState(false);
   const [pointsMsg, setPointsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   async function loadPointsConfig() {
     setLoadingPoints(true);
-    const res = await fetch("/api/admin/points-config");
-    if (res.ok) setPointsConfig(await res.json());
+    const [pointsRes, settingsRes] = await Promise.all([
+      fetch("/api/admin/points-config"),
+      fetch("/api/admin/settings"),
+    ]);
+    if (pointsRes.ok) setPointsConfig(await pointsRes.json());
+    if (settingsRes.ok) {
+      const settings = await settingsRes.json();
+      setCaptainBonusPerWin(settings.captainBonusPerWin ?? 5);
+    }
     setLoadingPoints(false);
   }
 
   async function savePointsConfig() {
     setPointsSaving(true);
     setPointsMsg(null);
-    const res = await fetch("/api/admin/points-config", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(pointsConfig),
-    });
-    const data = await res.json();
+    const [pointsRes] = await Promise.all([
+      fetch("/api/admin/points-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pointsConfig),
+      }),
+      fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ captainBonusPerWin: Number(captainBonusPerWin) }),
+      }),
+    ]);
+    const data = await pointsRes.json();
     setPointsSaving(false);
-    if (!res.ok) {
+    if (!pointsRes.ok) {
       setPointsMsg({ type: "err", text: data.error || "Opslaan mislukt" });
     } else {
       setPointsConfig(data);
-      setPointsMsg({ type: "ok", text: "Puntentabel opgeslagen" });
+      setPointsMsg({ type: "ok", text: "Puntensysteem opgeslagen" });
     }
   }
 
@@ -121,6 +136,19 @@ export default function PuntensysteemClient() {
                 </tbody>
               </table>
             </div>
+
+            <div className="flex items-center gap-3 mb-5 border-t border-slate-800 pt-4">
+              <span className="text-sm font-medium text-slate-300">Aanvoerder bonus</span>
+              <input
+                type="number"
+                min="0"
+                value={captainBonusPerWin}
+                onChange={(e) => setCaptainBonusPerWin(Number(e.target.value))}
+                className="w-14 bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+              />
+              <span className="text-xs text-slate-500">punten per overwinning (alleen als &apos;Aanvoerder verplicht&apos; aanstaat)</span>
+            </div>
+
             {pointsMsg && (
               <p
                 className={`text-sm px-3 py-2 rounded-lg mb-3 border ${
@@ -133,7 +161,7 @@ export default function PuntensysteemClient() {
               </p>
             )}
             <button onClick={savePointsConfig} disabled={pointsSaving} className={BTN_PRIMARY}>
-              {pointsSaving ? "Opslaan..." : "Puntentabel opslaan"}
+              {pointsSaving ? "Opslaan..." : "Puntensysteem opslaan"}
             </button>
           </div>
         )}

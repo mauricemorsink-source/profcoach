@@ -14,7 +14,7 @@ const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg
 const LABEL = "block text-sm font-medium text-slate-400 mb-1";
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
 
-export default function TekstenClient() {
+export default function ContentClient() {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,7 +39,7 @@ export default function TekstenClient() {
     if (!res.ok) {
       setMsg({ type: "err", text: "Opslaan mislukt" });
     } else {
-      setMsg({ type: "ok", text: "Teksten opgeslagen" });
+      setMsg({ type: "ok", text: "Content opgeslagen" });
     }
   }
 
@@ -105,7 +105,7 @@ export default function TekstenClient() {
         </p>
       )}
       <button onClick={save} disabled={saving} className={BTN_PRIMARY}>
-        {saving ? "Opslaan..." : "Teksten opslaan"}
+        {saving ? "Opslaan..." : "Content opslaan"}
       </button>
     </div>
   );

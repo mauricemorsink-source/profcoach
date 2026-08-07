@@ -9,7 +9,6 @@ type GameSettings = {
   requireLogin: boolean;
   inschrijfgeld: number;
   captainEnabled: boolean;
-  captainBonusPerWin: number;
   showTussenstand: boolean;
   showStatistieken: boolean;
   wijzigingsvensterOpen: boolean;
@@ -28,7 +27,6 @@ export default function InstellingenClient() {
     requireLogin: true,
     inschrijfgeld: 0,
     captainEnabled: false,
-    captainBonusPerWin: 5,
     showTussenstand: true,
     showStatistieken: true,
     wijzigingsvensterOpen: false,
@@ -48,7 +46,6 @@ export default function InstellingenClient() {
         requireLogin: data.requireLogin ?? true,
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
-        captainBonusPerWin: data.captainBonusPerWin ?? 5,
         showTussenstand: data.showTussenstand ?? true,
         showStatistieken: data.showStatistieken ?? true,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
@@ -69,7 +66,6 @@ export default function InstellingenClient() {
         requireLogin: settingsForm.requireLogin,
         inschrijfgeld: Number(settingsForm.inschrijfgeld),
         captainEnabled: settingsForm.captainEnabled,
-        captainBonusPerWin: Number(settingsForm.captainBonusPerWin),
         showTussenstand: settingsForm.showTussenstand,
         showStatistieken: settingsForm.showStatistieken,
         wijzigingsvensterOpen: settingsForm.wijzigingsvensterOpen,
@@ -88,7 +84,6 @@ export default function InstellingenClient() {
         requireLogin: data.requireLogin ?? true,
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
-        captainBonusPerWin: data.captainBonusPerWin ?? 5,
         showTussenstand: data.showTussenstand ?? true,
         showStatistieken: data.showStatistieken ?? true,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
@@ -246,16 +241,7 @@ export default function InstellingenClient() {
               >
                 {settingsForm.captainEnabled ? "Aan" : "Uit"}
               </span>
-              <span className="text-xs text-slate-500">— aanvoerder krijgt</span>
-              <input
-                type="number"
-                min="0"
-                value={settingsForm.captainBonusPerWin}
-                onChange={(e) => setSettingsForm({ ...settingsForm, captainBonusPerWin: Number(e.target.value) })}
-                disabled={!settingsForm.captainEnabled}
-                className="w-14 bg-slate-800 border border-slate-700 text-white rounded-lg px-2 py-0.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/40 disabled:opacity-40"
-              />
-              <span className="text-xs text-slate-500">pt per overwinning</span>
+              <span className="text-xs text-slate-500">— bonuspunten per overwinning instelbaar bij Puntensysteem</span>
             </div>
             <div className="border-t border-slate-800 pt-5">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Zichtbaarheid voor deelnemers</p>

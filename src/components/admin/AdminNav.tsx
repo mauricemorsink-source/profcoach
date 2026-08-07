@@ -14,8 +14,7 @@ const TAB_SECTIONS = [
     heading: "Instellingen",
     tabs: [
       { href: "/admin/instellingen", label: "Spelinstellingen" },
-      { href: "/admin/puntensysteem", label: "Puntensysteem" },
-      { href: "/admin/teksten", label: "Teksten" },
+      { href: "/admin/content", label: "Content" },
     ],
   },
   {
