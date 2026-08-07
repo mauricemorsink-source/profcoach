@@ -32,7 +32,7 @@ export async function POST(
   });
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://profcoach.vercel.app";
-  const link = `${baseUrl}/auth/magic?token=${token}`;
+  const link = `${baseUrl}/api/auth/magic?token=${token}`;
 
   return NextResponse.json({ link });
 }
