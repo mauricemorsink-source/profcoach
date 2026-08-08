@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { calculateMatchPoints, buildConfigMap } from "@/lib/points";
+import { buildConfigMap, applyMatchPointsToSeason } from "@/lib/points";
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -34,6 +34,9 @@ export async function GET(req: Request) {
   try {
     const configs = await prisma.pointsConfig.findMany();
     const configMap = buildConfigMap(configs);
+    const captainBonus = settings?.captainEnabled
+      ? { enabled: true, pointsPerWin: settings.captainBonusPerWin ?? 5 }
+      : null;
 
     for (const moment of overdueMoments) {
       const approvedMatches = await prisma.match.findMany({
@@ -41,86 +44,12 @@ export async function GET(req: Request) {
         include: { performances: { include: { player: { select: { position: true } } } } },
       });
 
-      type Delta = ReturnType<typeof calculateMatchPoints> extends Map<string, infer V> ? V : never;
-      const totalDeltas = new Map<string, Delta>();
-
-      function mergeDelta(playerId: string, delta: Delta) {
-        const existing = totalDeltas.get(playerId);
-        if (existing) {
-          existing.points        += delta.points;
-          existing.goals         += delta.goals;
-          existing.penaltyGoals  += delta.penaltyGoals;
-          existing.assists       += delta.assists;
-          existing.ownGoals      += delta.ownGoals;
-          existing.yellowCards   += delta.yellowCards;
-          existing.redCards      += delta.redCards;
-          existing.cleanSheets   += delta.cleanSheets;
-          existing.goalsConceded += delta.goalsConceded;
-          existing.wins          += delta.wins;
-          existing.draws         += delta.draws;
-          existing.matchesPlayed += delta.matchesPlayed;
-        } else {
-          totalDeltas.set(playerId, { ...delta });
-        }
-      }
-
-      for (const match of approvedMatches) {
-        for (const [playerId, delta] of calculateMatchPoints(match, configMap)) {
-          mergeDelta(playerId, delta);
-        }
-      }
-
-      // Snapshot prev* voor alle spelers → delta wordt 0 voor wie niet speelde
-      await prisma.$executeRaw`
-        UPDATE "PlayerSeasonStats"
-        SET "prevPoints"      = "totalPoints",
-            "prevGoals"       = goals,
-            "prevAssists"     = assists,
-            "prevCleanSheets" = "cleanSheets"
-        WHERE "seasonId" = ${season.id}
-      `;
-
-      const playerIds = Array.from(totalDeltas.keys());
-      if (playerIds.length > 0) {
-        const currentStats = await prisma.playerSeasonStats.findMany({
-          where: { playerId: { in: playerIds }, seasonId: season.id },
-        });
-        const currentStatsMap = new Map(currentStats.map((s) => [s.playerId, s] as [string, typeof currentStats[number]]));
-
-        for (const [playerId, delta] of totalDeltas) {
-          const current = currentStatsMap.get(playerId);
-          await prisma.playerSeasonStats.upsert({
-            where: { playerId_seasonId: { playerId, seasonId: season.id } },
-            create: {
-              playerId, seasonId: season.id,
-              prevPoints: 0, prevGoals: 0, prevAssists: 0, prevCleanSheets: 0,
-              totalPoints: delta.points,
-              goals: delta.goals, penaltyGoals: delta.penaltyGoals,
-              assists: delta.assists, ownGoals: delta.ownGoals,
-              yellowCards: delta.yellowCards, redCards: delta.redCards,
-              cleanSheets: delta.cleanSheets, goalsConceded: delta.goalsConceded,
-              wins: delta.wins, draws: delta.draws, matchesPlayed: delta.matchesPlayed,
-            },
-            update: {
-              prevGoals:       current?.goals       ?? 0,
-              prevAssists:     current?.assists     ?? 0,
-              prevCleanSheets: current?.cleanSheets ?? 0,
-              totalPoints:   { increment: delta.points },
-              goals:         { increment: delta.goals },
-              penaltyGoals:  { increment: delta.penaltyGoals },
-              assists:       { increment: delta.assists },
-              ownGoals:      { increment: delta.ownGoals },
-              yellowCards:   { increment: delta.yellowCards },
-              redCards:      { increment: delta.redCards },
-              cleanSheets:   { increment: delta.cleanSheets },
-              goalsConceded: { increment: delta.goalsConceded },
-              wins:          { increment: delta.wins },
-              draws:         { increment: delta.draws },
-              matchesPlayed: { increment: delta.matchesPlayed },
-            },
-          });
-        }
-      }
+      const playersUpdated = await applyMatchPointsToSeason(
+        season.id,
+        configMap,
+        [{ matches: approvedMatches, factor: 1 }],
+        captainBonus
+      );
 
       if (approvedMatches.length > 0) {
         await prisma.match.updateMany({
@@ -135,7 +64,7 @@ export async function GET(req: Request) {
       });
 
       totalProcessed += approvedMatches.length;
-      totalPlayers += totalDeltas.size;
+      totalPlayers += playersUpdated;
     }
 
     await prisma.gameSettings.update({
