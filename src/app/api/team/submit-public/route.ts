@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { rateLimit, getIp } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
-  const { ok, retryAfterSec } = rateLimit(`team-submit-public:${getIp(req)}`, { max: 5, windowMs: 60 * 60 * 1000 });
+  const { ok, retryAfterSec } = await rateLimit(`team-submit-public:${getIp(req)}`, { max: 5, windowMs: 60 * 60 * 1000 });
   if (!ok) {
     return NextResponse.json({ error: "Te veel inschrijvingen vanaf dit adres. Probeer het later opnieuw." }, {
       status: 429,

@@ -82,6 +82,12 @@ model SiteContent {
   updatedAt DateTime @updatedAt
 }
 
+model RateLimitEntry {
+  key     String   @id
+  count   Int      @default(1)
+  resetAt DateTime
+}
+
 model Season {
   id          String              @id @default(cuid())
   name        String

@@ -1,24 +1,25 @@
-// Simple in-memory rate limiter per IP.
-// Works per serverless instance; for stricter limits use a shared store (Redis/KV).
+// Rate limiter backed by Postgres (RateLimitEntry), so limits are shared across
+// serverless instances instead of living in per-instance memory.
+import { prisma } from "@/lib/prisma";
 
-type Entry = { count: number; resetAt: number };
-const store = new Map<string, Entry>();
-
-export function rateLimit(
+export async function rateLimit(
   key: string,
   { max, windowMs }: { max: number; windowMs: number }
-): { ok: boolean; retryAfterSec: number } {
-  const now = Date.now();
-  const entry = store.get(key);
+): Promise<{ ok: boolean; retryAfterSec: number }> {
+  const resetAt = new Date(Date.now() + windowMs);
 
-  if (!entry || entry.resetAt < now) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return { ok: true, retryAfterSec: 0 };
-  }
+  const rows = await prisma.$queryRaw<{ count: number; resetAt: Date }[]>`
+    INSERT INTO "RateLimitEntry" (key, count, "resetAt")
+    VALUES (${key}, 1, ${resetAt})
+    ON CONFLICT (key) DO UPDATE SET
+      count = CASE WHEN "RateLimitEntry"."resetAt" < NOW() THEN 1 ELSE "RateLimitEntry".count + 1 END,
+      "resetAt" = CASE WHEN "RateLimitEntry"."resetAt" < NOW() THEN ${resetAt} ELSE "RateLimitEntry"."resetAt" END
+    RETURNING count, "resetAt"
+  `;
 
-  entry.count += 1;
-  if (entry.count > max) {
-    return { ok: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
+  const row = rows[0];
+  if (row.count > max) {
+    return { ok: false, retryAfterSec: Math.ceil((row.resetAt.getTime() - Date.now()) / 1000) };
   }
   return { ok: true, retryAfterSec: 0 };
 }

@@ -5,7 +5,7 @@ import { randomBytes } from "crypto";
 import { rateLimit, getIp } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
-  const { ok, retryAfterSec } = rateLimit(`edit-request:${getIp(req)}`, { max: 3, windowMs: 60 * 60 * 1000 });
+  const { ok, retryAfterSec } = await rateLimit(`edit-request:${getIp(req)}`, { max: 3, windowMs: 60 * 60 * 1000 });
   if (!ok) {
     return NextResponse.json({ error: "Te veel aanvragen. Probeer het over een uur opnieuw." }, {
       status: 429,

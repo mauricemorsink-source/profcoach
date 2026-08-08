@@ -4,7 +4,7 @@ import { verifyPassword, setSessionCookie } from "@/lib/auth";
 import { rateLimit, getIp } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
-  const { ok, retryAfterSec } = rateLimit(`login:${getIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
+  const { ok, retryAfterSec } = await rateLimit(`login:${getIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
   if (!ok) {
     return NextResponse.json({ error: "Te veel pogingen. Probeer het later opnieuw." }, {
       status: 429,

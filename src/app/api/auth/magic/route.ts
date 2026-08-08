@@ -4,7 +4,7 @@ import { setSessionCookie } from "@/lib/auth";
 import { rateLimit, getIp } from "@/lib/rateLimit";
 
 export async function GET(req: NextRequest) {
-  const { ok } = rateLimit(`magic:${getIp(req)}`, { max: 20, windowMs: 15 * 60 * 1000 });
+  const { ok } = await rateLimit(`magic:${getIp(req)}`, { max: 20, windowMs: 15 * 60 * 1000 });
   if (!ok) {
     return NextResponse.redirect(new URL("/login?error=tooManyRequests", req.url));
   }
