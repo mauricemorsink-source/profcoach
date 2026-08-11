@@ -31,6 +31,7 @@ export async function PUT(req: Request) {
         defPoints: row.defPoints ?? null,
         midPoints: row.midPoints ?? null,
         attPoints: row.attPoints ?? null,
+        capPerMatch: row.capPerMatch ?? null,
       },
     });
   }

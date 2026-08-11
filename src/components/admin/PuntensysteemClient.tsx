@@ -9,6 +9,7 @@ type PointsConfig = {
   defPoints: number | null;
   midPoints: number | null;
   attPoints: number | null;
+  capPerMatch: number | null;
 };
 
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
@@ -61,7 +62,7 @@ export default function PuntensysteemClient() {
 
   function updatePointsCell(
     id: string,
-    field: "gkPoints" | "defPoints" | "midPoints" | "attPoints",
+    field: "gkPoints" | "defPoints" | "midPoints" | "attPoints" | "capPerMatch",
     value: string
   ) {
     setPointsConfig((prev) =>
@@ -92,6 +93,7 @@ export default function PuntensysteemClient() {
                     <th className="pb-2 font-semibold text-center w-12">DEF</th>
                     <th className="pb-2 font-semibold text-center w-12">MID</th>
                     <th className="pb-2 font-semibold text-center w-12">ATT</th>
+                    <th className="pb-2 font-semibold text-center w-20">Max/wedstrijd</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -131,11 +133,24 @@ export default function PuntensysteemClient() {
                             )}
                           </td>
                         ))}
+                        <td className="py-2 text-center">
+                          <input
+                            type="number"
+                            value={cfg.capPerMatch ?? ""}
+                            onChange={(e) => updatePointsCell(cfg.id, "capPerMatch", e.target.value)}
+                            placeholder="—"
+                            title="Maximum aantal punten dat deze categorie per wedstrijd mag opleveren/kosten. Leeg = geen maximum."
+                            className="w-14 bg-slate-800 border border-slate-700 text-white rounded px-1 py-1 text-xs text-center placeholder:text-slate-700 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                          />
+                        </td>
                       </tr>
                     ))}
                 </tbody>
               </table>
             </div>
+            <p className="text-xs text-slate-500 -mt-3 mb-5">
+              <strong className="text-slate-400">Max/wedstrijd</strong>: begrenst wat een categorie in één wedstrijd maximaal aan punten mag opleveren of kosten (bijv. bij tegendoelpunten: nooit meer dan -3, ook bij 4 of meer tegengoals). Leeg laten = geen grens.
+            </p>
 
             <div className="flex items-center gap-3 mb-5 border-t border-slate-800 pt-4">
               <span className="text-sm font-medium text-slate-300">Aanvoerder bonus</span>

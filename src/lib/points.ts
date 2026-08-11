@@ -96,9 +96,13 @@ export function calculateMatchPoints(
       pts += getPoints(configMap, "cleanSheet", pos);
     }
 
-    // Tegendoelpunten (alleen van toepassing voor GK en DEF)
+    // Tegendoelpunten (alleen van toepassing voor GK en DEF), met eventueel een maximum
+    // aantal minpunten per wedstrijd ongeacht hoeveel goals er daadwerkelijk tegen komen.
     if (isApplicable(configMap, "goalsConceded", pos) && match.goalsConceded > 0) {
-      pts += match.goalsConceded * getPoints(configMap, "goalsConceded", pos);
+      let concededPts = match.goalsConceded * getPoints(configMap, "goalsConceded", pos);
+      const cap = configMap["goalsConceded"]?.capPerMatch;
+      if (cap != null) concededPts = Math.max(concededPts, cap);
+      pts += concededPts;
     }
 
     deltaMap.set(perf.playerId, {

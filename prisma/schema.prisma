@@ -163,13 +163,14 @@ model TeamEntryPlayer {
 }
 
 model PointsConfig {
-  id        String   @id
-  label     String
-  gkPoints  Int?
-  defPoints Int?
-  midPoints Int?
-  attPoints Int?
-  updatedAt DateTime @updatedAt
+  id          String   @id
+  label       String
+  gkPoints    Int?
+  defPoints   Int?
+  midPoints   Int?
+  attPoints   Int?
+  capPerMatch Int?
+  updatedAt   DateTime @updatedAt
 }
 
 model PublishMoment {
