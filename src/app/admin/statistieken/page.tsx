@@ -35,12 +35,12 @@ function RankedList({ items, emptyText }: { items: ListItem[]; emptyText: string
 
 // Compacte variant voor het deelbare 3-koloms blok: geen teamnaam, tekst wrapt i.p.v. af te knippen.
 function CompactRankedList({ items, emptyText }: { items: ListItem[]; emptyText: string }) {
-  if (items.length === 0) return <p className="text-slate-500 text-[11px]">{emptyText}</p>;
+  if (items.length === 0) return <p className="text-slate-500 text-sm">{emptyText}</p>;
   return (
-    <ol className="space-y-1.5">
+    <ol className="space-y-2">
       {items.map((it) => (
-        <li key={it.key} className="flex items-start gap-1 text-[11px] leading-tight">
-          <span className="text-slate-600 shrink-0 w-3 text-right">{it.rank}</span>
+        <li key={it.key} className="flex items-start gap-1.5 text-sm leading-tight">
+          <span className="text-slate-600 shrink-0 w-4 text-right">{it.rank}</span>
           <span className="font-medium text-white flex-1 min-w-0 break-words">{it.primary}</span>
           <span className="font-bold text-cyan-400 shrink-0">{it.value}</span>
         </li>
@@ -105,7 +105,7 @@ export default async function AdminStatistiekenPage() {
       include: { player: { select: { name: true, clubTeam: true } } },
     }),
     prisma.playerSeasonStats.findMany({
-      where: { seasonId: season.id, cleanSheets: { gt: 0 } },
+      where: { seasonId: season.id, cleanSheets: { gt: 0 }, player: { position: "GK" } },
       orderBy: { cleanSheets: "desc" },
       take: 7,
       include: { player: { select: { name: true, clubTeam: true } } },
@@ -253,15 +253,15 @@ export default async function AdminStatistiekenPage() {
         </div>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 min-w-0">
-            <h3 className="font-bold text-[10px] sm:text-sm uppercase tracking-wide text-amber-400 mb-2 sm:mb-3">⚽ Topscorers</h3>
+            <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-amber-400 mb-2 sm:mb-3">⚽ Topscorers</h3>
             <CompactRankedList items={topScorerItems} emptyText="Nog geen doelpunten dit seizoen." />
           </div>
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 min-w-0">
-            <h3 className="font-bold text-[10px] sm:text-sm uppercase tracking-wide text-cyan-400 mb-2 sm:mb-3">🅰️ Assists</h3>
+            <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-cyan-400 mb-2 sm:mb-3">🅰️ Assists</h3>
             <CompactRankedList items={topAssistItems} emptyText="Nog geen assists dit seizoen." />
           </div>
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 min-w-0">
-            <h3 className="font-bold text-[10px] sm:text-sm uppercase tracking-wide text-green-400 mb-2 sm:mb-3">🧤 Clean sheets</h3>
+            <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-green-400 mb-2 sm:mb-3">🧤 Clean sheets</h3>
             <CompactRankedList items={topCleanSheetItems} emptyText="Nog geen clean sheets dit seizoen." />
           </div>
         </div>
