@@ -7,6 +7,7 @@ import { validateTeam, CLUB_LABEL } from "@/components/team/validate";
 import Pitch from "@/components/team/Pitch";
 import SpotlightTour, { TOUR_KEY, type TourStep } from "@/components/SpotlightTour";
 import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
+import GoalConfetti from "@/components/GoalConfetti";
 
 const SLOTS_KEY = "profcoach_team_slots";
 const FORMATION_KEY = "profcoach_team_formation";
@@ -407,6 +408,7 @@ export default function KladopstellingClient({
   if (submitted) {
     return (
       <div className="min-h-screen bg-[#060b14]">
+        <GoalConfetti />
         <div className="max-w-xl mx-auto px-4 py-8 pb-16">
           {/* Bevestiging */}
           <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex items-center gap-3">
