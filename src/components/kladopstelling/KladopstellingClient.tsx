@@ -758,7 +758,7 @@ export default function KladopstellingClient({
                 <input type="checkbox" id="akkoord" checked={betaaldAkkoord} onChange={(e) => setBetaaldAkkoord(e.target.checked)} className="mt-0.5 w-4 h-4 accent-cyan-500 shrink-0" />
                 <label htmlFor="akkoord" className="text-sm text-slate-300 cursor-pointer">
                   {inschrijfgeld > 0
-                    ? `Ik ga akkoord met het inschrijfgeld van €${inschrijfgeldDisplay} dat via een Tikkie wordt betaald`
+                    ? "Ik ga akkoord met het inschrijfgeld dat via een Tikkie wordt betaald"
                     : "Ik ga akkoord met de spelregels en dien mijn team definitief in"}
                 </label>
               </div>
