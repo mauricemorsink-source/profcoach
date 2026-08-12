@@ -734,6 +734,9 @@ export default function KladopstellingClient({
                   <p className="text-xs text-slate-400">
                     Na het indienen ontvang je een Tikkie op je telefoonnummer voor het inschrijfgeld van €{inschrijfgeldDisplay}.
                   </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Ben je onder de 18 jaar? Dan is het inschrijfgeld €7,50.
+                  </p>
                 </div>
               )}
 
