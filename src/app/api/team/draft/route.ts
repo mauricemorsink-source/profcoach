@@ -70,6 +70,12 @@ export async function POST(req: Request) {
     }
   }
 
+  // Admins/managers (of accounts die expliciet niet als deelnemer gemarkeerd zijn) mogen geen
+  // lege conceptteam krijgen — dat leidde eerder tot ongewenste lege teams in het systeem.
+  if (session.role !== "USER" || !session.isParticipant) {
+    return NextResponse.json({ error: "Dit account kan geen team samenstellen" }, { status: 403 });
+  }
+
   const formation = await prisma.formation.findFirst({ orderBy: { code: "asc" } });
   if (!formation) return NextResponse.json({ error: "Geen formaties" }, { status: 400 });
 

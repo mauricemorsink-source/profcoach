@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getContentMap } from "@/lib/content";
@@ -31,6 +32,12 @@ export default async function PlayPage() {
   const existingTeam = session
     ? await prisma.teamEntry.findFirst({ where: { userId: session.userId, seasonId: season.id } })
     : null;
+
+  // Ingelogde admins/managers zonder eigen team horen hier niet — anders wordt er bij het
+  // laden van TeamBuilder automatisch een lege conceptteam voor ze aangemaakt.
+  if (session && !existingTeam && (session.role !== "USER" || !session.isParticipant)) {
+    redirect(session.role === "ADMIN" ? "/admin" : session.role === "MANAGER" ? "/manager" : "/");
+  }
 
   if (!existingTeam && registrationClosed) {
     return (

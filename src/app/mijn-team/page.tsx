@@ -32,6 +32,12 @@ export default async function MijnTeamPage() {
 
   const existingTeam = await prisma.teamEntry.findFirst({ where: { userId: session.userId, seasonId: season.id } });
 
+  // Admins/managers zonder eigen team horen hier niet — anders wordt er bij het laden
+  // van TeamBuilder automatisch een lege conceptteam voor ze aangemaakt.
+  if (!existingTeam && (session.role !== "USER" || !session.isParticipant)) {
+    redirect(session.role === "ADMIN" ? "/admin" : session.role === "MANAGER" ? "/manager" : "/");
+  }
+
   if (!existingTeam && registrationClosed) {
     return (
       <div className="min-h-[calc(100vh-56px)] flex items-center justify-center p-8"

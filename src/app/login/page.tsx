@@ -8,7 +8,7 @@ import { Suspense } from "react";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/play";
+  const redirectParam = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +29,7 @@ function LoginForm() {
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
-      let data: { error?: string } = {};
+      let data: { error?: string; role?: string } = {};
       try { data = await res.json(); } catch { /* non-JSON body */ }
 
       if (!res.ok) {
@@ -38,7 +38,10 @@ function LoginForm() {
         return;
       }
 
-      router.push(redirect);
+      // Zonder expliciete redirect: stuur admins/managers naar hun eigen omgeving in plaats
+      // van /play, anders wordt daar bij het laden automatisch een lege conceptteam aangemaakt.
+      const defaultRedirect = data.role === "ADMIN" ? "/admin" : data.role === "MANAGER" ? "/manager" : "/play";
+      router.push(redirectParam ?? defaultRedirect);
       router.refresh();
     } catch {
       setError("Netwerkfout. Controleer je verbinding en probeer opnieuw.");

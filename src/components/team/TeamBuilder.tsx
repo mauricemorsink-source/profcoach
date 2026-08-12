@@ -63,6 +63,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [showPickerModal, setShowPickerModal] = useState(false);
@@ -119,6 +120,12 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
       const playersData = await playersRes.json();
       const draftData = await draftRes.json();
       if (predConfigRes.ok) setPredPointsConfig(await predConfigRes.json());
+
+      if (!draftRes.ok || !draftData.team) {
+        setInitError(draftData.error || "Kon geen team laden");
+        setLoading(false);
+        return;
+      }
 
       setPlayers(playersData);
 
@@ -389,6 +396,14 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
     await navigator.clipboard.writeText(url);
     setCopyFeedback(true);
     setTimeout(() => setCopyFeedback(false), 2000);
+  }
+
+  if (initError) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-500 text-sm">
+        {initError}
+      </div>
+    );
   }
 
   if (loading) {
