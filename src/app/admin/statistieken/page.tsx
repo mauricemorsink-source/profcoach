@@ -79,19 +79,19 @@ export default async function AdminStatistiekenPage() {
     prisma.playerSeasonStats.findMany({
       where: { seasonId: season.id, goals: { gt: 0 } },
       orderBy: { goals: "desc" },
-      take: 5,
+      take: 10,
       include: { player: { select: { name: true, clubTeam: true } } },
     }),
     prisma.playerSeasonStats.findMany({
       where: { seasonId: season.id, assists: { gt: 0 } },
       orderBy: { assists: "desc" },
-      take: 5,
+      take: 10,
       include: { player: { select: { name: true, clubTeam: true } } },
     }),
     prisma.playerSeasonStats.findMany({
       where: { seasonId: season.id, cleanSheets: { gt: 0 } },
       orderBy: { cleanSheets: "desc" },
-      take: 5,
+      take: 7,
       include: { player: { select: { name: true, clubTeam: true } } },
     }),
   ]);
