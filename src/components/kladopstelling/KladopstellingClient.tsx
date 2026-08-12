@@ -137,6 +137,16 @@ export default function KladopstellingClient({
       title: "Naar de volgende stap",
       body: "Zodra alle regels groen zijn en je 11 spelers hebt gekozen, klik je hier om verder te gaan met je inschrijving.",
     },
+    ...(captainEnabled ? [{
+      target: "tour-captain",
+      title: "Stap 2: Aanvoerder kiezen",
+      body: "Daarna kies je (optioneel) een aanvoerder uit je team. Die verdient voor elke overwinning extra bonuspunten.",
+    }] : []),
+    {
+      target: "tour-predictions",
+      title: "Stap 3: Bonusvoorspellingen",
+      body: "Tot slot vul je nog een paar bonusvoorspellingen in, zoals topscorer en assistkoning. Dat hoeft niet uit je eigen team te komen — je kiest uit alle spelers in het spel!",
+    },
   ];
 
   const deadlinePassed = !!deadline && new Date(deadline) <= new Date();
@@ -185,11 +195,15 @@ export default function KladopstellingClient({
   }, []);
 
   function handleTourStepEnter(i: number) {
-    if (i === 3) { setSelectedSlot(0); setShowPickerModal(true); }
+    const target = TOUR_STEPS[i]?.target;
+    if (target === "tour-picker") { setSelectedSlot(0); setShowPickerModal(true); }
+    if (target === "tour-captain") setStep(2);
+    if (target === "tour-predictions") setStep(3);
   }
 
   function handleTourStepLeave(i: number) {
-    if (i === 3) { setShowPickerModal(false); setSelectedSlot(null); }
+    const target = TOUR_STEPS[i]?.target;
+    if (target === "tour-picker") { setShowPickerModal(false); setSelectedSlot(null); }
   }
 
   useEffect(() => {
@@ -474,10 +488,10 @@ export default function KladopstellingClient({
 
   return (
     <div className="min-h-screen bg-[#060b14]">
-      {showTour && step === 1 && (
+      {showTour && step !== 4 && (
         <SpotlightTour
           steps={TOUR_STEPS}
-          onDone={() => { setShowTour(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+          onDone={() => { setShowTour(false); setStep(1); window.scrollTo({ top: 0, behavior: "instant" }); }}
           onStepEnter={handleTourStepEnter}
           onStepLeave={handleTourStepLeave}
         />
@@ -602,7 +616,7 @@ export default function KladopstellingClient({
         {/* ── STAP 2: Aanvoerder ── */}
         {step === 2 && captainEnabled && (
           <>
-            <div className="bg-slate-900 neon-border rounded-2xl p-5">
+            <div data-tour="tour-captain" className="bg-slate-900 neon-border rounded-2xl p-5">
               <p className="text-base font-bold text-white mb-1">Kies je aanvoerder</p>
               <p className="text-slate-400 text-sm mb-5">
                 Kies je aanvoerder en maak kans op extra punten: jouw aanvoerder ontvangt voor iedere overwinning{" "}
@@ -647,11 +661,11 @@ export default function KladopstellingClient({
         {/* ── STAP 3: Voorspellingen ── */}
         {step === 3 && (
           <>
-            <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
+            <div data-tour="tour-predictions" className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
               <div>
                 <p className="text-base font-bold text-white mb-1">Bonusvoorspellingen</p>
                 <p className="text-slate-400 text-sm">Vul je voorspellingen in voor bonuspunten aan het einde van het seizoen. Dit kan na het indienen niet meer worden gewijzigd.</p>
-                <p className="text-slate-500 text-xs mt-1">De topscorer en assistkoning hoeven niet in jouw eigen team te zitten — je kiest uit alle spelers in het spel.</p>
+                <p className="text-slate-500 text-sm mt-1">De topscorer en assistkoning hoeven niet in jouw eigen team te zitten — je kiest uit alle spelers in het spel.</p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
@@ -730,7 +744,7 @@ export default function KladopstellingClient({
 
               {inschrijfgeld > 0 && (
                 <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl px-4 py-3">
-                  <p className="text-sm font-bold text-amber-300 mb-1">Inschrijfgeld: €{inschrijfgeldDisplay}</p>
+                  <p className="text-sm font-bold text-amber-300 mb-1">Inschrijfgeld</p>
                   <p className="text-xs text-slate-400">
                     Na het indienen ontvang je een Tikkie op je telefoonnummer voor het inschrijfgeld van €{inschrijfgeldDisplay}.
                   </p>
