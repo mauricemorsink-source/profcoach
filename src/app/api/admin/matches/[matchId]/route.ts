@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { calculateMatchPoints, buildConfigMap } from "@/lib/points";
+import { calculateMatchPoints, buildConfigMap, reverseCaptainBonusForMatches } from "@/lib/points";
 
 export async function PATCH(
   req: Request,
@@ -107,6 +107,13 @@ export async function DELETE(
       });
     }
     playersReverted = deltaMap.size;
+
+    const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
+    await reverseCaptainBonusForMatches(
+      season.id,
+      [match],
+      settings ? { enabled: settings.captainEnabled, pointsPerWin: settings.captainBonusPerWin } : null
+    );
 
     await prisma.gameSettings.update({ where: { id: "singleton" }, data: { standingsUpdatedAt: new Date() } });
   }

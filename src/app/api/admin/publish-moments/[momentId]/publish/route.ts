@@ -248,7 +248,7 @@ export async function POST(
         if (wins > 0) {
           await prisma.teamEntry.update({
             where: { id: entry.id },
-            data: { bonusPoints: { increment: wins * settings.captainBonusPerWin } },
+            data: { captainPoints: { increment: wins * settings.captainBonusPerWin } },
           });
         }
       }

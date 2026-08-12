@@ -263,3 +263,53 @@ export async function applyMatchPointsToSeason(
 
   return totalDeltas.size;
 }
+
+/**
+ * Draait de aanvoerdersbonus terug voor een set wedstrijden die verwijderd of teruggezet
+ * worden. Spiegelt de toekenningslogica in applyMatchPointsToSeason exact: per wedstrijd die
+ * een overwinning was, telt elke TeamEntry waarvan de huidige aanvoerder in die wedstrijd
+ * speelde één gewonnen wedstrijd minder, en wordt captainPoints navenant verlaagd. Gebruikt
+ * door de admin delete-, bulk-delete- en revert-routes voor wedstrijden, zodat een verwijderde
+ * of teruggezette wedstrijd nooit een "vergeten" aanvoerdersbonus achterlaat.
+ */
+export async function reverseCaptainBonusForMatches(
+  seasonId: string,
+  matches: MatchWithPerformances[],
+  captainBonus: { enabled: boolean; pointsPerWin: number } | null
+): Promise<void> {
+  if (!captainBonus?.enabled || matches.length === 0) return;
+
+  const teamEntries = await prisma.teamEntry.findMany({
+    where: { seasonId, captainSlot: { not: null } },
+    include: { players: { select: { playerId: true, slotIndex: true } } },
+  });
+
+  const entriesByCaptainPlayerId = new Map<string, typeof teamEntries>();
+  for (const te of teamEntries) {
+    const captainPlayer = te.players.find((p) => p.slotIndex === te.captainSlot);
+    if (!captainPlayer) continue;
+    const list = entriesByCaptainPlayerId.get(captainPlayer.playerId) ?? [];
+    list.push(te);
+    entriesByCaptainPlayerId.set(captainPlayer.playerId, list);
+  }
+
+  const winsToReverseByTeamEntry = new Map<string, number>();
+  for (const match of matches) {
+    if (match.goalsScored <= match.goalsConceded) continue; // geen overwinning, geen bonus toegekend
+    for (const perf of match.performances) {
+      if (!perf.played) continue;
+      const entries = entriesByCaptainPlayerId.get(perf.playerId);
+      if (!entries) continue;
+      for (const te of entries) {
+        winsToReverseByTeamEntry.set(te.id, (winsToReverseByTeamEntry.get(te.id) ?? 0) + 1);
+      }
+    }
+  }
+
+  for (const [teamEntryId, wins] of winsToReverseByTeamEntry) {
+    await prisma.teamEntry.update({
+      where: { id: teamEntryId },
+      data: { captainPoints: { decrement: captainBonus.pointsPerWin * wins } },
+    });
+  }
+}
