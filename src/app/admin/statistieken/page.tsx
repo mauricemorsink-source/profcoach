@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 
 const TEAM_LABEL: Record<string, string> = {
@@ -49,7 +50,7 @@ export default async function AdminStatistiekenPage() {
     return <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>;
   }
 
-  const [entries, activePlayers, goalsAgg, yellowCardsAgg] = await Promise.all([
+  const [entries, activePlayers, goalsAgg, yellowCardsAgg, topScorerStats, topAssistStats, topCleanSheetStats] = await Promise.all([
     prisma.teamEntry.findMany({
       where: { seasonId: season.id },
       include: {
@@ -75,10 +76,41 @@ export default async function AdminStatistiekenPage() {
       where: { match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
       _sum: { yellowCards: true },
     }),
+    prisma.playerSeasonStats.findMany({
+      where: { seasonId: season.id, goals: { gt: 0 } },
+      orderBy: { goals: "desc" },
+      take: 5,
+      include: { player: { select: { name: true, clubTeam: true } } },
+    }),
+    prisma.playerSeasonStats.findMany({
+      where: { seasonId: season.id, assists: { gt: 0 } },
+      orderBy: { assists: "desc" },
+      take: 5,
+      include: { player: { select: { name: true, clubTeam: true } } },
+    }),
+    prisma.playerSeasonStats.findMany({
+      where: { seasonId: season.id, cleanSheets: { gt: 0 } },
+      orderBy: { cleanSheets: "desc" },
+      take: 5,
+      include: { player: { select: { name: true, clubTeam: true } } },
+    }),
   ]);
 
   const totalGoalsScored = goalsAgg._sum.goalsScored ?? 0;
   const totalYellowCards = yellowCardsAgg._sum.yellowCards ?? 0;
+
+  const topScorerItems: ListItem[] = topScorerStats.map((s, i) => ({
+    key: s.playerId, rank: i + 1, primary: s.player.name,
+    secondary: TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam, value: `${s.goals}`,
+  }));
+  const topAssistItems: ListItem[] = topAssistStats.map((s, i) => ({
+    key: s.playerId, rank: i + 1, primary: s.player.name,
+    secondary: TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam, value: `${s.assists}`,
+  }));
+  const topCleanSheetItems: ListItem[] = topCleanSheetStats.map((s, i) => ({
+    key: s.playerId, rank: i + 1, primary: s.player.name,
+    secondary: TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam, value: `${s.cleanSheets}`,
+  }));
 
   const totalEntries = entries.length;
 
@@ -189,6 +221,36 @@ export default async function AdminStatistiekenPage() {
         <span className="text-sm text-slate-400 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5">
           {totalEntries} team{totalEntries !== 1 ? "s" : ""} ingediend
         </span>
+      </div>
+
+      {/* Deelbaar 2x2-blok: topscorers, assists, clean sheets — bedoeld om als vierkant/rechthoek te screenshotten */}
+      <div
+        className="bg-slate-900 neon-border rounded-2xl p-5 sm:p-6"
+        style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(14,40,80,0.6) 0%, #0b1120 70%)" }}
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <Image src="/file-removebg-preview.png" alt="ProfCoach" width={40} height={40} className="object-contain shrink-0" />
+          <div>
+            <p className="font-black text-white text-lg leading-tight">ProfCoach</p>
+            <p className="text-slate-500 text-xs">Tussenstand · {season.name}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 min-w-0">
+            <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-amber-400 mb-3">⚽ Topscorers</h3>
+            <RankedList items={topScorerItems} emptyText="Nog geen doelpunten dit seizoen." />
+          </div>
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 min-w-0">
+            <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-cyan-400 mb-3">🅰️ Assists</h3>
+            <RankedList items={topAssistItems} emptyText="Nog geen assists dit seizoen." />
+          </div>
+          <div className="col-span-2 flex justify-center">
+            <div className="w-1/2 min-w-0 bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+              <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-green-400 mb-3">🧤 Clean sheets</h3>
+              <RankedList items={topCleanSheetItems} emptyText="Nog geen clean sheets dit seizoen." />
+            </div>
+          </div>
+        </div>
       </div>
 
       {totalEntries === 0 ? (
