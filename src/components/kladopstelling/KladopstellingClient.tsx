@@ -140,7 +140,7 @@ export default function KladopstellingClient({
     ...(captainEnabled ? [{
       target: "tour-captain",
       title: "Stap 2: Aanvoerder kiezen",
-      body: "Daarna kies je (optioneel) een aanvoerder uit je team. Die verdient voor elke overwinning extra bonuspunten.",
+      body: "Daarna kies je een aanvoerder uit je team. Verplicht — die verdient voor elke overwinning extra bonuspunten.",
     }] : []),
     {
       target: "tour-predictions",
