@@ -58,8 +58,12 @@ export async function GET(
         if (p.redCard)          add("Rode kaart",      getPoints(configMap, "redCard", pos));
         if (cleanSheet && isApplicable(configMap, "cleanSheet", pos))
                                 add("Nul gehouden",    getPoints(configMap, "cleanSheet", pos));
-        if (isApplicable(configMap, "goalsConceded", pos) && m.goalsConceded > 0)
-                                add("Tegendoelpunten", m.goalsConceded * getPoints(configMap, "goalsConceded", pos));
+        if (isApplicable(configMap, "goalsConceded", pos) && m.goalsConceded > 0) {
+          let concededPts = m.goalsConceded * getPoints(configMap, "goalsConceded", pos);
+          const cap = configMap["goalsConceded"]?.capPerMatch;
+          if (cap != null) concededPts = Math.max(concededPts, cap);
+          add("Tegendoelpunten", concededPts);
+        }
       }
 
       return {
