@@ -49,7 +49,7 @@ export default async function AdminStatistiekenPage() {
     return <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>;
   }
 
-  const [entries, activePlayers] = await Promise.all([
+  const [entries, activePlayers, goalsAgg, yellowCardsAgg] = await Promise.all([
     prisma.teamEntry.findMany({
       where: { seasonId: season.id },
       include: {
@@ -67,10 +67,30 @@ export default async function AdminStatistiekenPage() {
       where: { active: true },
       select: { id: true, name: true, clubTeam: true, position: true, value: true },
     }),
+    prisma.match.aggregate({
+      where: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } },
+      _sum: { goalsScored: true },
+    }),
+    prisma.matchPerformance.aggregate({
+      where: { match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
+      _sum: { yellowCards: true },
+    }),
   ]);
 
+  const totalGoalsScored = goalsAgg._sum.goalsScored ?? 0;
+  const totalYellowCards = yellowCardsAgg._sum.yellowCards ?? 0;
+
   const totalEntries = entries.length;
+
+  // playerById moet ELKE ooit gekozen speler kunnen herkennen, ook als die inmiddels
+  // inactief is gezet (bijv. een verouderd dubbel spelerrecord) — anders vallen
+  // gekozen spelers stilletjes weg uit alle onderstaande tellingen.
   const playerById = new Map<string, PlayerLite>(activePlayers.map((p) => [p.id, p]));
+  for (const e of entries) {
+    for (const tp of e.players) {
+      if (!playerById.has(tp.player.id)) playerById.set(tp.player.id, tp.player);
+    }
+  }
 
   // Pick counts (hoe vaak elke speler in een team zit)
   const pickCounts = new Map<string, number>();
@@ -94,16 +114,6 @@ export default async function AdminStatistiekenPage() {
     .filter((x): x is { player: PlayerLite; count: number } => !!x.player)
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
-
-  const leastPicked = [...pickCounts.entries()]
-    .filter(([, count]) => count > 0)
-    .map(([playerId, count]) => ({ player: playerById.get(playerId), count }))
-    .filter((x): x is { player: PlayerLite; count: number } => !!x.player)
-    .sort((a, b) => a.count - b.count)
-    .slice(0, 5);
-
-  const neverPickedAll = activePlayers.filter((p) => !pickCounts.has(p.id)).sort((a, b) => b.value - a.value);
-  const neverPicked = neverPickedAll.slice(0, 10);
 
   // Vaakst gekozen aanvoerder
   const captainCounts = new Map<string, number>();
@@ -142,21 +152,19 @@ export default async function AdminStatistiekenPage() {
   }
   const topFormations = [...formationCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  // Populairste elftal (gemiddeld aantal keer gekozen per speler in dat elftal)
-  const rosterSizeByTeam = new Map<string, number>();
-  for (const p of activePlayers) {
-    rosterSizeByTeam.set(p.clubTeam, (rosterSizeByTeam.get(p.clubTeam) ?? 0) + 1);
-  }
+  // Populairste elftal (gemiddeld aantal spelers gekozen uit dat elftal per ingediend team;
+  // ligt door de spelregel "1 tot 2 spelers per elftal verplicht" altijd tussen 1 en 2)
   const picksByTeam = new Map<string, number>();
   for (const [playerId, count] of pickCounts) {
     const p = playerById.get(playerId);
     if (!p) continue;
     picksByTeam.set(p.clubTeam, (picksByTeam.get(p.clubTeam) ?? 0) + count);
   }
-  const teamPopularity = [...rosterSizeByTeam.entries()]
-    .map(([team, roster]) => {
+  const clubTeams = [...new Set(activePlayers.map((p) => p.clubTeam))];
+  const teamPopularity = clubTeams
+    .map((team) => {
       const picks = picksByTeam.get(team) ?? 0;
-      return { team, picks, roster, avg: roster > 0 ? picks / roster : 0 };
+      return { team, picks, avg: totalEntries > 0 ? picks / totalEntries : 0 };
     })
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 5);
@@ -192,10 +200,6 @@ export default async function AdminStatistiekenPage() {
               <RankedList items={toItems(mostPicked)} emptyText="Nog geen selecties." />
             </StatCard>
 
-            <StatCard title="Minst gekozen spelers" hint="Onder spelers die minstens 1x gekozen zijn">
-              <RankedList items={toItems(leastPicked)} emptyText="Nog geen selecties." />
-            </StatCard>
-
             <StatCard title="Vaakst gekozen aanvoerder">
               <RankedList items={toItems(topCaptains)} emptyText="Nog geen aanvoerders gekozen." />
             </StatCard>
@@ -215,18 +219,32 @@ export default async function AdminStatistiekenPage() {
               <RankedList items={toItems(topPredictedAssists)} emptyText="Nog geen voorspellingen." />
             </StatCard>
 
-            <StatCard title="Populairste elftal" hint="Gemiddeld aantal keer gekozen per speler in dat elftal">
+            <StatCard title="Populairste elftal" hint="Gemiddeld aantal spelers gekozen uit dat elftal per ingediend team (ligt tussen 1 en 2)">
               <RankedList
                 items={teamPopularity.map((t, i) => ({
                   key: t.team,
                   rank: i + 1,
                   primary: TEAM_LABEL[t.team] ?? t.team,
-                  secondary: `${t.picks} picks · ${t.roster} spelers`,
-                  value: `${t.avg.toFixed(1)}x gem.`,
+                  secondary: `${t.picks} picks totaal`,
+                  value: `${t.avg.toFixed(2)}x gem.`,
                 }))}
                 emptyText="Nog geen selecties."
               />
             </StatCard>
+          </div>
+
+          <div>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Bonusvragen — stand van zaken</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-900 neon-border rounded-2xl p-4">
+                <p className="text-2xl font-black text-white">{totalGoalsScored}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Doelpunten voor Rietmolen (incl. eigen goals tegenstanders en spelers buiten het spel)</p>
+              </div>
+              <div className="bg-slate-900 neon-border rounded-2xl p-4">
+                <p className="text-2xl font-black text-white">{totalYellowCards}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Gele kaarten Rietmolen</p>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -239,37 +257,6 @@ export default async function AdminStatistiekenPage() {
               ))}
             </div>
           </div>
-
-          <StatCard
-            title="Nooit gekozen spelers"
-            hint={`${neverPickedAll.length} van de ${activePlayers.length} actieve spelers nog niet gekozen`}
-          >
-            {neverPicked.length === 0 ? (
-              <p className="text-slate-500 text-sm">Alle actieve spelers zijn minstens 1x gekozen.</p>
-            ) : (
-              <>
-                <ol className="space-y-2">
-                  {neverPicked.map((p, i) => (
-                    <li key={p.id} className="flex items-center gap-2">
-                      <span className="text-slate-600 w-5 text-right text-sm shrink-0">{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-white truncate">{p.name}</div>
-                        <div className="text-slate-500 text-xs truncate">
-                          {TEAM_LABEL[p.clubTeam] ?? p.clubTeam} · {POSITION_LABEL[p.position] ?? p.position}
-                        </div>
-                      </div>
-                      <span className="font-bold text-slate-500 shrink-0">€{p.value}</span>
-                    </li>
-                  ))}
-                </ol>
-                {neverPickedAll.length > neverPicked.length && (
-                  <p className="text-xs text-slate-600 mt-2">
-                    + {neverPickedAll.length - neverPicked.length} meer (op waarde gesorteerd, top 10 getoond)
-                  </p>
-                )}
-              </>
-            )}
-          </StatCard>
         </>
       )}
     </div>

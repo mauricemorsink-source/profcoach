@@ -7,7 +7,7 @@ export default async function AdminDashboardPage() {
     prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
   ]);
 
-  const [teamEntryCount, paidTeamEntryCount, totalMatches, pendingMatches, waitingMatches, processedMatches] = season
+  const [teamEntryCount, paidTeamEntryCount, totalMatches, pendingMatches, waitingMatches, processedMatches, goalsAgg, yellowCardsAgg] = season
     ? await Promise.all([
         prisma.teamEntry.count({ where: { seasonId: season.id } }),
         prisma.teamEntry.count({ where: { seasonId: season.id, betaald: true } }),
@@ -15,8 +15,19 @@ export default async function AdminDashboardPage() {
         prisma.match.count({ where: { seasonId: season.id, status: "PENDING" } }),
         prisma.match.count({ where: { seasonId: season.id, status: { in: ["APPROVED", "CORRECTION"] } } }),
         prisma.match.count({ where: { seasonId: season.id, status: "PROCESSED" } }),
+        prisma.match.aggregate({
+          where: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } },
+          _sum: { goalsScored: true },
+        }),
+        prisma.matchPerformance.aggregate({
+          where: { match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
+          _sum: { yellowCards: true },
+        }),
       ])
-    : [0, 0, 0, 0, 0, 0];
+    : [0, 0, 0, 0, 0, 0, { _sum: { goalsScored: 0 } }, { _sum: { yellowCards: 0 } }];
+
+  const totalGoalsScored = goalsAgg._sum.goalsScored ?? 0;
+  const totalYellowCards = yellowCardsAgg._sum.yellowCards ?? 0;
 
   const deadline = settings?.deadline ? new Date(settings.deadline) : null;
   const deadlinePassed = !!deadline && deadline <= new Date();
@@ -32,6 +43,11 @@ export default async function AdminDashboardPage() {
     { label: "Wachtend op goedkeuring", value: pendingMatches },
     { label: "Wachtend op verwerking", value: waitingMatches },
     { label: "Verwerkt", value: processedMatches },
+  ];
+
+  const bonusvraagStats = [
+    { label: "Doelpunten voor Rietmolen", value: totalGoalsScored },
+    { label: "Gele kaarten Rietmolen", value: totalYellowCards },
   ];
 
   const shortcuts = [
@@ -79,6 +95,17 @@ export default async function AdminDashboardPage() {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Wedstrijden</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {wedstrijdenStats.map((s) => (
+                <div key={s.label} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
+                  <p className="text-2xl font-black text-white">{s.value}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Bonusvragen</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {bonusvraagStats.map((s) => (
                 <div key={s.label} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
                   <p className="text-2xl font-black text-white">{s.value}</p>
                   <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
