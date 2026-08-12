@@ -928,6 +928,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                 const totalGoals = totalPerfGoals + totalExtraGoals;
                 const expectedGoals = Number(addForm.goalsScored) || 0;
                 const goalsMismatch = totalGoals !== expectedGoals;
+                const goalsTooMany = totalGoals > expectedGoals;
                 const totalAssists = addPerfs.filter(p => p.played).reduce((s, p) => s + p.assists, 0);
                 const assistsMismatch = totalAssists > totalGoals;
 
@@ -1025,6 +1026,16 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                             + Doelpuntenmaker toevoegen
                           </button>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Validatie: ingevulde doelpunten > werkelijke eindstand */}
+                    {goalsTooMany && (
+                      <div className="bg-red-900/20 border border-red-500/30 rounded-xl px-4 py-3 flex items-start gap-2">
+                        <span className="text-red-400 shrink-0 mt-0.5">⚠</span>
+                        <p className="text-red-300 text-xs">
+                          Het aantal ingevulde doelpunten ({totalGoals}) is hoger dan het werkelijke aantal doelpunten van {TEAM_LABEL[managedTeam] ?? managedTeam} ({expectedGoals}). Controleer de statistieken.
+                        </p>
                       </div>
                     )}
 
