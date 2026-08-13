@@ -251,7 +251,7 @@ export default async function AdminStatistiekenPage() {
             <p className="text-slate-500 text-xs">Tussenstand · {season.name}</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 min-w-0">
             <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-amber-400 mb-2 sm:mb-3">⚽ Topscorers</h3>
             <CompactRankedList items={topScorerItems} emptyText="Nog geen doelpunten dit seizoen." />
