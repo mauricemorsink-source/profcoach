@@ -4,8 +4,16 @@ import { getSessionFromRequest } from "@/lib/auth";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// Kaal apex-domein (en www) mag niet bestaan: de app is alleen bereikbaar via een subdomein.
+const BLOCKED_APEX_HOSTS = new Set(["mauricemorsink.nl", "www.mauricemorsink.nl"]);
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const host = req.headers.get("host")?.split(":")[0]?.toLowerCase();
+
+  if (host && BLOCKED_APEX_HOSTS.has(host)) {
+    return NextResponse.rewrite(new URL("/apex-domein-bestaat-niet", req.url));
+  }
 
   // API routes: CSRF-achtige Origin-check op mutating requests
   if (pathname.startsWith("/api/")) {
@@ -79,5 +87,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/admin/:path*", "/play/:path*", "/manager/:path*", "/mijn-team"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|site\\.webmanifest|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|webp|avif|ico)$).*)",
+  ],
 };
