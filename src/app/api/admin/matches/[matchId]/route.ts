@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { calculateMatchPoints, buildConfigMap, reverseCaptainBonusForMatches } from "@/lib/points";
+import { buildConfigMap, applyMatchPointsToSeason } from "@/lib/points";
 
 export async function PATCH(
   req: Request,
@@ -74,46 +74,20 @@ export async function DELETE(
 
   let playersReverted = 0;
 
-  // PROCESSED of CORRECTION: punten meteen terugdraaien voordat de wedstrijd verdwijnt
+  // PROCESSED of CORRECTION: punten meteen terugdraaien voordat de wedstrijd verdwijnt.
+  // Hergebruikt dezelfde snapshot-logica als het normale verwerken (nu met factor -1),
+  // zodat prevPoints/prevCaptainPoints ook bij verwijderen correct opnieuw gezet worden
+  // en het delta-pijltje in de tussenstand niet scheeftrekt.
   if (match.status === "PROCESSED" || match.status === "CORRECTION") {
     const season = await prisma.season.findFirst({ where: { isActive: true } });
     if (!season) return NextResponse.json({ error: "Geen actief seizoen gevonden" }, { status: 400 });
 
     const configs = await prisma.pointsConfig.findMany();
     const configMap = buildConfigMap(configs);
-    const deltaMap = calculateMatchPoints(match, configMap);
-
-    for (const [playerId, delta] of deltaMap) {
-      const current = await prisma.playerSeasonStats.findUnique({
-        where: { playerId_seasonId: { playerId, seasonId: season.id } },
-      });
-      if (!current) continue;
-      await prisma.playerSeasonStats.update({
-        where: { playerId_seasonId: { playerId, seasonId: season.id } },
-        data: {
-          totalPoints:   { decrement: delta.points },
-          goals:         { decrement: delta.goals },
-          penaltyGoals:  { decrement: delta.penaltyGoals },
-          assists:       { decrement: delta.assists },
-          ownGoals:      { decrement: delta.ownGoals },
-          yellowCards:   { decrement: delta.yellowCards },
-          redCards:      { decrement: delta.redCards },
-          cleanSheets:   { decrement: delta.cleanSheets },
-          goalsConceded: { decrement: delta.goalsConceded },
-          wins:          { decrement: delta.wins },
-          draws:         { decrement: delta.draws },
-          matchesPlayed: { decrement: delta.matchesPlayed },
-        },
-      });
-    }
-    playersReverted = deltaMap.size;
-
     const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
-    await reverseCaptainBonusForMatches(
-      season.id,
-      [match],
-      settings ? { enabled: settings.captainEnabled, pointsPerWin: settings.captainBonusPerWin } : null
-    );
+    const captainBonus = settings ? { enabled: settings.captainEnabled, pointsPerWin: settings.captainBonusPerWin } : null;
+
+    playersReverted = await applyMatchPointsToSeason(season.id, configMap, [{ matches: [match], factor: -1 }], captainBonus);
 
     await prisma.gameSettings.update({ where: { id: "singleton" }, data: { standingsUpdatedAt: new Date() } });
   }

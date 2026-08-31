@@ -14,8 +14,13 @@ export async function GET() {
   const players = await prisma.player.findMany({
     where: { active: true },
     orderBy: [{ clubTeam: "asc" }, { position: "asc" }, { name: "asc" }],
+    include: { performances: { where: { played: true }, select: { id: true }, take: 1 } },
   });
-  return NextResponse.json(players);
+  const result = players.map(({ performances, ...player }) => ({
+    ...player,
+    hasPlayedMatch: performances.length > 0,
+  }));
+  return NextResponse.json(result);
 }
 
 export async function POST(req: Request) {

@@ -10,6 +10,7 @@ type Player = {
   clubTeam: "ONE" | "TWO" | "THREE" | "FOUR" | "FIVE" | "DAMES";
   altTeam?: string | null;
   value: number;
+  hasPlayedMatch: boolean;
 };
 
 type PlayerForm = {
@@ -492,6 +493,15 @@ export default function SpelersClient() {
             <h3 className="text-lg font-bold text-white mb-4">
               {modal === "add" ? "Nieuwe speler toevoegen" : "Speler bewerken"}
             </h3>
+            {modal === "edit" && editingPlayer?.hasPlayedMatch && (
+              <p className="text-xs text-amber-400/90 bg-amber-900/20 border border-amber-500/30 rounded-lg px-3 py-2 mb-4">
+                Let op: deze speler heeft al een wedstrijd gespeeld. Het wijzigen van positie of elftal
+                werkt niet met terugwerkende kracht — al verwerkte wedstrijden blijven meetellen met de
+                oude positie/elftal totdat ze eventueel worden teruggedraaid of verwijderd, en gebruiken
+                dan de nieuwe waarde. Wijzig dit alleen om een fout te corrigeren, niet voor een
+                seizoenstransfer.
+              </p>
+            )}
             <div className="space-y-4">
               <div>
                 <label className={LABEL}>Naam</label>

@@ -186,6 +186,14 @@ export async function POST(
       WHERE "seasonId" = ${season.id}
     `;
 
+    // Snapshot prevCaptainPoints voor alle TeamEntries van dit seizoen, zodat het
+    // delta-pijltje in de tussenstand ook klopt als hierna een aanvoerdersbonus wordt toegekend.
+    await prisma.$executeRaw`
+      UPDATE "TeamEntry"
+      SET "prevCaptainPoints" = "captainPoints"
+      WHERE "seasonId" = ${season.id}
+    `;
+
     const playerIds = Array.from(totalDeltas.keys());
     const currentStats = await prisma.playerSeasonStats.findMany({
       where: { playerId: { in: playerIds }, seasonId: season.id },
