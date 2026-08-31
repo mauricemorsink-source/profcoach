@@ -62,7 +62,7 @@ export default function RegisterPage() {
           <div>
             <label className={LABEL}>Wachtwoord <span className="text-cyan-500">*</span></label>
             <div className="relative">
-              <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className={INPUT + " pr-16"} placeholder="Minimaal 8 tekens" />
+              <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className={INPUT + " pr-16"} placeholder="Min. 8 tekens, hoofdletter, cijfer, speciaal teken" />
               <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs transition-colors" tabIndex={-1}>
                 {showPassword ? "Verberg" : "Toon"}
               </button>

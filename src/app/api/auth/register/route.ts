@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
 import { rateLimit, getIp } from "@/lib/rateLimit";
+import { validatePassword } from "@/lib/passwordPolicy";
 
 export async function POST(req: Request) {
   const { ok, retryAfterSec } = await rateLimit(`register:${getIp(req)}`, { max: 5, windowMs: 60 * 60 * 1000 });
@@ -18,8 +19,9 @@ export async function POST(req: Request) {
   if (!name?.trim() || !email?.trim() || !password) {
     return NextResponse.json({ error: "Naam, email en wachtwoord zijn verplicht" }, { status: 400 });
   }
-  if (password.length < 8) {
-    return NextResponse.json({ error: "Wachtwoord moet minimaal 8 tekens bevatten" }, { status: 400 });
+  const passwordError = await validatePassword(password);
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
   // Check of registratie open is

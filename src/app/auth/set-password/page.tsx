@@ -64,7 +64,7 @@ export default function SetPasswordPage() {
               required
               minLength={8}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-cyan-500"
-              placeholder="Minimaal 8 tekens"
+              placeholder="Min. 8 tekens, hoofdletter, cijfer, speciaal teken"
             />
           </div>
           <div>

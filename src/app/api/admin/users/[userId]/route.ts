@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hashPassword } from "@/lib/auth";
+import { validatePassword } from "@/lib/passwordPolicy";
 
 export async function PATCH(
   req: Request,
@@ -17,6 +18,8 @@ export async function PATCH(
 
   if (password !== undefined) {
     if (!password?.trim()) return NextResponse.json({ error: "Wachtwoord mag niet leeg zijn" }, { status: 400 });
+    const passwordError = await validatePassword(password);
+    if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
     await prisma.user.update({
       where: { id: userId },
       data: { password: hashPassword(password), mustChangePassword: false },

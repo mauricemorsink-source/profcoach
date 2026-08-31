@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, hashPassword } from "@/lib/auth";
+import { validatePassword } from "@/lib/passwordPolicy";
 
 export async function GET() {
   const session = await getSession();
@@ -57,6 +58,8 @@ export async function POST(req: Request) {
 
   if (!email?.trim()) return NextResponse.json({ error: "E-mailadres is verplicht" }, { status: 400 });
   if (!password?.trim()) return NextResponse.json({ error: "Wachtwoord is verplicht" }, { status: 400 });
+  const passwordError = await validatePassword(password);
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
   if (!["ADMIN", "MANAGER"].includes(role)) return NextResponse.json({ error: "Ongeldige rol" }, { status: 400 });
   if (role === "MANAGER" && !managedTeam) return NextResponse.json({ error: "Elftal is verplicht voor manager" }, { status: 400 });
 
