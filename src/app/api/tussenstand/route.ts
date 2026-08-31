@@ -23,7 +23,7 @@ export async function GET() {
   const teamEntries = await prisma.teamEntry.findMany({
     where: { seasonId: season.id, userId: { not: null } },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true } },
       players: { select: { playerId: true } },
     },
   });
@@ -46,7 +46,7 @@ export async function GET() {
       }
       return {
         userId: te.user!.id,
-        userName: te.user!.name ?? te.user!.email,
+        userName: te.user!.name ?? "Deelnemer",
         totalPoints,
         prevPoints,
         delta: totalPoints - prevPoints,
