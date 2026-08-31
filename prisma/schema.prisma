@@ -92,6 +92,7 @@ model Season {
   id          String              @id @default(cuid())
   name        String
   isActive    Boolean             @default(false)
+  createdAt   DateTime            @default(now())
   teamEntries TeamEntry[]
   matches     Match[]
   playerStats PlayerSeasonStats[]
