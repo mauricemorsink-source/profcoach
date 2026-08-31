@@ -8,6 +8,14 @@ import Pitch from "@/components/team/Pitch";
 import SpotlightTour, { TOUR_KEY, type TourStep } from "@/components/SpotlightTour";
 import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
 import GoalConfetti from "@/components/GoalConfetti";
+import { trackEvent } from "@/lib/analytics";
+
+const STEP_NAMES: Record<number, string> = {
+  1: "team_samenstellen",
+  2: "aanvoerder_kiezen",
+  3: "voorspellingen",
+  4: "gegevens_en_indienen",
+};
 
 const SLOTS_KEY = "profcoach_team_slots";
 const FORMATION_KEY = "profcoach_team_formation";
@@ -269,9 +277,9 @@ export default function KladopstellingClient({
 
   function goNext() {
     setSubmitError(null);
-    if (step === 1) setStep(captainEnabled ? 2 : 3);
-    else if (step === 2) setStep(3);
-    else if (step === 3) setStep(4);
+    const next = step === 1 ? (captainEnabled ? 2 : 3) : step === 2 ? 3 : step === 3 ? 4 : step;
+    setStep(next);
+    trackEvent("team_indienen_stap", { stap: next, stap_naam: STEP_NAMES[next] });
     scrollTop();
   }
 
@@ -318,6 +326,7 @@ export default function KladopstellingClient({
       if (!res.ok) {
         setSubmitError(data.error ?? "Er is een fout opgetreden");
       } else {
+        trackEvent("team_ingediend");
         setSubmitted(true);
         localStorage.removeItem(SLOTS_KEY);
         localStorage.removeItem(FORMATION_KEY);

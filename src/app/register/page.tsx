@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function RegisterPage() {
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Er is een fout opgetreden"); setLoading(false); return; }
 
+    trackEvent("sign_up", { method: "email" });
     router.push("/play");
     router.refresh();
   }

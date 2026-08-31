@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
+import RouteChangeTracker from "@/components/RouteChangeTracker";
 import "./globals.css";
 
 const GTM_ID = "GTM-PDM45VZ4";
@@ -64,6 +65,7 @@ export default function RootLayout({
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
+        <RouteChangeTracker />
         <NavBar />
         <main className="flex-1">
           {children}

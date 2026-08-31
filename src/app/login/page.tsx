@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 function LoginForm() {
   const router = useRouter();
@@ -37,6 +38,8 @@ function LoginForm() {
         setLoading(false);
         return;
       }
+
+      trackEvent("login", { method: "email" });
 
       // Zonder expliciete redirect: stuur admins/managers naar hun eigen omgeving in plaats
       // van /play, anders wordt daar bij het laden automatisch een lege conceptteam aangemaakt.
