@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getContentMap } from "@/lib/content";
+import { getVisibleStandingsPublication, type PublishedStandingsData, type StatItem } from "@/lib/standings";
 
 function Delta({ value }: { value: number }) {
   if (!value || !isFinite(value)) return null;
@@ -11,9 +12,7 @@ function Delta({ value }: { value: number }) {
   );
 }
 
-type Item = { key: string; name: string; value: number; delta: number };
-
-function StatColumn({ title, icon, color, items, emptyText }: { title: string; icon: string; color: string; items: Item[]; emptyText: string }) {
+function StatColumn({ title, icon, color, items, emptyText }: { title: string; icon: string; color: string; items: StatItem[]; emptyText: string }) {
   return (
     <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 sm:p-4 min-w-0">
       <h3 className={`font-bold text-xs sm:text-sm uppercase tracking-wide mb-2 sm:mb-3 ${color}`}>{icon} {title}</h3>
@@ -53,51 +52,33 @@ export default async function StatistiekenPage() {
     );
   }
 
-  const updatedAt = settings?.standingsUpdatedAt
-    ? new Date(settings.standingsUpdatedAt).toLocaleDateString("nl-NL", {
-        day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam",
-      })
-    : null;
-
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
-  let topScorers: Item[] = [];
-  let topAssists: Item[] = [];
-  let topCleanSheets: Item[] = [];
+  // Zelfde publicatie als de deelnemerstussenstand — één publiceeractie werkt beide bij.
+  const publication = season ? await getVisibleStandingsPublication(season.id) : null;
+  const data = publication?.data as PublishedStandingsData | undefined;
+  const stats = data?.stats;
 
-  if (season) {
-    const allStats = await prisma.playerSeasonStats.findMany({
-      where: { seasonId: season.id },
-      include: { player: { select: { name: true, position: true } } },
-    });
-
-    topScorers = allStats
-      .filter((s) => s.goals > 0)
-      .sort((a, b) => b.goals - a.goals)
-      .slice(0, 10)
-      .map((s) => ({ key: s.playerId, name: s.player.name, value: s.goals, delta: s.goals - (s.prevGoals ?? 0) }));
-
-    topAssists = allStats
-      .filter((s) => s.assists > 0)
-      .sort((a, b) => b.assists - a.assists)
-      .slice(0, 10)
-      .map((s) => ({ key: s.playerId, name: s.player.name, value: s.assists, delta: s.assists - (s.prevAssists ?? 0) }));
-
-    topCleanSheets = allStats
-      .filter((s) => s.player.position === "GK" && s.cleanSheets > 0)
-      .sort((a, b) => b.cleanSheets - a.cleanSheets)
-      .slice(0, 10)
-      .map((s) => ({ key: s.playerId, name: s.player.name, value: s.cleanSheets, delta: s.cleanSheets - (s.prevCleanSheets ?? 0) }));
+  if (!publication || !stats) {
+    return (
+      <div className="bg-slate-900 neon-border rounded-2xl p-8 text-center">
+        <p className="text-slate-300 font-medium">De statistieken zijn nog niet gepubliceerd.</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-3">
-      {updatedAt && <p className="text-slate-500 text-xs">{`Laatste wijziging: ${updatedAt}`}</p>}
+      <p className="text-slate-500 text-xs">
+        {`Laatste wijziging: ${new Date(publication.revealAt).toLocaleDateString("nl-NL", {
+          day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam",
+        })}`}
+      </p>
       <div className="bg-slate-900 neon-border rounded-2xl p-5">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-          <StatColumn title="Topscorers" icon="⚽" color="text-amber-400" items={topScorers} emptyText="Nog geen doelpunten." />
-          <StatColumn title="Assists" icon="🅰️" color="text-cyan-400" items={topAssists} emptyText="Nog geen assists." />
-          <StatColumn title="Clean sheets" icon="🧤" color="text-green-400" items={topCleanSheets} emptyText="Nog geen clean sheets." />
+          <StatColumn title="Topscorers" icon="⚽" color="text-amber-400" items={stats.topScorers} emptyText="Nog geen doelpunten." />
+          <StatColumn title="Assists" icon="🅰️" color="text-cyan-400" items={stats.topAssists} emptyText="Nog geen assists." />
+          <StatColumn title="Clean sheets" icon="🧤" color="text-green-400" items={stats.topCleanSheets} emptyText="Nog geen clean sheets." />
         </div>
       </div>
     </div>

@@ -8,6 +8,15 @@ export type DeelnemerStanding = {
   delta: number;
 };
 
+export type PublishedStandingsData = { deelnemers: DeelnemerStanding[]; stats: TopStats };
+
+export async function getVisibleStandingsPublication(seasonId: string) {
+  return prisma.standingsPublication.findFirst({
+    where: { seasonId, revealAt: { lte: new Date() } },
+    orderBy: { revealAt: "desc" },
+  });
+}
+
 export async function computeDeelnemersStandings(seasonId: string): Promise<DeelnemerStanding[]> {
   const allStats = await prisma.playerSeasonStats.findMany({
     where: { seasonId },
@@ -52,4 +61,34 @@ export async function computeDeelnemersStandings(seasonId: string): Promise<Deel
       };
     })
     .sort((a, b) => b.totalPoints - a.totalPoints);
+}
+
+export type StatItem = { key: string; name: string; value: number; delta: number };
+export type TopStats = { topScorers: StatItem[]; topAssists: StatItem[]; topCleanSheets: StatItem[] };
+
+export async function computeTopStats(seasonId: string): Promise<TopStats> {
+  const allStats = await prisma.playerSeasonStats.findMany({
+    where: { seasonId },
+    include: { player: { select: { name: true, position: true } } },
+  });
+
+  const topScorers = allStats
+    .filter((s) => s.goals > 0)
+    .sort((a, b) => b.goals - a.goals)
+    .slice(0, 10)
+    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.goals, delta: s.goals - (s.prevGoals ?? 0) }));
+
+  const topAssists = allStats
+    .filter((s) => s.assists > 0)
+    .sort((a, b) => b.assists - a.assists)
+    .slice(0, 10)
+    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.assists, delta: s.assists - (s.prevAssists ?? 0) }));
+
+  const topCleanSheets = allStats
+    .filter((s) => s.player.position === "GK" && s.cleanSheets > 0)
+    .sort((a, b) => b.cleanSheets - a.cleanSheets)
+    .slice(0, 10)
+    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.cleanSheets, delta: s.cleanSheets - (s.prevCleanSheets ?? 0) }));
+
+  return { topScorers, topAssists, topCleanSheets };
 }

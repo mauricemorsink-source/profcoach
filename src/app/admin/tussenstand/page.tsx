@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { computeDeelnemersStandings } from "@/lib/standings";
+import { computeDeelnemersStandings, computeTopStats } from "@/lib/standings";
 import TussenstandBeheerClient from "@/components/admin/TussenstandBeheerClient";
 
 export default async function AdminTussenstandPage() {
   const season = await prisma.season.findFirst({ where: { isActive: true } });
-  const liveStandings = season ? await computeDeelnemersStandings(season.id) : [];
+  const [liveStandings, liveStats] = season
+    ? await Promise.all([computeDeelnemersStandings(season.id), computeTopStats(season.id)])
+    : [[], { topScorers: [], topAssists: [], topCleanSheets: [] }];
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -14,7 +16,7 @@ export default async function AdminTussenstandPage() {
           Bepaal of deelnemers de tussenstand en statistieken kunnen zien, en welke stand ze precies te zien krijgen.
         </p>
       </div>
-      <TussenstandBeheerClient liveStandings={liveStandings} hasSeason={!!season} />
+      <TussenstandBeheerClient liveStandings={liveStandings} liveStats={liveStats} hasSeason={!!season} />
     </div>
   );
 }
