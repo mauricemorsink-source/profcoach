@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { buildConfigMap, applyMatchPointsToSeason } from "@/lib/points";
+import { buildConfigMap, applyMatchPointsToSeason, applyAutoExcludableGuestPerformances } from "@/lib/points";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     const approvedMatches = await prisma.match.findMany({
       where: approvedWhere,
-      include: { performances: { include: { player: { select: { position: true } } } } },
+      include: { performances: { include: { player: { select: { position: true, clubTeam: true } } } } },
     });
 
     const correctionMatches = await prisma.match.findMany({
@@ -59,6 +59,10 @@ export async function POST(req: Request) {
       await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
       return NextResponse.json({ processed: 0, reversed: 0, playersUpdated: 0 });
     }
+
+    // Gastspeler bij twee elftallen in dezelfde ronde: hier draait geen admin mee, dus pas
+    // de eigen-elftal-voorrangsregel automatisch toe voordat de punten berekend worden.
+    await applyAutoExcludableGuestPerformances(approvedMatches);
 
     const playersUpdated = await applyMatchPointsToSeason(
       season.id,

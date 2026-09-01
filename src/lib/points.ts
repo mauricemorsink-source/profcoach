@@ -11,6 +11,72 @@ export type MatchWithPerformances = Match & {
 
 type ConfigMap = Record<string, PointsConfig>;
 
+export type MatchForGuestConflictCheck = Match & {
+  performances: (MatchPerformance & { player: Pick<Player, "clubTeam"> })[];
+};
+
+/**
+ * Regel: een prestatie bij het elftal waar een speler op papier staat (player.clubTeam)
+ * telt altijd. Speelt hij in dezelfde verwerkingsronde óók als gastspeler bij een ander
+ * elftal, dan wordt die gastwedstrijd hier automatisch aangewezen om uit te sluiten van
+ * punten. Alleen wanneer dat niet eenduidig is (geen van de wedstrijden is zijn eigen
+ * elftal, bv. twee verschillende gastoptredens) blijft die speler ongemoeid — dat is zo
+ * zeldzaam dat het geen automatische afhandeling verdient buiten de handmatige
+ * publiceerroute (die daar een conflictscherm voor toont).
+ */
+export function findAutoExcludableGuestPerformances(
+  matches: MatchForGuestConflictCheck[]
+): { matchId: string; playerId: string }[] {
+  const byPlayer = new Map<string, { matchId: string; isOwnTeam: boolean }[]>();
+  for (const match of matches) {
+    for (const perf of match.performances) {
+      if (!perf.played) continue;
+      const list = byPlayer.get(perf.playerId) ?? [];
+      list.push({ matchId: match.id, isOwnTeam: match.clubTeam === perf.player.clubTeam });
+      byPlayer.set(perf.playerId, list);
+    }
+  }
+
+  const toExclude: { matchId: string; playerId: string }[] = [];
+  for (const [playerId, entries] of byPlayer) {
+    if (entries.length < 2) continue;
+    const ownTeamEntries = entries.filter((e) => e.isOwnTeam);
+    if (ownTeamEntries.length === 1) {
+      for (const e of entries) {
+        if (!e.isOwnTeam) toExclude.push({ matchId: e.matchId, playerId });
+      }
+    }
+  }
+  return toExclude;
+}
+
+/**
+ * Past findAutoExcludableGuestPerformances toe: zet isExcluded zowel in-memory (zodat
+ * calculateMatchPoints, dat hierna in dezelfde aanroep draait, de juiste waarde ziet) als
+ * in de database (voor consistentie bij een latere terugdraai/verwijdering en voor TOTW).
+ * Gebruikt door de cron- en handmatige verwerk-routes, die geen conflictscherm hebben.
+ */
+export async function applyAutoExcludableGuestPerformances(
+  matches: MatchForGuestConflictCheck[]
+): Promise<number> {
+  const toExclude = findAutoExcludableGuestPerformances(matches);
+  if (toExclude.length === 0) return 0;
+
+  const excludeKeys = new Set(toExclude.map((e) => `${e.matchId}:${e.playerId}`));
+  for (const match of matches) {
+    for (const perf of match.performances) {
+      if (excludeKeys.has(`${match.id}:${perf.playerId}`)) perf.isExcluded = true;
+    }
+  }
+
+  await prisma.matchPerformance.updateMany({
+    where: { OR: toExclude.map((e) => ({ matchId: e.matchId, playerId: e.playerId })) },
+    data: { isExcluded: true },
+  });
+
+  return toExclude.length;
+}
+
 export function getPoints(configMap: ConfigMap, actionId: string, position: string): number {
   const cfg = configMap[actionId];
   if (!cfg) return 0;

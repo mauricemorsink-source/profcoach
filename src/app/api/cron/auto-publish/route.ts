@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { buildConfigMap, applyMatchPointsToSeason } from "@/lib/points";
+import { buildConfigMap, applyMatchPointsToSeason, applyAutoExcludableGuestPerformances } from "@/lib/points";
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -41,8 +41,12 @@ export async function GET(req: Request) {
     for (const moment of overdueMoments) {
       const approvedMatches = await prisma.match.findMany({
         where: { publishMomentId: moment.id, status: "APPROVED", seasonId: season.id },
-        include: { performances: { include: { player: { select: { position: true } } } } },
+        include: { performances: { include: { player: { select: { position: true, clubTeam: true } } } } },
       });
+
+      // Gastspeler bij twee elftallen in dezelfde ronde: hier draait geen admin mee, dus
+      // pas de eigen-elftal-voorrangsregel automatisch toe voordat de punten berekend worden.
+      await applyAutoExcludableGuestPerformances(approvedMatches);
 
       const playersUpdated = await applyMatchPointsToSeason(
         season.id,
