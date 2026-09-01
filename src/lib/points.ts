@@ -21,6 +21,7 @@ export type GuestAppearanceMatch = {
   matchClubTeam: string;
   isOwnTeam: boolean;
   counts: boolean;
+  points: number;
 };
 
 export type GuestDoubleAppearance = {
@@ -44,15 +45,22 @@ export type GuestDoubleAppearance = {
  * conflictscherm voor toont).
  */
 export function findGuestDoubleAppearances(
-  matches: MatchForGuestConflictCheck[]
+  matches: MatchForGuestConflictCheck[],
+  configMap: ConfigMap
 ): GuestDoubleAppearance[] {
   type Entry = {
     matchId: string; matchName: string; matchClubTeam: string; isOwnTeam: boolean;
-    playerId: string; playerName: string; playerPosition: string;
+    playerId: string; playerName: string; playerPosition: string; points: number;
   };
   const byKey = new Map<string, Entry[]>();
   for (const match of matches) {
     const day = match.matchDate.toISOString().slice(0, 10);
+    // Punten alsof deze wedstrijd wél meetelt (isExcluded genegeerd) — puur om aan de admin
+    // te laten zien wat elke wedstrijd voor deze speler zou opleveren, om een keuze te maken.
+    const pointsMap = calculateMatchPoints(
+      { ...match, performances: match.performances.map((p) => ({ ...p, isExcluded: false })) },
+      configMap
+    );
     for (const perf of match.performances) {
       if (!perf.played) continue;
       const key = `${perf.playerId}|${day}`;
@@ -65,6 +73,7 @@ export function findGuestDoubleAppearances(
         playerId: perf.playerId,
         playerName: perf.player.name,
         playerPosition: perf.player.position,
+        points: pointsMap.get(perf.playerId)?.points ?? 0,
       });
       byKey.set(key, list);
     }
@@ -88,6 +97,7 @@ export function findGuestDoubleAppearances(
         matchClubTeam: e.matchClubTeam,
         isOwnTeam: e.isOwnTeam,
         counts: resolvable ? e.isOwnTeam : false,
+        points: e.points,
       })),
     });
   }
@@ -95,10 +105,11 @@ export function findGuestDoubleAppearances(
 }
 
 export function findAutoExcludableGuestPerformances(
-  matches: MatchForGuestConflictCheck[]
+  matches: MatchForGuestConflictCheck[],
+  configMap: ConfigMap
 ): { matchId: string; playerId: string }[] {
   const toExclude: { matchId: string; playerId: string }[] = [];
-  for (const appearance of findGuestDoubleAppearances(matches)) {
+  for (const appearance of findGuestDoubleAppearances(matches, configMap)) {
     if (appearance.ambiguous) continue;
     for (const m of appearance.matches) {
       if (!m.counts) toExclude.push({ matchId: m.matchId, playerId: appearance.playerId });
@@ -114,9 +125,10 @@ export function findAutoExcludableGuestPerformances(
  * Gebruikt door de cron- en handmatige verwerk-routes, die geen conflictscherm hebben.
  */
 export async function applyAutoExcludableGuestPerformances(
-  matches: MatchForGuestConflictCheck[]
+  matches: MatchForGuestConflictCheck[],
+  configMap: ConfigMap
 ): Promise<number> {
-  const toExclude = findAutoExcludableGuestPerformances(matches);
+  const toExclude = findAutoExcludableGuestPerformances(matches, configMap);
   if (toExclude.length === 0) return 0;
 
   const excludeKeys = new Set(toExclude.map((e) => `${e.matchId}:${e.playerId}`));

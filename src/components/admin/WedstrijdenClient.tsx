@@ -49,6 +49,7 @@ type GuestAppearance = {
     matchClubTeam: string;
     isOwnTeam: boolean;
     counts: boolean;
+    points: number;
   }[];
 };
 
@@ -185,6 +186,7 @@ export default function WedstrijdenClient() {
   const [processing, setProcessing] = useState(false);
   const [checkingGuests, setCheckingGuests] = useState(false);
   const [guestPreview, setGuestPreview] = useState<{ appearances: GuestAppearance[]; body: string | undefined } | null>(null);
+  const [ambiguousResolutions, setAmbiguousResolutions] = useState<Record<string, Set<string>>>({});
   const [processSelectedIds, setProcessSelectedIds] = useState<Set<string>>(new Set());
   const [isProcessingStuck, setIsProcessingStuck] = useState(false);
   const [resettingProcessing, setResettingProcessing] = useState(false);
@@ -374,26 +376,44 @@ export default function WedstrijdenClient() {
     setCheckingGuests(false);
     if (previewRes.ok) {
       const previewData = await previewRes.json();
-      if (Array.isArray(previewData.appearances) && previewData.appearances.length > 0) {
-        setGuestPreview({ appearances: previewData.appearances, body });
+      const appearances: GuestAppearance[] = previewData.appearances ?? [];
+      if (appearances.length > 0) {
+        setGuestPreview({ appearances, body });
+        setAmbiguousResolutions(
+          Object.fromEntries(appearances.filter((a) => a.ambiguous).map((a) => [a.playerId, new Set<string>()]))
+        );
         return;
       }
     }
-    await doProcessPoints(body);
+    await doProcessPoints(body, []);
   }
 
-  async function doProcessPoints(body: string | undefined) {
+  async function doProcessPoints(body: string | undefined, excludedPerformances: { matchId: string; playerId: string }[]) {
     setProcessing(true);
+    const parsed = body ? JSON.parse(body) : {};
+    const finalBody = JSON.stringify({ ...parsed, excludedPerformances });
     const res = await fetch("/api/admin/process-points", {
       method: "POST",
-      ...(body ? { headers: { "Content-Type": "application/json" }, body } : {}),
+      headers: { "Content-Type": "application/json" },
+      body: finalBody,
     });
     const data = await res.json();
     setProcessing(false);
-    setGuestPreview(null);
     if (!res.ok) {
+      if (res.status === 409 && data.error === "conflicts" && Array.isArray(data.conflicts)) {
+        // Server is leidend: toon de actuele (mogelijk gewijzigde) conflicten opnieuw.
+        const appearances: GuestAppearance[] = data.conflicts;
+        setGuestPreview({ appearances, body });
+        setAmbiguousResolutions(
+          Object.fromEntries(appearances.filter((a) => a.ambiguous).map((a) => [a.playerId, new Set<string>()]))
+        );
+        return;
+      }
       setPointsMsg({ type: "err", text: data.error || "Verwerking mislukt" });
+      setGuestPreview(null);
     } else {
+      setGuestPreview(null);
+      setAmbiguousResolutions({});
       setProcessSelectedIds(new Set());
       const parts = [];
       if (data.processed > 0) parts.push(`${data.processed} wedstrijden verwerkt`);
@@ -1958,9 +1978,10 @@ export default function WedstrijdenClient() {
         </div>
       )}
 
-      {/* Modal: FLEX conflicten */}
+      {/* Modal: gastspeler-check (auto-opgelost + ambigu, met keuze) */}
       {guestPreview && (() => {
-        const hasAmbiguous = guestPreview.appearances.some((a) => a.ambiguous);
+        const ambiguousAppearances = guestPreview.appearances.filter((a) => a.ambiguous);
+        const allResolved = ambiguousAppearances.every((a) => (ambiguousResolutions[a.playerId]?.size ?? 0) > 0);
         return (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-900 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
@@ -1991,56 +2012,82 @@ export default function WedstrijdenClient() {
                       </span>
                       {a.ambiguous && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-400 border border-amber-500/30 font-medium">
-                          Niet automatisch op te lossen
+                          Kies welke telt
                         </span>
                       )}
                     </div>
                     <div className="space-y-1.5 mt-2">
-                      {a.matches.map((m) => (
-                        <div
-                          key={m.matchId}
-                          className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 ${
-                            a.ambiguous
-                              ? "border-amber-500/20 bg-amber-900/10"
-                              : m.counts
-                              ? "border-green-500/30 bg-green-900/10"
+                      {a.matches.map((m) => {
+                        const isSelected = a.ambiguous
+                          ? (ambiguousResolutions[a.playerId]?.has(m.matchId) ?? false)
+                          : m.counts;
+                        const content = (
+                          <>
+                            <div className="min-w-0">
+                              <p className="text-sm text-slate-200 truncate">{m.matchName}</p>
+                              <p className="text-xs text-slate-500">
+                                {TEAM_LABEL[m.matchClubTeam] ?? m.matchClubTeam}
+                                {m.isOwnTeam && " · eigen elftal"} · {m.points} punten
+                              </p>
+                            </div>
+                            {a.ambiguous ? (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  setAmbiguousResolutions((prev) => {
+                                    const next = new Set(prev[a.playerId] ?? []);
+                                    next.has(m.matchId) ? next.delete(m.matchId) : next.add(m.matchId);
+                                    return { ...prev, [a.playerId]: next };
+                                  });
+                                }}
+                                className="accent-cyan-500 shrink-0"
+                              />
+                            ) : m.counts ? (
+                              <span className="text-xs font-semibold text-green-400 shrink-0">✓ Telt mee</span>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-500 shrink-0">✗ Telt niet mee</span>
+                            )}
+                          </>
+                        );
+                        const rowClass = `flex items-center justify-between gap-3 rounded-lg border px-3 py-2 ${
+                          a.ambiguous
+                            ? isSelected
+                              ? "border-cyan-500/40 bg-cyan-900/10"
                               : "border-slate-700 bg-slate-800/60"
-                          }`}
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm text-slate-200 truncate">{m.matchName}</p>
-                            <p className="text-xs text-slate-500">
-                              {TEAM_LABEL[m.matchClubTeam] ?? m.matchClubTeam}
-                              {m.isOwnTeam && " · eigen elftal"}
-                            </p>
-                          </div>
-                          {a.ambiguous ? (
-                            <span className="text-xs font-semibold text-amber-400 shrink-0">?</span>
-                          ) : m.counts ? (
-                            <span className="text-xs font-semibold text-green-400 shrink-0">✓ Telt mee</span>
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-500 shrink-0">✗ Telt niet mee</span>
-                          )}
-                        </div>
-                      ))}
+                            : m.counts
+                            ? "border-green-500/30 bg-green-900/10"
+                            : "border-slate-700 bg-slate-800/60"
+                        }`;
+                        return a.ambiguous ? (
+                          <label key={m.matchId} className={rowClass + " cursor-pointer"}>{content}</label>
+                        ) : (
+                          <div key={m.matchId} className={rowClass}>{content}</div>
+                        );
+                      })}
                     </div>
+                    {a.ambiguous && (ambiguousResolutions[a.playerId]?.size ?? 0) === 0 && (
+                      <p className="text-xs text-amber-400 mt-2">Kies minimaal één wedstrijd die meetelt voor {a.playerName}.</p>
+                    )}
                   </div>
                 ))}
-                {hasAmbiguous && (
-                  <p className="text-xs text-amber-300 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2">
-                    Bij een ambigu geval (geen van de wedstrijden is duidelijk het eigen elftal) kan dit niet automatisch bepaald
-                    worden. Los dit eerst op — bijvoorbeeld via een publicatiemoment (die heeft een conflictscherm) of door in
-                    &quot;Prestaties&quot; aan te passen wie echt speelde — voordat je verwerkt.
-                  </p>
-                )}
               </div>
               <div className="flex items-center gap-3 px-6 py-4 border-t border-slate-700 shrink-0">
                 <button onClick={() => setGuestPreview(null)} className={BTN_SECONDARY}>
                   Annuleer
                 </button>
                 <button
-                  onClick={() => doProcessPoints(guestPreview.body)}
-                  disabled={processing || hasAmbiguous}
+                  onClick={() => {
+                    const excludedPerformances: { matchId: string; playerId: string }[] = [];
+                    for (const a of ambiguousAppearances) {
+                      const selected = ambiguousResolutions[a.playerId] ?? new Set<string>();
+                      for (const m of a.matches) {
+                        if (!selected.has(m.matchId)) excludedPerformances.push({ matchId: m.matchId, playerId: a.playerId });
+                      }
+                    }
+                    doProcessPoints(guestPreview.body, excludedPerformances);
+                  }}
+                  disabled={processing || !allResolved}
                   className={BTN_PRIMARY + " disabled:opacity-40 ml-auto"}
                 >
                   {processing ? "Verwerken..." : "Doorgaan met verwerken"}

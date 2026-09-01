@@ -46,7 +46,7 @@ export async function GET(req: Request) {
 
       // Gastspeler bij twee elftallen in dezelfde ronde: hier draait geen admin mee, dus
       // pas de eigen-elftal-voorrangsregel automatisch toe voordat de punten berekend worden.
-      await applyAutoExcludableGuestPerformances(approvedMatches);
+      await applyAutoExcludableGuestPerformances(approvedMatches, configMap);
 
       const playersUpdated = await applyMatchPointsToSeason(
         season.id,

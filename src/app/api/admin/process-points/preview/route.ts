@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { findGuestDoubleAppearances } from "@/lib/points";
+import { buildConfigMap, findGuestDoubleAppearances } from "@/lib/points";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -28,11 +28,14 @@ export async function POST(req: Request) {
     ? { status: "APPROVED" as const, seasonId: season.id, id: { in: selectedIds } }
     : { status: "APPROVED" as const, seasonId: season.id };
 
-  const approvedMatches = await prisma.match.findMany({
-    where: approvedWhere,
-    include: { performances: { include: { player: { select: { name: true, position: true, clubTeam: true } } } } },
-  });
+  const [approvedMatches, configs] = await Promise.all([
+    prisma.match.findMany({
+      where: approvedWhere,
+      include: { performances: { include: { player: { select: { name: true, position: true, clubTeam: true } } } } },
+    }),
+    prisma.pointsConfig.findMany(),
+  ]);
 
-  const appearances = findGuestDoubleAppearances(approvedMatches);
+  const appearances = findGuestDoubleAppearances(approvedMatches, buildConfigMap(configs));
   return NextResponse.json({ appearances });
 }

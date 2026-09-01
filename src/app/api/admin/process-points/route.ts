@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { buildConfigMap, applyMatchPointsToSeason, applyAutoExcludableGuestPerformances } from "@/lib/points";
+import { buildConfigMap, applyMatchPointsToSeason, applyAutoExcludableGuestPerformances, findGuestDoubleAppearances } from "@/lib/points";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -9,16 +9,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
   }
 
-  // Optional: only process specific match IDs
+  // Optioneel: alleen specifieke wedstrijden verwerken, en/of eerder door de admin opgeloste
+  // ambigue gastspeler-conflicten (welke wedstrijd telt mee per speler).
   let selectedIds: string[] | null = null;
+  let excludedPerformances: { matchId: string; playerId: string }[] = [];
   try {
     const body = await req.json();
     if (Array.isArray(body?.matchIds) && body.matchIds.length > 0) {
       selectedIds = body.matchIds as string[];
     }
+    if (Array.isArray(body?.excludedPerformances)) {
+      excludedPerformances = body.excludedPerformances;
+    }
   } catch {
-    // No body or invalid JSON → process all
+    // No body or invalid JSON → process all, geen conflicten opgelost
   }
+  const excludedSet = new Set(excludedPerformances.map((e) => `${e.matchId}:${e.playerId}`));
 
   const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
   if (settings?.isProcessing) {
@@ -51,9 +57,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ processed: 0, playersUpdated: 0 });
     }
 
-    // Gastspeler bij twee elftallen in dezelfde ronde: hier draait geen admin mee, dus pas
-    // de eigen-elftal-voorrangsregel automatisch toe voordat de punten berekend worden.
-    await applyAutoExcludableGuestPerformances(approvedMatches);
+    // Ambigue gastspeler-conflicten (twee optredens dezelfde dag, geen van beide het eigen
+    // elftal) kunnen niet automatisch opgelost worden — de admin moet zelf kiezen welke
+    // wedstrijd telt. Zolang niet voor ELKE ambigue speler een keuze is doorgegeven, wordt er
+    // helemaal niets verwerkt (geen enkele wedstrijd uit deze batch, ook niet de rest).
+    const appearances = findGuestDoubleAppearances(approvedMatches, configMap);
+    const unresolved = appearances.filter(
+      (a) => a.ambiguous && !a.matches.some((m) => excludedSet.has(`${m.matchId}:${a.playerId}`))
+    );
+    if (unresolved.length > 0) {
+      await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
+      return NextResponse.json({ error: "conflicts", conflicts: unresolved }, { status: 409 });
+    }
+
+    // Pas de door de admin opgeloste ambigue conflicten toe (in-memory zodat calculateMatchPoints
+    // hierna de juiste waarde ziet, en in de database voor consistentie bij terugdraaien/TOTW).
+    if (excludedSet.size > 0) {
+      for (const match of approvedMatches) {
+        for (const perf of match.performances) {
+          if (excludedSet.has(`${match.id}:${perf.playerId}`)) perf.isExcluded = true;
+        }
+      }
+      await prisma.matchPerformance.updateMany({
+        where: { OR: excludedPerformances.map((e) => ({ matchId: e.matchId, playerId: e.playerId })) },
+        data: { isExcluded: true },
+      });
+    }
+
+    // De rest (eenduidige gastspeler-conflicten) automatisch oplossen: eigen elftal telt.
+    await applyAutoExcludableGuestPerformances(approvedMatches, configMap);
 
     const playersUpdated = await applyMatchPointsToSeason(
       season.id,
