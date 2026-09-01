@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { calculatePredictionBonus } from "@/lib/predictionBonus";
 
 export async function POST() {
   const session = await getSession();
@@ -22,27 +23,7 @@ export async function POST() {
 
   let processed = 0;
   for (const pred of predictions) {
-    let bonus = 0;
-    if (config.topScorerId && pred.topScorerId === config.topScorerId) bonus += config.topScorerPoints;
-    if (config.assistKoningId && pred.assistKoningId === config.assistKoningId) bonus += config.assistKoningPoints;
-    if (
-      pred.totalYellowCards != null &&
-      config.yellowCardsMin != null &&
-      config.yellowCardsMax != null &&
-      pred.totalYellowCards >= config.yellowCardsMin &&
-      pred.totalYellowCards <= config.yellowCardsMax
-    ) {
-      bonus += config.yellowCardsPoints;
-    }
-    if (
-      pred.totalGoals != null &&
-      config.totalGoalsMin != null &&
-      config.totalGoalsMax != null &&
-      pred.totalGoals >= config.totalGoalsMin &&
-      pred.totalGoals <= config.totalGoalsMax
-    ) {
-      bonus += config.totalGoalsPoints;
-    }
+    const bonus = calculatePredictionBonus(config, pred);
     if (bonus > 0) {
       await prisma.teamEntry.update({
         where: { id: pred.teamEntryId },

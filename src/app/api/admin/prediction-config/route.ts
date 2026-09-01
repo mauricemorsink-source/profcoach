@@ -22,6 +22,14 @@ export async function PUT(req: Request) {
   if (!session || session.role !== "ADMIN") {
     return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
   }
+  const existing = await prisma.predictionConfig.findUnique({ where: { id: "singleton" } });
+  if (existing?.processed) {
+    return NextResponse.json(
+      { error: "Bonuspunten zijn al verwerkt — trek eerst in voordat je de configuratie wijzigt" },
+      { status: 400 }
+    );
+  }
+
   const body = await req.json();
   const {
     topScorerId, assistKoningId,

@@ -468,8 +468,17 @@ export default function BonusvragenClient() {
               </p>
             )}
 
+            {predConfig?.processed && (
+              <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg px-3 py-2">
+                Bonuspunten zijn al verwerkt — trek eerst in voordat je de instellingen wijzigt.
+              </p>
+            )}
             <div className="flex gap-3 flex-wrap items-center border-t border-slate-800 pt-5">
-              <button onClick={savePredConfig} disabled={predConfigSaving} className={BTN_PRIMARY}>
+              <button
+                onClick={savePredConfig}
+                disabled={predConfigSaving || predConfig?.processed}
+                className={BTN_PRIMARY}
+              >
                 {predConfigSaving ? "Opslaan..." : "Instellingen opslaan"}
               </button>
               <div className="flex-1" />

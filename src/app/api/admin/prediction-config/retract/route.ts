@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { calculatePredictionBonus } from "@/lib/predictionBonus";
 
 export async function POST() {
   const session = await getSession();
@@ -15,11 +16,22 @@ export async function POST() {
   const season = await prisma.season.findFirst({ where: { isActive: true } });
   if (!season) return NextResponse.json({ error: "Geen actief seizoen" }, { status: 400 });
 
-  // Reset all bonus points in active season
-  await prisma.teamEntry.updateMany({
-    where: { seasonId: season.id },
-    data: { bonusPoints: 0 },
+  // Trek exact terug wat "process" ooit heeft toegekend — niet blind naar 0 resetten,
+  // want bonusPoints kan ook los daarvan handmatig zijn aangepast door een admin
+  // (via de deelnemers- of team-entry-beheerpagina), en dat mag hier niet verdwijnen.
+  const predictions = await prisma.teamPrediction.findMany({
+    where: { teamEntry: { seasonId: season.id } },
   });
+
+  for (const pred of predictions) {
+    const bonus = calculatePredictionBonus(config, pred);
+    if (bonus > 0) {
+      await prisma.teamEntry.update({
+        where: { id: pred.teamEntryId },
+        data: { bonusPoints: { decrement: bonus } },
+      });
+    }
+  }
 
   await prisma.predictionConfig.update({
     where: { id: "singleton" },
