@@ -13,10 +13,11 @@ export async function PATCH(
 
   const { id } = await params;
   const { bonusPoints } = await req.json();
+  const parsed = Number(bonusPoints);
 
   const entry = await prisma.teamEntry.update({
     where: { id },
-    data: { bonusPoints: Number(bonusPoints) ?? 0 },
+    data: { bonusPoints: Number.isFinite(parsed) ? parsed : 0 },
     select: { id: true, bonusPoints: true },
   });
 
