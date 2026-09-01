@@ -37,6 +37,21 @@ type FlexConflict = {
   }[];
 };
 
+type GuestAppearance = {
+  playerId: string;
+  playerName: string;
+  playerPosition: string;
+  day: string;
+  ambiguous: boolean;
+  matches: {
+    matchId: string;
+    matchName: string;
+    matchClubTeam: string;
+    isOwnTeam: boolean;
+    counts: boolean;
+  }[];
+};
+
 type PublishMoment = {
   id: string;
   label: string;
@@ -168,6 +183,8 @@ export default function WedstrijdenClient() {
 
   const [pointsMsg, setPointsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [checkingGuests, setCheckingGuests] = useState(false);
+  const [guestPreview, setGuestPreview] = useState<{ appearances: GuestAppearance[]; body: string | undefined } | null>(null);
   const [processSelectedIds, setProcessSelectedIds] = useState<Set<string>>(new Set());
   const [isProcessingStuck, setIsProcessingStuck] = useState(false);
   const [resettingProcessing, setResettingProcessing] = useState(false);
@@ -341,18 +358,39 @@ export default function WedstrijdenClient() {
   }
 
   async function processPoints() {
-    setProcessing(true);
     setPointsMsg(null);
     const body =
       processSelectedIds.size > 0
         ? JSON.stringify({ matchIds: Array.from(processSelectedIds) })
         : undefined;
+
+    // Eerst checken welke spelers deze ronde bij twee elftallen speelden (gastspeler), zodat
+    // we vóór het verwerken kunnen laten zien welke wedstrijd telt en welke niet.
+    setCheckingGuests(true);
+    const previewRes = await fetch("/api/admin/process-points/preview", {
+      method: "POST",
+      ...(body ? { headers: { "Content-Type": "application/json" }, body } : {}),
+    });
+    setCheckingGuests(false);
+    if (previewRes.ok) {
+      const previewData = await previewRes.json();
+      if (Array.isArray(previewData.appearances) && previewData.appearances.length > 0) {
+        setGuestPreview({ appearances: previewData.appearances, body });
+        return;
+      }
+    }
+    await doProcessPoints(body);
+  }
+
+  async function doProcessPoints(body: string | undefined) {
+    setProcessing(true);
     const res = await fetch("/api/admin/process-points", {
       method: "POST",
       ...(body ? { headers: { "Content-Type": "application/json" }, body } : {}),
     });
     const data = await res.json();
     setProcessing(false);
+    setGuestPreview(null);
     if (!res.ok) {
       setPointsMsg({ type: "err", text: data.error || "Verwerking mislukt" });
     } else {
@@ -830,10 +868,14 @@ export default function WedstrijdenClient() {
             </span>
             <button
               onClick={processPoints}
-              disabled={processing}
+              disabled={processing || checkingGuests}
               className={BTN_PRIMARY + " disabled:opacity-40"}
             >
-              {processing ? "Verwerken..." : `Verwerk ${processSelectedIds.size} geselecteerde`}
+              {checkingGuests
+                ? "Gastspelers checken..."
+                : processing
+                ? "Verwerken..."
+                : `Verwerk ${processSelectedIds.size} geselecteerde`}
             </button>
             <button onClick={() => setProcessSelectedIds(new Set())} className={BTN_SECONDARY}>
               Deselecteer
@@ -1917,6 +1959,98 @@ export default function WedstrijdenClient() {
       )}
 
       {/* Modal: FLEX conflicten */}
+      {guestPreview && (() => {
+        const hasAmbiguous = guestPreview.appearances.some((a) => a.ambiguous);
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
+                <div>
+                  <h3 className="text-base font-bold text-white">Gastspeler-check</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Deze spelers speelden dezelfde dag bij twee elftallen. De wedstrijd van hun eigen elftal telt mee, de rest niet.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setGuestPreview(null)}
+                  className="text-slate-500 hover:text-slate-300 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+                {guestPreview.appearances.map((a) => (
+                  <div key={`${a.playerId}-${a.day}`} className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-sm font-semibold text-white">{a.playerName}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[a.playerPosition] ?? "text-slate-400"}`}>
+                        {POSITION_LABEL[a.playerPosition] ?? a.playerPosition}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(a.day).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                      </span>
+                      {a.ambiguous && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-400 border border-amber-500/30 font-medium">
+                          Niet automatisch op te lossen
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 mt-2">
+                      {a.matches.map((m) => (
+                        <div
+                          key={m.matchId}
+                          className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 ${
+                            a.ambiguous
+                              ? "border-amber-500/20 bg-amber-900/10"
+                              : m.counts
+                              ? "border-green-500/30 bg-green-900/10"
+                              : "border-slate-700 bg-slate-800/60"
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm text-slate-200 truncate">{m.matchName}</p>
+                            <p className="text-xs text-slate-500">
+                              {TEAM_LABEL[m.matchClubTeam] ?? m.matchClubTeam}
+                              {m.isOwnTeam && " · eigen elftal"}
+                            </p>
+                          </div>
+                          {a.ambiguous ? (
+                            <span className="text-xs font-semibold text-amber-400 shrink-0">?</span>
+                          ) : m.counts ? (
+                            <span className="text-xs font-semibold text-green-400 shrink-0">✓ Telt mee</span>
+                          ) : (
+                            <span className="text-xs font-semibold text-slate-500 shrink-0">✗ Telt niet mee</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {hasAmbiguous && (
+                  <p className="text-xs text-amber-300 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2">
+                    Bij een ambigu geval (geen van de wedstrijden is duidelijk het eigen elftal) kan dit niet automatisch bepaald
+                    worden. Los dit eerst op — bijvoorbeeld via een publicatiemoment (die heeft een conflictscherm) of door in
+                    &quot;Prestaties&quot; aan te passen wie echt speelde — voordat je verwerkt.
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-3 px-6 py-4 border-t border-slate-700 shrink-0">
+                <button onClick={() => setGuestPreview(null)} className={BTN_SECONDARY}>
+                  Annuleer
+                </button>
+                <button
+                  onClick={() => doProcessPoints(guestPreview.body)}
+                  disabled={processing || hasAmbiguous}
+                  className={BTN_PRIMARY + " disabled:opacity-40 ml-auto"}
+                >
+                  {processing ? "Verwerken..." : "Doorgaan met verwerken"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {conflictModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 rounded-2xl w-full max-w-lg border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">

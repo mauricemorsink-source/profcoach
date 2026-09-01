@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     for (const moment of overdueMoments) {
       const approvedMatches = await prisma.match.findMany({
         where: { publishMomentId: moment.id, status: "APPROVED", seasonId: season.id },
-        include: { performances: { include: { player: { select: { position: true, clubTeam: true } } } } },
+        include: { performances: { include: { player: { select: { name: true, position: true, clubTeam: true } } } } },
       });
 
       // Gastspeler bij twee elftallen in dezelfde ronde: hier draait geen admin mee, dus

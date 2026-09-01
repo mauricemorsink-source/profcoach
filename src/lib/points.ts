@@ -12,39 +12,96 @@ export type MatchWithPerformances = Match & {
 type ConfigMap = Record<string, PointsConfig>;
 
 export type MatchForGuestConflictCheck = Match & {
-  performances: (MatchPerformance & { player: Pick<Player, "clubTeam"> })[];
+  performances: (MatchPerformance & { player: Pick<Player, "name" | "position" | "clubTeam"> })[];
+};
+
+export type GuestAppearanceMatch = {
+  matchId: string;
+  matchName: string;
+  matchClubTeam: string;
+  isOwnTeam: boolean;
+  counts: boolean;
+};
+
+export type GuestDoubleAppearance = {
+  playerId: string;
+  playerName: string;
+  playerPosition: string;
+  day: string;
+  ambiguous: boolean;
+  matches: GuestAppearanceMatch[];
 };
 
 /**
- * Regel: een prestatie bij het elftal waar een speler op papier staat (player.clubTeam)
- * telt altijd. Speelt hij in dezelfde verwerkingsronde óók als gastspeler bij een ander
- * elftal, dan wordt die gastwedstrijd hier automatisch aangewezen om uit te sluiten van
- * punten. Alleen wanneer dat niet eenduidig is (geen van de wedstrijden is zijn eigen
- * elftal, bv. twee verschillende gastoptredens) blijft die speler ongemoeid — dat is zo
- * zeldzaam dat het geen automatische afhandeling verdient buiten de handmatige
- * publiceerroute (die daar een conflictscherm voor toont).
+ * Groepeert alle prestaties per speler PER DAG (niet per hele verwerkbatch — een admin kan
+ * in één keer meerdere weken tegelijk verwerken, en dan zijn wedstrijden van verschillende
+ * weken géén "dezelfde ronde"). Regel: een prestatie bij het elftal waar een speler op
+ * papier staat (player.clubTeam) telt altijd. Speelt hij die dag óók als gastspeler bij een
+ * ander elftal, dan is dat automatisch op te lossen (de gastwedstrijd telt niet mee). Alleen
+ * wanneer dat niet eenduidig is (geen van de wedstrijden die dag is zijn eigen elftal, bv.
+ * twee verschillende gastoptredens) is het ambigu — dat is zo zeldzaam dat het geen
+ * automatische afhandeling verdient buiten de handmatige publiceerroute (die daar een
+ * conflictscherm voor toont).
  */
-export function findAutoExcludableGuestPerformances(
+export function findGuestDoubleAppearances(
   matches: MatchForGuestConflictCheck[]
-): { matchId: string; playerId: string }[] {
-  const byPlayer = new Map<string, { matchId: string; isOwnTeam: boolean }[]>();
+): GuestDoubleAppearance[] {
+  type Entry = {
+    matchId: string; matchName: string; matchClubTeam: string; isOwnTeam: boolean;
+    playerId: string; playerName: string; playerPosition: string;
+  };
+  const byKey = new Map<string, Entry[]>();
   for (const match of matches) {
+    const day = match.matchDate.toISOString().slice(0, 10);
     for (const perf of match.performances) {
       if (!perf.played) continue;
-      const list = byPlayer.get(perf.playerId) ?? [];
-      list.push({ matchId: match.id, isOwnTeam: match.clubTeam === perf.player.clubTeam });
-      byPlayer.set(perf.playerId, list);
+      const key = `${perf.playerId}|${day}`;
+      const list = byKey.get(key) ?? [];
+      list.push({
+        matchId: match.id,
+        matchName: match.name,
+        matchClubTeam: match.clubTeam,
+        isOwnTeam: match.clubTeam === perf.player.clubTeam,
+        playerId: perf.playerId,
+        playerName: perf.player.name,
+        playerPosition: perf.player.position,
+      });
+      byKey.set(key, list);
     }
   }
 
-  const toExclude: { matchId: string; playerId: string }[] = [];
-  for (const [playerId, entries] of byPlayer) {
+  const result: GuestDoubleAppearance[] = [];
+  for (const [key, entries] of byKey) {
     if (entries.length < 2) continue;
+    const day = key.slice(key.indexOf("|") + 1);
     const ownTeamEntries = entries.filter((e) => e.isOwnTeam);
-    if (ownTeamEntries.length === 1) {
-      for (const e of entries) {
-        if (!e.isOwnTeam) toExclude.push({ matchId: e.matchId, playerId });
-      }
+    const resolvable = ownTeamEntries.length === 1;
+    result.push({
+      playerId: entries[0].playerId,
+      playerName: entries[0].playerName,
+      playerPosition: entries[0].playerPosition,
+      day,
+      ambiguous: !resolvable,
+      matches: entries.map((e) => ({
+        matchId: e.matchId,
+        matchName: e.matchName,
+        matchClubTeam: e.matchClubTeam,
+        isOwnTeam: e.isOwnTeam,
+        counts: resolvable ? e.isOwnTeam : false,
+      })),
+    });
+  }
+  return result;
+}
+
+export function findAutoExcludableGuestPerformances(
+  matches: MatchForGuestConflictCheck[]
+): { matchId: string; playerId: string }[] {
+  const toExclude: { matchId: string; playerId: string }[] = [];
+  for (const appearance of findGuestDoubleAppearances(matches)) {
+    if (appearance.ambiguous) continue;
+    for (const m of appearance.matches) {
+      if (!m.counts) toExclude.push({ matchId: m.matchId, playerId: appearance.playerId });
     }
   }
   return toExclude;

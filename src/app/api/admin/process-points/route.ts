@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
     const approvedMatches = await prisma.match.findMany({
       where: approvedWhere,
-      include: { performances: { include: { player: { select: { position: true, clubTeam: true } } } } },
+      include: { performances: { include: { player: { select: { name: true, position: true, clubTeam: true } } } } },
     });
 
     if (approvedMatches.length === 0) {
