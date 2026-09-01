@@ -428,6 +428,24 @@ export default function KladopstellingClient({
             </div>
           </div>
 
+          {/* WhatsApp-groep */}
+          {personInfo.whatsappGroep && (
+            <div className="mb-5 bg-emerald-900/15 border border-emerald-500/25 rounded-2xl px-5 py-4">
+              <p className="text-emerald-400 font-semibold text-sm mb-1">Doe mee met de WhatsApp-groep</p>
+              <p className="text-slate-400 text-sm mb-3">
+                Je hebt aangegeven lid te willen worden van de WhatsApp-groep. Klik hieronder om je aan te sluiten.
+              </p>
+              <a
+                href="https://chat.whatsapp.com/Dzqab7sMXu93CriSAqrSEd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-sm transition-colors"
+              >
+                Word lid van de WhatsApp-groep
+              </a>
+            </div>
+          )}
+
           {/* Screenshot tip */}
           <div className="mb-5 bg-amber-900/15 border border-amber-500/25 rounded-2xl px-5 py-4">
             <p className="text-amber-400 font-semibold text-sm mb-1">Tip: maak een screenshot</p>
