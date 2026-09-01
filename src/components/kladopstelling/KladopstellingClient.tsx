@@ -478,7 +478,7 @@ export default function KladopstellingClient({
                 <tr className="text-left text-slate-500 border-b border-slate-800 bg-slate-800/50">
                   <th className="px-4 py-2.5 font-semibold">Speler</th>
                   <th className="px-4 py-2.5 font-semibold">Elftal</th>
-                  <th className="px-4 py-2.5 font-semibold text-right">€</th>
+                  <th className="px-4 py-2.5 font-semibold text-right">Waarde</th>
                 </tr>
               </thead>
               <tbody>
@@ -496,7 +496,7 @@ export default function KladopstellingClient({
                           {isCaptain && <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold">C</span>}
                         </td>
                         <td className="px-4 py-2.5 text-slate-400 text-xs">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</td>
-                        <td className="px-4 py-2.5 text-right text-cyan-400 font-bold">{player.value}</td>
+                        <td className="px-4 py-2.5 text-right text-cyan-400 font-bold">€{player.value}</td>
                       </tr>
                     );
                   })}

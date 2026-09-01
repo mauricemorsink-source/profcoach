@@ -181,7 +181,7 @@ export default function SpelerslijstClient({ players }: { players: Player[] }) {
                   Elftal <SortIcon active={sortKey === "clubTeam"} dir={sortDir} />
                 </th>
                 <th className={`${thClass("value")} text-right px-4`} onClick={() => toggleSort("value")}>
-                  € <SortIcon active={sortKey === "value"} dir={sortDir} />
+                  Waarde <SortIcon active={sortKey === "value"} dir={sortDir} />
                 </th>
               </tr>
             </thead>

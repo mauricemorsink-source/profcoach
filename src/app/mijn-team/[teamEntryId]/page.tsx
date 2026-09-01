@@ -90,7 +90,7 @@ export default async function ShareTeamPage({
               <tr className="text-left text-slate-500 border-b border-slate-800 bg-slate-800/50">
                 <th className="px-4 py-2.5 font-semibold">Speler</th>
                 <th className="px-4 py-2.5 font-semibold">Elftal</th>
-                <th className="px-4 py-2.5 font-semibold text-right">€</th>
+                <th className="px-4 py-2.5 font-semibold text-right">Waarde</th>
               </tr>
             </thead>
             <tbody>
@@ -105,7 +105,7 @@ export default async function ShareTeamPage({
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-slate-400">{CLUB_LABEL[tp.player.clubTeam] ?? tp.player.clubTeam}</td>
-                    <td className="px-4 py-2.5 text-right text-cyan-400 font-bold">{tp.player.value}</td>
+                    <td className="px-4 py-2.5 text-right text-cyan-400 font-bold">€{tp.player.value}</td>
                   </tr>
                 );
               })}
