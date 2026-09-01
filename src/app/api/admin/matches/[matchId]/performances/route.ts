@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { validatePerformanceInput } from "@/lib/performanceValidation";
 
 export async function PUT(
   req: Request,
@@ -30,6 +31,11 @@ export async function PUT(
       redCard: boolean;
     }[];
   };
+
+  for (const p of performances) {
+    const error = validatePerformanceInput(p);
+    if (error) return NextResponse.json({ error }, { status: 400 });
+  }
 
   for (const p of performances) {
     await prisma.matchPerformance.upsert({

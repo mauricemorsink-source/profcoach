@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { validatePerformanceInput } from "@/lib/performanceValidation";
 
 export async function POST(
   req: NextRequest,
@@ -40,6 +41,11 @@ export async function POST(
 
   if (!Array.isArray(performances)) {
     return NextResponse.json({ error: "Ongeldige invoer" }, { status: 400 });
+  }
+
+  for (const perf of performances) {
+    const error = validatePerformanceInput(perf);
+    if (error) return NextResponse.json({ error }, { status: 400 });
   }
 
   for (const perf of performances) {

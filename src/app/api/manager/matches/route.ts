@@ -47,6 +47,11 @@ export async function POST(req: NextRequest) {
   if (!name?.trim() || !matchDate) {
     return NextResponse.json({ error: "Naam en datum zijn verplicht" }, { status: 400 });
   }
+  const scored = goalsScored != null ? Number(goalsScored) : 0;
+  const conceded = goalsConceded != null ? Number(goalsConceded) : 0;
+  if (!Number.isInteger(scored) || scored < 0 || !Number.isInteger(conceded) || conceded < 0) {
+    return NextResponse.json({ error: "Doelpunten moeten positieve gehele getallen zijn" }, { status: 400 });
+  }
 
   const match = await prisma.match.create({
     data: {
@@ -55,8 +60,8 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       homeAway: homeAway ?? "HOME",
       matchDate: new Date(matchDate),
-      goalsScored: Number(goalsScored) || 0,
-      goalsConceded: Number(goalsConceded) || 0,
+      goalsScored: scored,
+      goalsConceded: conceded,
       extraScorers: extraScorers?.length ? extraScorers : null,
       notes: notes?.trim() || null,
       status: "PENDING",

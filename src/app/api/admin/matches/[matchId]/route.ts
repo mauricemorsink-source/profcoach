@@ -37,6 +37,12 @@ export async function PATCH(
   if (status && !["APPROVED", "REJECTED", "PENDING"].includes(status)) {
     return NextResponse.json({ error: "Ongeldige status" }, { status: 400 });
   }
+  if (goalsScored !== undefined && (!Number.isInteger(Number(goalsScored)) || Number(goalsScored) < 0)) {
+    return NextResponse.json({ error: "Doelpunten voor moeten een positief geheel getal zijn" }, { status: 400 });
+  }
+  if (goalsConceded !== undefined && (!Number.isInteger(Number(goalsConceded)) || Number(goalsConceded) < 0)) {
+    return NextResponse.json({ error: "Doelpunten tegen moeten een positief geheel getal zijn" }, { status: 400 });
+  }
 
   const updated = await prisma.match.update({
     where: { id: matchId },

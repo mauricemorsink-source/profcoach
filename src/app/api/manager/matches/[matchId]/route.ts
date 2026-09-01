@@ -108,6 +108,12 @@ export async function PUT(
   }
 
   const body = await req.json();
+  if (body.goalsScored !== undefined && (!Number.isInteger(Number(body.goalsScored)) || Number(body.goalsScored) < 0)) {
+    return NextResponse.json({ error: "Doelpunten voor moeten een positief geheel getal zijn" }, { status: 400 });
+  }
+  if (body.goalsConceded !== undefined && (!Number.isInteger(Number(body.goalsConceded)) || Number(body.goalsConceded) < 0)) {
+    return NextResponse.json({ error: "Doelpunten tegen moeten een positief geheel getal zijn" }, { status: 400 });
+  }
   const updated = await prisma.match.update({
     where: { id: matchId },
     data: {
