@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getIp } from "@/lib/rateLimit";
+import { validateTeamServerSide } from "@/lib/teamValidation";
 
 export async function POST(req: Request) {
   const { ok, retryAfterSec } = await rateLimit(`team-submit-public:${getIp(req)}`, { max: 5, windowMs: 60 * 60 * 1000 });
@@ -71,6 +72,17 @@ export async function POST(req: Request) {
 
   const formation = await prisma.formation.findUnique({ where: { id: formationId } });
   if (!formation) return NextResponse.json({ error: "Ongeldige formatie" }, { status: 400 });
+
+  const validation = await validateTeamServerSide({
+    formationId,
+    slots,
+    budget: settings.budget,
+    captainEnabled: settings.captainEnabled,
+    captainSlot: captainSlot ?? null,
+  });
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.errors[0] ?? "Ongeldige teamsamenstelling", errors: validation.errors }, { status: 400 });
+  }
 
   const entry = await prisma.$transaction(async (tx) => {
     const teamEntry = await tx.teamEntry.create({

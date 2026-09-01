@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateTeamServerSide } from "@/lib/teamValidation";
 
 export async function POST(req: Request) {
   const { token, formationId, slots, captainSlot } = await req.json();
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
 
   const settings = await prisma.gameSettings.findUnique({
     where: { id: "singleton" },
-    select: { wijzigingsvensterOpen: true },
+    select: { wijzigingsvensterOpen: true, budget: true, captainEnabled: true },
   });
 
   if (!settings?.wijzigingsvensterOpen) {
@@ -35,6 +36,17 @@ export async function POST(req: Request) {
   const playerIds = (slots as (string | null)[]).filter(Boolean) as string[];
   if (playerIds.length === 0) {
     return NextResponse.json({ error: "Geen spelers geselecteerd" }, { status: 400 });
+  }
+
+  const validation = await validateTeamServerSide({
+    formationId,
+    slots,
+    budget: settings.budget,
+    captainEnabled: settings.captainEnabled,
+    captainSlot: captainSlot ?? null,
+  });
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.errors[0] ?? "Ongeldige teamsamenstelling", errors: validation.errors }, { status: 400 });
   }
 
   const teamEntryId = editToken.teamEntry.id;

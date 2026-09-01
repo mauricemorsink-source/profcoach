@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { rateLimit, getIp } from "@/lib/rateLimit";
+import { validateTeamServerSide } from "@/lib/teamValidation";
 
 const teamInclude = {
   formation: true,
@@ -10,6 +11,12 @@ const teamInclude = {
     orderBy: { slotIndex: "asc" as const },
   },
 };
+
+function buildSlotsArray(players: { slotIndex: number; playerId: string }[]): (string | null)[] {
+  const slots: (string | null)[] = Array(11).fill(null);
+  for (const p of players) slots[p.slotIndex] = p.playerId;
+  return slots;
+}
 
 export async function POST(req: Request) {
   const { ok, retryAfterSec } = await rateLimit(`team-submit:${getIp(req)}`, { max: 10, windowMs: 60 * 1000 });
@@ -42,6 +49,17 @@ export async function POST(req: Request) {
   const settings = await prisma.gameSettings.findUnique({ where: { id: "singleton" } });
   if (settings?.deadline && new Date() > new Date(settings.deadline)) {
     return NextResponse.json({ error: "De deadline is verstreken" }, { status: 403 });
+  }
+
+  const validation = await validateTeamServerSide({
+    formationId: team.formationId,
+    slots: buildSlotsArray(team.players),
+    budget: settings?.budget ?? 1750,
+    captainEnabled: settings?.captainEnabled ?? false,
+    captainSlot: team.captainSlot,
+  });
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.errors[0] ?? "Ongeldige teamsamenstelling", errors: validation.errors }, { status: 400 });
   }
 
   const locked = await prisma.teamEntry.update({

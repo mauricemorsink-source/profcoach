@@ -32,6 +32,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "slots moet lengte 11 hebben" }, { status: 400 });
   }
 
+  // Lichte validatie die altijd moet kloppen, ook tijdens een nog onvolledig concept:
+  // geen dubbele spelers, en elke ingevulde speler moet echt bestaan. Budget/posities/
+  // elftal-verdeling worden pas bij het definitief indienen afgedwongen (save is bedoeld
+  // voor tussentijds, mogelijk nog onvolledig opslaan).
+  const filledIds = (slots as (string | null)[]).filter((id): id is string => !!id);
+  if (new Set(filledIds).size !== filledIds.length) {
+    return NextResponse.json({ error: "Een speler kan niet twee keer in het team staan" }, { status: 400 });
+  }
+  if (filledIds.length > 0) {
+    const foundCount = await prisma.player.count({ where: { id: { in: filledIds } } });
+    if (foundCount !== filledIds.length) {
+      return NextResponse.json({ error: "Eén of meer geselecteerde spelers bestaan niet (meer)" }, { status: 400 });
+    }
+  }
+
   const team = await prisma.teamEntry.findUnique({ where: { id: teamEntryId } });
   if (!team) return NextResponse.json({ error: "Team niet gevonden" }, { status: 404 });
   if (team.locked) return NextResponse.json({ error: "Team is gelockt" }, { status: 400 });
