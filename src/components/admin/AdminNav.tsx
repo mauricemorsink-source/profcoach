@@ -29,6 +29,7 @@ const TAB_SECTIONS = [
     heading: "Deelnemers",
     tabs: [
       { href: "/admin/gebruikers", label: "Deelnemers" },
+      { href: "/admin/tussenstand", label: "Tussenstand" },
       { href: "/admin/statistieken", label: "Statistieken" },
     ],
   },

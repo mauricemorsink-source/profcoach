@@ -9,8 +9,6 @@ type GameSettings = {
   requireLogin: boolean;
   inschrijfgeld: number;
   captainEnabled: boolean;
-  showTussenstand: boolean;
-  showStatistieken: boolean;
   wijzigingsvensterOpen: boolean;
 };
 
@@ -27,8 +25,6 @@ export default function InstellingenClient() {
     requireLogin: true,
     inschrijfgeld: 0,
     captainEnabled: false,
-    showTussenstand: true,
-    showStatistieken: true,
     wijzigingsvensterOpen: false,
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -46,8 +42,6 @@ export default function InstellingenClient() {
         requireLogin: data.requireLogin ?? true,
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
-        showTussenstand: data.showTussenstand ?? true,
-        showStatistieken: data.showStatistieken ?? true,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
       });
     }
@@ -66,8 +60,6 @@ export default function InstellingenClient() {
         requireLogin: settingsForm.requireLogin,
         inschrijfgeld: Number(settingsForm.inschrijfgeld),
         captainEnabled: settingsForm.captainEnabled,
-        showTussenstand: settingsForm.showTussenstand,
-        showStatistieken: settingsForm.showStatistieken,
         wijzigingsvensterOpen: settingsForm.wijzigingsvensterOpen,
       }),
     });
@@ -84,8 +76,6 @@ export default function InstellingenClient() {
         requireLogin: data.requireLogin ?? true,
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
-        showTussenstand: data.showTussenstand ?? true,
-        showStatistieken: data.showStatistieken ?? true,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
       });
       setSettingsMsg({ type: "ok", text: "Instellingen opgeslagen" });
@@ -243,53 +233,10 @@ export default function InstellingenClient() {
               </span>
               <span className="text-xs text-slate-500">— bonuspunten per overwinning instelbaar bij Puntensysteem</span>
             </div>
-            <div className="border-t border-slate-800 pt-5">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Zichtbaarheid voor deelnemers</p>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settingsForm.showTussenstand}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, showTussenstand: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
-                  </label>
-                  <span className="text-sm font-medium text-slate-300">Tussenstand zichtbaar</span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      settingsForm.showTussenstand
-                        ? "bg-green-900/40 text-green-400 border border-green-500/30"
-                        : "bg-red-900/40 text-red-400 border border-red-500/30"
-                    }`}
-                  >
-                    {settingsForm.showTussenstand ? "Zichtbaar" : "Verborgen"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settingsForm.showStatistieken}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, showStatistieken: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
-                  </label>
-                  <span className="text-sm font-medium text-slate-300">Statistieken zichtbaar</span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      settingsForm.showStatistieken
-                        ? "bg-green-900/40 text-green-400 border border-green-500/30"
-                        : "bg-red-900/40 text-red-400 border border-red-500/30"
-                    }`}
-                  >
-                    {settingsForm.showStatistieken ? "Zichtbaar" : "Verborgen"}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <p className="text-xs text-slate-500 border-t border-slate-800 pt-4">
+              Zichtbaarheid van tussenstand/statistieken en het publiceren van de stand voor deelnemers regel je nu bij{" "}
+              <a href="/admin/tussenstand" className="text-cyan-400 hover:text-cyan-300 underline">Tussenstand</a>.
+            </p>
             {settingsMsg && (
               <p
                 className={`text-sm px-3 py-2 rounded-lg border ${
