@@ -16,6 +16,15 @@ export async function POST() {
   const season = await prisma.season.findFirst({ where: { isActive: true } });
   if (!season) return NextResponse.json({ error: "Geen actief seizoen" }, { status: 400 });
 
+  // Snapshot prevBonusPoints voor alle TeamEntries van dit seizoen, zodat de bonus die
+  // hierna wordt toegekend één keer als delta in de tussenstand opvalt en daarna gewoon
+  // settelt in het totaal (net als prevPoints/prevCaptainPoints bij matchverwerking).
+  await prisma.$executeRaw`
+    UPDATE "TeamEntry"
+    SET "prevBonusPoints" = "bonusPoints"
+    WHERE "seasonId" = ${season.id}
+  `;
+
   const predictions = await prisma.teamPrediction.findMany({
     where: { teamEntry: { seasonId: season.id } },
     include: { teamEntry: true },

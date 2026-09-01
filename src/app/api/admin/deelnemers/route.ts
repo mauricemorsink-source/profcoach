@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { calculatePredictionBonusBreakdown } from "@/lib/predictionBonus";
 
 export async function GET() {
   const session = await getSession();
@@ -11,23 +12,36 @@ export async function GET() {
   const season = await prisma.season.findFirst({ where: { isActive: true } });
   if (!season) return NextResponse.json([]);
 
-  const entries = await prisma.teamEntry.findMany({
-    where: { seasonId: season.id },
-    orderBy: { createdAt: "asc" },
-    include: {
-      formation: true,
-      players: {
-        include: { player: true },
-        orderBy: { slotIndex: "asc" },
-      },
-      prediction: {
-        include: {
-          topScorer: { select: { id: true, name: true } },
-          assistKoning: { select: { id: true, name: true } },
+  const [entries, predictionConfig] = await Promise.all([
+    prisma.teamEntry.findMany({
+      where: { seasonId: season.id },
+      orderBy: { createdAt: "asc" },
+      include: {
+        formation: true,
+        players: {
+          include: { player: true },
+          orderBy: { slotIndex: "asc" },
+        },
+        prediction: {
+          include: {
+            topScorer: { select: { id: true, name: true } },
+            assistKoning: { select: { id: true, name: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.predictionConfig.findUnique({ where: { id: "singleton" } }),
+  ]);
 
-  return NextResponse.json(entries);
+  // Alleen een zinvolle breakdown tonen als de bonusvragen daadwerkelijk verwerkt zijn —
+  // anders staat er nog geen "correct antwoord" vast om tegen te vergelijken.
+  const result = entries.map((entry) => ({
+    ...entry,
+    predictionBonusBreakdown:
+      predictionConfig?.processed && entry.prediction
+        ? calculatePredictionBonusBreakdown(predictionConfig, entry.prediction)
+        : null,
+  }));
+
+  return NextResponse.json(result);
 }

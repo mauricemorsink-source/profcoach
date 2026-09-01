@@ -133,6 +133,7 @@ model TeamEntry {
   locked         Boolean           @default(false)
   captainSlot    Int?
   bonusPoints       Int               @default(0)
+  prevBonusPoints   Int               @default(0)
   captainPoints     Int               @default(0)
   prevCaptainPoints Int               @default(0)
   createdAt         DateTime          @default(now())

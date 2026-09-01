@@ -61,7 +61,7 @@ export default async function DeelnemersPage() {
           }
         }
         totalPoints += (te.bonusPoints ?? 0) + (te.captainPoints ?? 0);
-        prevPoints  += te.prevCaptainPoints ?? 0;
+        prevPoints  += (te.prevBonusPoints ?? 0) + (te.prevCaptainPoints ?? 0);
 
         const userName = te.user?.name
           ?? ([te.voornaam, te.achternaam].filter(Boolean).join(" ") || "Anoniem");

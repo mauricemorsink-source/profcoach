@@ -15,6 +15,13 @@ type Prediction = {
   totalGoals: number | null;
 };
 
+type PredictionBonusBreakdown = {
+  topScorer: number;
+  assistKoning: number;
+  yellowCards: number;
+  totalGoals: number;
+};
+
 type Deelnemer = {
   id: string;
   voornaam: string | null;
@@ -30,6 +37,7 @@ type Deelnemer = {
   formation: { id: string; code: string } | null;
   players: TeamPlayer[];
   prediction: Prediction | null;
+  predictionBonusBreakdown: PredictionBonusBreakdown | null;
 };
 
 const POSITION_SHORT: Record<string, string> = { GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN" };
@@ -295,16 +303,32 @@ export default function DeelnemersClient() {
                 <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Voorspellingen</p>
                 <div className="space-y-1.5 text-sm">
                   {[
-                    ["Topscorer", modal.prediction.topScorer?.name],
-                    ["Assistkoning", modal.prediction.assistKoning?.name],
-                    ["Gele kaarten", modal.prediction.totalYellowCards],
-                    ["Totaal doelpunten", modal.prediction.totalGoals],
-                  ].map(([label, value]) => (
-                    <div key={String(label)} className="flex justify-between">
+                    ["Topscorer", modal.prediction.topScorer?.name, modal.predictionBonusBreakdown?.topScorer],
+                    ["Assistkoning", modal.prediction.assistKoning?.name, modal.predictionBonusBreakdown?.assistKoning],
+                    ["Gele kaarten", modal.prediction.totalYellowCards, modal.predictionBonusBreakdown?.yellowCards],
+                    ["Totaal doelpunten", modal.prediction.totalGoals, modal.predictionBonusBreakdown?.totalGoals],
+                  ].map(([label, value, points]) => (
+                    <div key={String(label)} className="flex justify-between items-center">
                       <span className="text-slate-500">{label}</span>
-                      <span className="text-white font-medium">{value ?? <span className="text-slate-600 italic">—</span>}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-white font-medium">{value ?? <span className="text-slate-600 italic">—</span>}</span>
+                        {modal.predictionBonusBreakdown && (
+                          <span
+                            className={`text-xs font-semibold px-1.5 py-0.5 rounded-full border ${
+                              points ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"
+                            }`}
+                          >
+                            {points ? `+${points}` : "0"}
+                          </span>
+                        )}
+                      </span>
                     </div>
                   ))}
+                  {!modal.predictionBonusBreakdown && (
+                    <p className="text-xs text-slate-600 italic pt-1">
+                      Nog niet verwerkt — punten per antwoord verschijnen hier zodra de bonuspunten zijn toegekend bij Spelinstellingen.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
