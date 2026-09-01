@@ -56,6 +56,7 @@ model User {
   betaald             Boolean       @default(false)
   teamEntries         TeamEntry[]
   createdMatches      Match[]
+  standingsPublications StandingsPublication[]
 }
 
 model GameSettings {
@@ -72,8 +73,6 @@ model GameSettings {
   showTussenstand       Boolean   @default(true)
   showStatistieken      Boolean   @default(true)
   wijzigingsvensterOpen Boolean   @default(false)
-  publishedStandingsAt   DateTime?
-  publishedStandingsData Json?
   updatedAt             DateTime  @updatedAt
 }
 
@@ -90,13 +89,34 @@ model RateLimitEntry {
 }
 
 model Season {
-  id          String              @id @default(cuid())
-  name        String
-  isActive    Boolean             @default(false)
-  createdAt   DateTime            @default(now())
-  teamEntries TeamEntry[]
-  matches     Match[]
-  playerStats PlayerSeasonStats[]
+  id                    String                  @id @default(cuid())
+  name                  String
+  isActive              Boolean                 @default(false)
+  createdAt             DateTime                @default(now())
+  teamEntries           TeamEntry[]
+  matches               Match[]
+  playerStats           PlayerSeasonStats[]
+  standingsPublications StandingsPublication[]
+}
+
+/// Een momentopname van de deelnemersstand die (meteen of op een gepland moment) zichtbaar
+/// wordt voor deelnemers, los van de altijd-live stand die de admin ziet. De zichtbare
+/// publicatie is steeds de rij met de meest recente revealAt die al bereikt is — "terugdraaien"
+/// maakt daarom geen bestaande rij ongedaan, maar voegt een nieuwe rij toe met de oude data,
+/// zodat de geschiedenis nooit verloren gaat.
+model StandingsPublication {
+  id          String    @id @default(cuid())
+  seasonId    String
+  label       String?
+  data        Json
+  matchesAsOf DateTime?
+  revealAt    DateTime
+  createdAt   DateTime  @default(now())
+  createdById String?
+  season      Season    @relation(fields: [seasonId], references: [id])
+  createdBy   User?     @relation(fields: [createdById], references: [id])
+
+  @@index([seasonId, revealAt])
 }
 
 model Formation {
