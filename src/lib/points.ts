@@ -173,9 +173,10 @@ export function calculateMatchPoints(
 
     // Uitgesloten prestaties (conflictresolutie bij een gastspeler die dezelfde publicatie-
     // ronde in twee wedstrijden speelde): tellen wel mee voor statistieken (doelpunten,
-    // assists, kaarten), maar niet voor punten/wedstrijden-gespeeld/winst — exact zoals bij
-    // het oorspronkelijk verwerken. Zo blijft een latere terugdraai/verwijdering van deze
-    // wedstrijd consistent: er wordt nooit meer afgetrokken dan ooit is toegekend.
+    // assists, kaarten, clean sheets), maar niet voor punten/wedstrijden-gespeeld/winst —
+    // exact zoals bij het oorspronkelijk verwerken. Zo blijft een latere terugdraai/
+    // verwijdering van deze wedstrijd consistent: er wordt nooit meer afgetrokken dan ooit
+    // is toegekend.
     const excluded = perf.isExcluded;
 
     deltaMap.set(perf.playerId, {
@@ -186,7 +187,7 @@ export function calculateMatchPoints(
       ownGoals: perf.ownGoals,
       yellowCards: perf.yellowCards,
       redCards: perf.redCard ? 1 : 0,
-      cleanSheets: !excluded && cleanSheet && isApplicable(configMap, "cleanSheet", pos) ? 1 : 0,
+      cleanSheets: cleanSheet && isApplicable(configMap, "cleanSheet", pos) ? 1 : 0,
       goalsConceded: !excluded && isApplicable(configMap, "goalsConceded", pos) ? match.goalsConceded : 0,
       wins: !excluded && won ? 1 : 0,
       draws: !excluded && drew ? 1 : 0,
