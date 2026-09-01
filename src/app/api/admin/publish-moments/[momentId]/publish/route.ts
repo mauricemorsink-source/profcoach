@@ -234,31 +234,28 @@ export async function POST(
       });
     }
 
-    // Captain bonus: for each team entry whose captain's team won a match in this moment
+    // Aanvoerdersbonus: op basis van of de aanvoerder zélf heeft meegespeeld en gewonnen
+    // (totalDeltas, hierboven al berekend — houdt ook rekening met uitgesloten prestaties).
+    // Niet gebaseerd op het elftal van de aanvoerder, want een gastspeler (FLEX) kan in
+    // hetzelfde publicatiemoment voor twee elftallen spelen; alleen kijken naar het
+    // FLEX-team zou een winst met het hoofdelftal missen, en zonder te checken of de
+    // aanvoerder daadwerkelijk speelde, kreeg een deelnemer soms ten onrechte bonus.
     if (settings?.captainEnabled && (settings.captainBonusPerWin ?? 0) > 0) {
       const teamEntries = await prisma.teamEntry.findMany({
         where: { seasonId: season.id, captainSlot: { not: null } },
-        include: {
-          players: {
-            include: { player: { select: { clubTeam: true, altTeam: true } } },
-          },
-        },
+        include: { players: { select: { playerId: true, slotIndex: true } } },
       });
 
       for (const entry of teamEntries) {
         if (entry.captainSlot === null) continue;
         const captainSlotPlayer = entry.players.find((p) => p.slotIndex === entry.captainSlot);
         if (!captainSlotPlayer) continue;
-        const captainTeam = captainSlotPlayer.player.altTeam ?? captainSlotPlayer.player.clubTeam;
-        const wins = approvedMatches.filter(
-          (m) => m.clubTeam === captainTeam && m.goalsScored > m.goalsConceded
-        ).length;
-        if (wins > 0) {
-          await prisma.teamEntry.update({
-            where: { id: entry.id },
-            data: { captainPoints: { increment: wins * settings.captainBonusPerWin } },
-          });
-        }
+        const captainDelta = totalDeltas.get(captainSlotPlayer.playerId);
+        if (!captainDelta || captainDelta.wins === 0) continue;
+        await prisma.teamEntry.update({
+          where: { id: entry.id },
+          data: { captainPoints: { increment: captainDelta.wins * settings.captainBonusPerWin } },
+        });
       }
     }
 
