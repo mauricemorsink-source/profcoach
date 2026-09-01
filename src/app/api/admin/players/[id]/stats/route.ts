@@ -47,7 +47,12 @@ export async function GET(
 
       const add = (key: string, val: number) => { if (val !== 0) { breakdown[key] = val; points += val; } };
 
-      if (p.played) {
+      // Uitgesloten prestaties (conflictresolutie bij een gastspeler die dezelfde ronde in
+      // twee wedstrijden speelde) tellen niet mee voor punten — net als in de echte
+      // puntenberekening (calculateMatchPoints). Zonder deze check liet dit overzicht per
+      // wedstrijd nog de volledige punten zien, terwijl het seizoenstotaal bovenaan al wel
+      // correct was gecorrigeerd.
+      if (p.played && !p.isExcluded) {
         if (p.goals > 0)        add("Doelpunten",      p.goals       * getPoints(configMap, "goal",          pos));
         if (p.penaltyGoals > 0) add("Strafschoppen",   p.penaltyGoals * getPoints(configMap, "penaltyGoal",  pos));
         if (p.assists > 0)      add("Assists",         p.assists      * getPoints(configMap, "assist",        pos));
@@ -75,6 +80,7 @@ export async function GET(
         goalsScored:   m.goalsScored,
         goalsConceded: m.goalsConceded,
         played:        p.played,
+        isExcluded:    p.isExcluded,
         goals:         p.goals,
         penaltyGoals:  p.penaltyGoals,
         assists:       p.assists,

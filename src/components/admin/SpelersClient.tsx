@@ -38,6 +38,7 @@ type PlayerStatPerf = {
   goalsScored: number;
   goalsConceded: number;
   played: boolean;
+  isExcluded: boolean;
   goals: number;
   penaltyGoals: number;
   assists: number;
@@ -706,14 +707,19 @@ export default function SpelersClient() {
                           <div
                             key={p.matchId}
                             className={`rounded-xl border p-3 ${
-                              !p.played ? "border-slate-800 opacity-50" : "border-slate-700 bg-slate-800/40"
+                              !p.played || p.isExcluded ? "border-slate-800 opacity-50" : "border-slate-700 bg-slate-800/40"
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3 mb-2">
                               <div>
-                                <p className="font-medium text-white text-sm">
+                                <p className="font-medium text-white text-sm flex items-center gap-1.5 flex-wrap">
                                   {TEAM_LABEL[p.clubTeam] ?? p.clubTeam} {p.homeAway === "HOME" ? "vs" : "@"}{" "}
                                   {p.matchName}
+                                  {p.isExcluded && (
+                                    <span className="text-[10px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
+                                      Uitgesloten (gastspeler)
+                                    </span>
+                                  )}
                                 </p>
                                 <p className="text-xs text-slate-500">
                                   {new Date(p.matchDate).toLocaleDateString("nl-NL", {
@@ -733,6 +739,7 @@ export default function SpelersClient() {
                                       ? "Gelijkspel"
                                       : "Verloren"
                                     : "Niet gespeeld"}
+                                  {p.isExcluded && " · telt niet mee voor punten (speelde die ronde ook voor eigen elftal)"}
                                 </p>
                               </div>
                               <span
