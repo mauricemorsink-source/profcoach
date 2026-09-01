@@ -5,7 +5,7 @@ const ALLOWED_TAGS = [
   "h1", "h2", "h3", "h4", "h5", "h6",
   "p", "br", "hr",
   "ul", "ol", "li",
-  "strong", "em", "b", "i", "u", "s",
+  "strong", "em", "b", "i", "u", "s", "small",
   "a",
   "blockquote",
   "code", "pre",

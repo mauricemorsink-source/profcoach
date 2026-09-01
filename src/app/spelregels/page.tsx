@@ -34,6 +34,7 @@ export default async function SpelregelsPage() {
                 [&_li]:text-slate-300
                 [&_strong]:text-white [&_strong]:font-semibold
                 [&_em]:text-slate-400
+                [&_small]:text-slate-500
                 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline
                 [&_hr]:border-slate-700 [&_hr]:my-6
                 [&_blockquote]:border-l-4 [&_blockquote]:border-cyan-500/40 [&_blockquote]:pl-4 [&_blockquote]:text-slate-400 [&_blockquote]:italic
