@@ -75,62 +75,81 @@ export async function POST(
       matchPointsMaps.set(match.id, calculateMatchPoints(match, configMap));
     }
 
-    // Server-side conflict check: only when admin hasn't gone through the modal yet.
-    if (!conflictsResolved) {
-      const playerMatchMap = new Map<string, {
-        player: { name: string; position: string; clubTeam: string; altTeam: string | null };
-        matches: {
-          matchId: string; matchName: string; matchDate: string; matchClubTeam: string;
-          isOriginalTeam: boolean; goals: number; penaltyGoals: number; assists: number;
-          ownGoals: number; yellowCards: number; redCard: boolean; points: number;
-        }[];
-      }>();
+    // Groepeer alle prestaties per speler binnen dit publicatiemoment, om te zien wie in
+    // meerdere wedstrijden speelde (bv. een gastspeler bij een ander elftal). Draait altijd
+    // (ook bij een herindiening na conflictresolutie), zodat de automatische regel hieronder
+    // consistent blijft toegepast.
+    const playerMatchMap = new Map<string, {
+      player: { name: string; position: string; clubTeam: string; altTeam: string | null };
+      matches: {
+        matchId: string; matchName: string; matchDate: string; matchClubTeam: string;
+        isOriginalTeam: boolean; goals: number; penaltyGoals: number; assists: number;
+        ownGoals: number; yellowCards: number; redCard: boolean; points: number;
+      }[];
+    }>();
 
-      for (const match of approvedMatches) {
-        const matchPointsMap = matchPointsMaps.get(match.id)!;
-        for (const perf of match.performances) {
-          if (!perf.played) continue;
-          if (excludedSet.has(`${match.id}:${perf.playerId}`)) continue;
-          const delta = matchPointsMap.get(perf.playerId);
-          const entry = {
-            matchId: match.id,
-            matchName: match.name,
-            matchDate: match.matchDate.toISOString(),
-            matchClubTeam: match.clubTeam,
-            isOriginalTeam: match.clubTeam === perf.player.clubTeam,
-            goals: perf.goals,
-            penaltyGoals: perf.penaltyGoals,
-            assists: perf.assists,
-            ownGoals: perf.ownGoals,
-            yellowCards: perf.yellowCards,
-            redCard: perf.redCard,
-            points: delta?.points ?? 0,
-          };
-          const existing = playerMatchMap.get(perf.playerId);
-          if (existing) {
-            existing.matches.push(entry);
-          } else {
-            playerMatchMap.set(perf.playerId, {
-              player: {
-                name: perf.player.name,
-                position: perf.player.position,
-                clubTeam: perf.player.clubTeam,
-                altTeam: perf.player.altTeam,
-              },
-              matches: [entry],
-            });
-          }
+    for (const match of approvedMatches) {
+      const matchPointsMap = matchPointsMaps.get(match.id)!;
+      for (const perf of match.performances) {
+        if (!perf.played) continue;
+        if (excludedSet.has(`${match.id}:${perf.playerId}`)) continue;
+        const delta = matchPointsMap.get(perf.playerId);
+        const entry = {
+          matchId: match.id,
+          matchName: match.name,
+          matchDate: match.matchDate.toISOString(),
+          matchClubTeam: match.clubTeam,
+          isOriginalTeam: match.clubTeam === perf.player.clubTeam,
+          goals: perf.goals,
+          penaltyGoals: perf.penaltyGoals,
+          assists: perf.assists,
+          ownGoals: perf.ownGoals,
+          yellowCards: perf.yellowCards,
+          redCard: perf.redCard,
+          points: delta?.points ?? 0,
+        };
+        const existing = playerMatchMap.get(perf.playerId);
+        if (existing) {
+          existing.matches.push(entry);
+        } else {
+          playerMatchMap.set(perf.playerId, {
+            player: {
+              name: perf.player.name,
+              position: perf.player.position,
+              clubTeam: perf.player.clubTeam,
+              altTeam: perf.player.altTeam,
+            },
+            matches: [entry],
+          });
         }
       }
+    }
 
-      const unresolvedConflicts = [];
-      for (const [playerId, data] of playerMatchMap) {
-        if (data.matches.length >= 2) unresolvedConflicts.push({ playerId, ...data });
+    // Automatische regel: een prestatie bij het eigen, op papier geregistreerde elftal
+    // (player.clubTeam) telt altijd. Speelt iemand in hetzelfde publicatiemoment óók als
+    // gastspeler bij een ander elftal, dan telt alléén de wedstrijd van het eigen elftal mee
+    // en wordt de gastwedstrijd automatisch uitgesloten — geen handmatige keuze nodig. Alleen
+    // wanneer dat niet eenduidig is (geen van de wedstrijden is het eigen elftal, bv. twee
+    // verschillende gastoptredens) blijft dit een conflict dat de admin zelf moet oplossen.
+    const unresolvedConflicts = [];
+    for (const [playerId, data] of playerMatchMap) {
+      if (data.matches.length < 2) continue;
+      const ownTeamMatches = data.matches.filter((m) => m.isOriginalTeam);
+      if (ownTeamMatches.length === 1) {
+        for (const m of data.matches) {
+          if (!m.isOriginalTeam) {
+            excludedSet.add(`${m.matchId}:${playerId}`);
+            excludedPerformances.push({ matchId: m.matchId, playerId });
+          }
+        }
+      } else {
+        unresolvedConflicts.push({ playerId, ...data });
       }
-      if (unresolvedConflicts.length > 0) {
-        await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
-        return NextResponse.json({ error: "conflicts", conflicts: unresolvedConflicts }, { status: 409 });
-      }
+    }
+
+    if (!conflictsResolved && unresolvedConflicts.length > 0) {
+      await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
+      return NextResponse.json({ error: "conflicts", conflicts: unresolvedConflicts }, { status: 409 });
     }
 
     type Delta = ReturnType<typeof calculateMatchPoints> extends Map<string, infer V> ? V : never;

@@ -91,9 +91,14 @@ export async function GET(
     }
   }
 
+  // Zelfde automatische regel als bij het echte publiceren: een prestatie bij het eigen
+  // elftal telt altijd en wint automatisch van een gastoptreden bij een ander elftal, dus
+  // dat is geen conflict dat de admin hoeft op te lossen — alleen tonen wat écht ambigu is.
   const conflicts = [];
   for (const [playerId, data] of playerMatchMap) {
-    if (data.matches.length >= 2) {
+    if (data.matches.length < 2) continue;
+    const ownTeamMatches = data.matches.filter((m) => m.isOriginalTeam);
+    if (ownTeamMatches.length !== 1) {
       conflicts.push({ playerId, ...data });
     }
   }
