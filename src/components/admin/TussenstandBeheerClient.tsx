@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import StandingsPublishPanel from "@/components/tussenstand/StandingsPublishPanel";
+import DeelnemersTable from "@/components/tussenstand/DeelnemersTable";
 
 type DeelnemerStanding = {
   id: string;
@@ -115,7 +116,19 @@ export default function TussenstandBeheerClient({
       </section>
 
       {hasSeason ? (
-        <StandingsPublishPanel liveStandings={liveStandings} />
+        <>
+          <section>
+            <div className="mb-2">
+              <h2 className="text-base font-bold text-white">Live stand</h2>
+              <p className="text-slate-500 text-sm">
+                Altijd actueel, inclusief de laatst verwerkte wedstrijden. De +/- is t.o.v. de vorige verwerkronde — dit
+                is dus wat deelnemers te zien krijgen zodra je publiceert, niet eerder.
+              </p>
+            </div>
+            <DeelnemersTable deelnemers={liveStandings} />
+          </section>
+          <StandingsPublishPanel liveStandings={liveStandings} />
+        </>
       ) : (
         <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>
       )}
