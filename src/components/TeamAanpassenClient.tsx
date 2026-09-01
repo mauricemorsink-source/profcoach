@@ -344,6 +344,7 @@ export default function TeamAanpassenClient({
                     <span className={`font-semibold text-sm flex-1 ${isCaptain ? "text-yellow-200" : "text-white"}`}>
                       {player.name}
                     </span>
+                    <span className="text-xs text-slate-500 shrink-0">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</span>
                     {isCaptain && <span className="text-yellow-300 font-black text-sm">C</span>}
                   </button>
                 );

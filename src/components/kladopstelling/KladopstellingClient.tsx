@@ -672,7 +672,9 @@ export default function KladopstellingClient({
                           : <span className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-500">C</span>}
                         <span>{player.name}</span>
                       </div>
-                      <span className="text-xs text-slate-500">{POSITION_LABEL[player.position] ?? player.position}</span>
+                      <span className="text-xs text-slate-500">
+                        {CLUB_LABEL[player.clubTeam] ?? player.clubTeam} · {POSITION_LABEL[player.position] ?? player.position}
+                      </span>
                     </button>
                   );
                 })}
