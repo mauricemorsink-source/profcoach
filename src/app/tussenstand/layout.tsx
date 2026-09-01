@@ -1,19 +1,8 @@
-import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { getContent } from "@/lib/content";
 import TussenstandTabs from "@/components/tussenstand/TussenstandTabs";
 
 export default async function TussenstandLayout({ children }: { children: React.ReactNode }) {
-  const [settings, title] = await Promise.all([
-    prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
-    getContent("tussenstand.title"),
-  ]);
-  const updatedAt = settings?.standingsUpdatedAt
-    ? new Date(settings.standingsUpdatedAt).toLocaleString("nl-NL", {
-        day: "numeric", month: "long", year: "numeric",
-        hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam",
-      })
-    : null;
+  const title = await getContent("tussenstand.title");
 
   return (
     <div
@@ -23,9 +12,6 @@ export default async function TussenstandLayout({ children }: { children: React.
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-black text-white">{title}</h1>
-          <p className="text-slate-500 text-xs mt-0.5">
-            {updatedAt ? `Bijgewerkt op ${updatedAt}` : "Nog niet bijgewerkt"}
-          </p>
         </div>
         <TussenstandTabs />
         {children}

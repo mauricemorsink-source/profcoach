@@ -72,6 +72,8 @@ model GameSettings {
   showTussenstand       Boolean   @default(true)
   showStatistieken      Boolean   @default(true)
   wijzigingsvensterOpen Boolean   @default(false)
+  publishedStandingsAt   DateTime?
+  publishedStandingsData Json?
   updatedAt             DateTime  @updatedAt
 }
 

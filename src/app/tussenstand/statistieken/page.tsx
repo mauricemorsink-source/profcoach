@@ -34,6 +34,13 @@ export default async function StatistiekenPage() {
     );
   }
 
+  const updatedAt = settings?.standingsUpdatedAt
+    ? new Date(settings.standingsUpdatedAt).toLocaleString("nl-NL", {
+        day: "numeric", month: "long", year: "numeric",
+        hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam",
+      })
+    : null;
+
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
   let topScorers: { playerId: string; playerName: string; clubTeam: string; goals: number; delta: number }[] = [];
@@ -74,6 +81,7 @@ export default async function StatistiekenPage() {
 
   return (
     <div className="space-y-4">
+      <p className="text-slate-500 text-xs -mt-2">{updatedAt ? `Bijgewerkt op ${updatedAt}` : "Nog niet bijgewerkt"}</p>
       <div className="bg-slate-900 neon-border rounded-2xl p-5">
         <h2 className="font-bold text-white mb-3 text-sm uppercase tracking-wide text-slate-400">Topscorers</h2>
         {topScorers.length === 0 ? (

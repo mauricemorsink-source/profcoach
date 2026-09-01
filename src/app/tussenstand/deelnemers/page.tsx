@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getContentMap } from "@/lib/content";
+import { computeDeelnemersStandings, type DeelnemerStanding } from "@/lib/standings";
 import DeelnemersTable from "@/components/tussenstand/DeelnemersTable";
+import PublishStandingsBar from "@/components/tussenstand/PublishStandingsBar";
 
 export default async function DeelnemersPage() {
   const [session, settings] = await Promise.all([
@@ -21,61 +23,42 @@ export default async function DeelnemersPage() {
     );
   }
 
-  const season = await prisma.season.findFirst({ where: { isActive: true } });
+  const publishedStandingsAt = settings?.publishedStandingsAt ?? null;
+  const publishedStandingsData = (settings?.publishedStandingsData as DeelnemerStanding[] | null) ?? null;
 
-  let deelnemers: {
-    id: string; userName: string; totalPoints: number; prevPoints: number; delta: number;
-  }[] = [];
-
-  if (season) {
-    const allStats = await prisma.playerSeasonStats.findMany({
-      where: { seasonId: season.id },
-      select: { playerId: true, totalPoints: true, prevPoints: true, wins: true },
-    });
-
-    const teamEntries = await prisma.teamEntry.findMany({
-      where: {
-        seasonId: season.id,
-        OR: [
-          { userId: null },
-          { user: { isParticipant: true } },
-        ],
-      },
-      include: {
-        user: { select: { id: true, name: true } },
-        players: { select: { playerId: true } },
-      },
-    });
-
-    const statsMap = new Map(allStats.map((s) => [s.playerId, s]));
-
-    deelnemers = teamEntries
-      .map((te) => {
-        let totalPoints = 0;
-        let prevPoints = 0;
-        for (const p of te.players) {
-          const stat = statsMap.get(p.playerId);
-          if (stat) {
-            totalPoints += stat.totalPoints;
-            prevPoints += stat.prevPoints;
-          }
-        }
-        totalPoints += (te.bonusPoints ?? 0) + (te.captainPoints ?? 0);
-        prevPoints  += (te.prevBonusPoints ?? 0) + (te.prevCaptainPoints ?? 0);
-
-        const userName = te.user?.name
-          ?? ([te.voornaam, te.achternaam].filter(Boolean).join(" ") || "Anoniem");
-
-        return {
-          id: te.id,
-          userName,
-          totalPoints,
-          prevPoints,
-          delta: isFinite(totalPoints - prevPoints) ? totalPoints - prevPoints : 0,
-        };
-      })
-      .sort((a, b) => b.totalPoints - a.totalPoints);
+  // Admin ziet altijd de live stand (om te beoordelen vóór publiceren). Deelnemers zien
+  // uitsluitend de laatst gepubliceerde momentopname — nooit automatisch live data, zodat
+  // wij zelf bepalen wanneer een nieuwe stand zichtbaar wordt.
+  let deelnemers: DeelnemerStanding[] = [];
+  if (isAdmin) {
+    const season = await prisma.season.findFirst({ where: { isActive: true } });
+    if (season) deelnemers = await computeDeelnemersStandings(season.id);
+  } else {
+    deelnemers = publishedStandingsData ?? [];
   }
 
-  return <DeelnemersTable deelnemers={deelnemers} />;
+  const publishedLabel = publishedStandingsAt
+    ? new Date(publishedStandingsAt).toLocaleString("nl-NL", {
+        day: "numeric", month: "long", year: "numeric",
+        hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam",
+      })
+    : null;
+
+  return (
+    <div className="space-y-3">
+      {isAdmin && <PublishStandingsBar publishedStandingsAt={publishedStandingsAt} />}
+      {!isAdmin && publishedStandingsData === null ? (
+        <div className="bg-slate-900 neon-border rounded-2xl p-8 text-center">
+          <p className="text-slate-300 font-medium">De tussenstand is nog niet gepubliceerd.</p>
+        </div>
+      ) : (
+        <>
+          {!isAdmin && (
+            <p className="text-slate-500 text-xs">{`Gepubliceerd op ${publishedLabel}`}</p>
+          )}
+          <DeelnemersTable deelnemers={deelnemers} />
+        </>
+      )}
+    </div>
+  );
 }
