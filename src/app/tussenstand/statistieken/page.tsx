@@ -53,6 +53,12 @@ export default async function StatistiekenPage() {
     );
   }
 
+  const updatedAt = settings?.standingsUpdatedAt
+    ? new Date(settings.standingsUpdatedAt).toLocaleDateString("nl-NL", {
+        day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam",
+      })
+    : null;
+
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
   let topScorers: Item[] = [];
@@ -85,11 +91,14 @@ export default async function StatistiekenPage() {
   }
 
   return (
-    <div className="bg-slate-900 neon-border rounded-2xl p-5">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-        <StatColumn title="Topscorers" icon="⚽" color="text-amber-400" items={topScorers} emptyText="Nog geen doelpunten." />
-        <StatColumn title="Assists" icon="🅰️" color="text-cyan-400" items={topAssists} emptyText="Nog geen assists." />
-        <StatColumn title="Clean sheets" icon="🧤" color="text-green-400" items={topCleanSheets} emptyText="Nog geen clean sheets." />
+    <div className="space-y-3">
+      {updatedAt && <p className="text-slate-500 text-xs">{`Laatste wijziging: ${updatedAt}`}</p>}
+      <div className="bg-slate-900 neon-border rounded-2xl p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+          <StatColumn title="Topscorers" icon="⚽" color="text-amber-400" items={topScorers} emptyText="Nog geen doelpunten." />
+          <StatColumn title="Assists" icon="🅰️" color="text-cyan-400" items={topAssists} emptyText="Nog geen assists." />
+          <StatColumn title="Clean sheets" icon="🧤" color="text-green-400" items={topCleanSheets} emptyText="Nog geen clean sheets." />
+        </div>
       </div>
     </div>
   );
