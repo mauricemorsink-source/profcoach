@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { buildConfigMap, applyMatchPointsToSeason } from "@/lib/points";
+import type { MatchStatus } from "@prisma/client";
 
 export async function GET() {
   const session = await getSession();
@@ -22,6 +23,38 @@ export async function GET() {
   });
 
   return NextResponse.json(matches);
+}
+
+export async function PATCH(req: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const { ids, status } = body as { ids: string[]; status: string };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: "Geen wedstrijden opgegeven" }, { status: 400 });
+  }
+  if (status !== "APPROVED" && status !== "REJECTED") {
+    return NextResponse.json({ error: "Ongeldige status" }, { status: 400 });
+  }
+  const newStatus: MatchStatus = status;
+
+  // PROCESSED wedstrijden slaan we over: die status ligt vast en kan niet meer via
+  // een bulk-actie gewijzigd worden (zelfde regel als de losse PATCH per wedstrijd).
+  const targets = await prisma.match.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, status: true },
+  });
+  const updatableIds = targets.filter((m) => m.status !== "PROCESSED").map((m) => m.id);
+
+  if (updatableIds.length > 0) {
+    await prisma.match.updateMany({ where: { id: { in: updatableIds } }, data: { status: newStatus } });
+  }
+
+  return NextResponse.json({ updated: updatableIds.length, skipped: targets.length - updatableIds.length });
 }
 
 export async function DELETE(req: Request) {

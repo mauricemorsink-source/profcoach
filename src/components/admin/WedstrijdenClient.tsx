@@ -178,6 +178,10 @@ export default function WedstrijdenClient() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState("");
 
+  const [approveSelectedIds, setApproveSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkApproveError, setBulkApproveError] = useState("");
+
   async function loadAdminMatches() {
     setLoadingMatches(true);
     const res = await fetch("/api/admin/matches");
@@ -236,6 +240,44 @@ export default function WedstrijdenClient() {
     setProcessSelectedIds(new Set(toProcess.map((m) => m.id)));
   }
 
+  function selectAllPending() {
+    const toApprove = adminMatches.filter((m) => m.status === "PENDING");
+    setApproveSelectedIds(new Set(toApprove.map((m) => m.id)));
+  }
+
+  function toggleApproveSelect(id: string) {
+    setApproveSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllApproveSelect() {
+    const approvable = filteredMatches.filter((m) => m.status === "PENDING");
+    const allSelected =
+      approvable.length > 0 && approvable.every((m) => approveSelectedIds.has(m.id));
+    setApproveSelectedIds(allSelected ? new Set() : new Set(approvable.map((m) => m.id)));
+  }
+
+  async function bulkApproveMatches(status: "APPROVED" | "REJECTED") {
+    setBulkApproving(true);
+    setBulkApproveError("");
+    setPointsMsg(null);
+    const res = await fetch("/api/admin/matches", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(approveSelectedIds), status }),
+    });
+    const data = await res.json();
+    setBulkApproving(false);
+    if (!res.ok) { setBulkApproveError(data.error ?? "Bijwerken mislukt"); return; }
+    setApproveSelectedIds(new Set());
+    const verb = status === "APPROVED" ? "goedgekeurd" : "afgekeurd";
+    setPointsMsg({ type: "ok", text: `${data.updated} wedstrijd${data.updated !== 1 ? "en" : ""} ${verb}` });
+    await loadAdminMatches();
+  }
+
   function toggleProcessSelect(id: string) {
     setProcessSelectedIds((prev) => {
       const next = new Set(prev);
@@ -257,6 +299,7 @@ export default function WedstrijdenClient() {
     setConfirmBulkDelete(false);
     setBulkDeleteError("");
     setProcessSelectedIds(new Set());
+    setApproveSelectedIds(new Set());
   }
 
   function toggleDeleteSelect(id: string) {
@@ -623,6 +666,27 @@ export default function WedstrijdenClient() {
 
         {/* Wachtrij banner */}
         {(() => {
+          const pending = adminMatches.filter((m) => m.status === "PENDING");
+          if (pending.length === 0) return null;
+          return (
+            <div className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4 border text-sm flex-wrap bg-slate-800/50 border-slate-700 text-slate-300">
+              <span className="flex-1">
+                <span className="font-semibold">
+                  {pending.length} wedstrijd{pending.length !== 1 ? "en" : ""}
+                </span>{" "}
+                wacht{pending.length === 1 ? "" : "en"} op goedkeuring
+              </span>
+              <button
+                onClick={selectAllPending}
+                className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Selecteer alle ({pending.length})
+              </button>
+            </div>
+          );
+        })()}
+
+        {(() => {
           const waiting = adminMatches.filter((m) => m.status === "APPROVED");
           if (waiting.length === 0) return null;
           const oldest = waiting.reduce((a, b) =>
@@ -729,6 +793,35 @@ export default function WedstrijdenClient() {
           </div>
         )}
 
+        {/* Actiebalk voor geselecteerde wedstrijden (goedkeuren/afkeuren) */}
+        {approveSelectedIds.size > 0 && (
+          <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 mb-3 flex-wrap">
+            <span className="text-sm text-slate-300 flex-1">
+              {approveSelectedIds.size} geselecteerd voor goedkeuring
+            </span>
+            <button
+              onClick={() => bulkApproveMatches("APPROVED")}
+              disabled={bulkApproving}
+              className={BTN_PRIMARY + " disabled:opacity-40 !bg-green-600 hover:!bg-green-500"}
+            >
+              {bulkApproving ? "Bezig..." : `Keur ${approveSelectedIds.size} goed`}
+            </button>
+            <button
+              onClick={() => bulkApproveMatches("REJECTED")}
+              disabled={bulkApproving}
+              className={BTN_SECONDARY + " disabled:opacity-40 !text-amber-400"}
+            >
+              Wijs af
+            </button>
+            <button onClick={() => setApproveSelectedIds(new Set())} className={BTN_SECONDARY}>
+              Deselecteer
+            </button>
+          </div>
+        )}
+        {bulkApproveError && (
+          <p className="text-red-400 text-sm bg-red-900/20 border border-red-500/20 rounded-lg px-3 py-2 mb-3">{bulkApproveError}</p>
+        )}
+
         {/* Actiebalk voor geselecteerde wedstrijden */}
         {processSelectedIds.size > 0 && (
           <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 mb-3 flex-wrap">
@@ -800,6 +893,7 @@ export default function WedstrijdenClient() {
             <div className="md:hidden space-y-2">
               {filteredMatches.map((m) => {
                 const isProcessable = m.status === "APPROVED";
+                const isApprovable = m.status === "PENDING";
                 return (
                   <div
                     key={m.id}
@@ -811,6 +905,8 @@ export default function WedstrijdenClient() {
                           : "border-slate-700"
                         : isProcessable && processSelectedIds.has(m.id)
                         ? "border-cyan-500/50 bg-cyan-500/5"
+                        : isApprovable && approveSelectedIds.has(m.id)
+                        ? "border-green-500/50 bg-green-500/5"
                         : "border-slate-700"
                     }`}
                   >
@@ -828,6 +924,13 @@ export default function WedstrijdenClient() {
                           checked={processSelectedIds.has(m.id)}
                           onChange={() => toggleProcessSelect(m.id)}
                           className="mt-0.5 accent-cyan-500 shrink-0"
+                        />
+                      ) : isApprovable ? (
+                        <input
+                          type="checkbox"
+                          checked={approveSelectedIds.has(m.id)}
+                          onChange={() => toggleApproveSelect(m.id)}
+                          className="mt-0.5 accent-green-500 shrink-0"
                         />
                       ) : (
                         <span className="w-4 shrink-0" />
@@ -1011,7 +1114,7 @@ export default function WedstrijdenClient() {
                           onChange={toggleAllDeleteSelect}
                           className="accent-red-500"
                         />
-                      ) : (
+                      ) : filteredMatches.some((m) => m.status === "APPROVED") ? (
                         <input
                           type="checkbox"
                           checked={
@@ -1035,6 +1138,32 @@ export default function WedstrijdenClient() {
                           onChange={toggleAllProcessSelect}
                           className="accent-cyan-500"
                         />
+                      ) : (
+                        filteredMatches.some((m) => m.status === "PENDING") && (
+                          <input
+                            type="checkbox"
+                            checked={
+                              filteredMatches.filter(
+                                (m) => m.status === "PENDING"
+                              ).length > 0 &&
+                              filteredMatches
+                                .filter((m) => m.status === "PENDING")
+                                .every((m) => approveSelectedIds.has(m.id))
+                            }
+                            ref={(el) => {
+                              if (el) {
+                                const p = filteredMatches.filter(
+                                  (m) => m.status === "PENDING"
+                                );
+                                el.indeterminate =
+                                  p.some((m) => approveSelectedIds.has(m.id)) &&
+                                  !p.every((m) => approveSelectedIds.has(m.id));
+                              }
+                            }}
+                            onChange={toggleAllApproveSelect}
+                            className="accent-green-500"
+                          />
+                        )
                       )}
                     </th>
                     <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
@@ -1048,6 +1177,7 @@ export default function WedstrijdenClient() {
                 <tbody>
                   {filteredMatches.map((m) => {
                     const isProcessable = m.status === "APPROVED";
+                    const isApprovable = m.status === "PENDING";
                     const isAway = m.homeAway === "AWAY";
                     return (
                       <tr
@@ -1060,6 +1190,8 @@ export default function WedstrijdenClient() {
                               : "hover:bg-slate-800/30"
                             : isProcessable && processSelectedIds.has(m.id)
                             ? "bg-cyan-500/5"
+                            : isApprovable && approveSelectedIds.has(m.id)
+                            ? "bg-green-500/5"
                             : "hover:bg-slate-800/30"
                         }`}
                       >
@@ -1071,13 +1203,20 @@ export default function WedstrijdenClient() {
                               onChange={() => toggleDeleteSelect(m.id)}
                               className="accent-red-500"
                             />
+                          ) : isProcessable ? (
+                            <input
+                              type="checkbox"
+                              checked={processSelectedIds.has(m.id)}
+                              onChange={() => toggleProcessSelect(m.id)}
+                              className="accent-cyan-500"
+                            />
                           ) : (
-                            isProcessable && (
+                            isApprovable && (
                               <input
                                 type="checkbox"
-                                checked={processSelectedIds.has(m.id)}
-                                onChange={() => toggleProcessSelect(m.id)}
-                                className="accent-cyan-500"
+                                checked={approveSelectedIds.has(m.id)}
+                                onChange={() => toggleApproveSelect(m.id)}
+                                className="accent-green-500"
                               />
                             )
                           )}
