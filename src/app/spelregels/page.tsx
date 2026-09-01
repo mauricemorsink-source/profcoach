@@ -53,7 +53,7 @@ export default async function SpelregelsPage() {
 
           <div className="mt-8 pt-6 border-t border-slate-800">
             <Link
-              href="/register"
+              href="/team-indienen"
               className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl transition-colors neon-glow-sm"
             >
               Deelnemen
