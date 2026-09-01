@@ -41,23 +41,14 @@ export async function POST(req: Request) {
       ? { status: "APPROVED" as const, seasonId: season.id, id: { in: selectedIds } }
       : { status: "APPROVED" as const, seasonId: season.id };
 
-    const correctionWhere = selectedIds
-      ? { status: "CORRECTION" as const, seasonId: season.id, id: { in: selectedIds } }
-      : { status: "CORRECTION" as const, seasonId: season.id };
-
     const approvedMatches = await prisma.match.findMany({
       where: approvedWhere,
       include: { performances: { include: { player: { select: { position: true, clubTeam: true } } } } },
     });
 
-    const correctionMatches = await prisma.match.findMany({
-      where: correctionWhere,
-      include: { performances: { include: { player: { select: { position: true } } } } },
-    });
-
-    if (approvedMatches.length === 0 && correctionMatches.length === 0) {
+    if (approvedMatches.length === 0) {
       await prisma.gameSettings.update({ where: { id: "singleton" }, data: { isProcessing: false } });
-      return NextResponse.json({ processed: 0, reversed: 0, playersUpdated: 0 });
+      return NextResponse.json({ processed: 0, playersUpdated: 0 });
     }
 
     // Gastspeler bij twee elftallen in dezelfde ronde: hier draait geen admin mee, dus pas
@@ -67,26 +58,14 @@ export async function POST(req: Request) {
     const playersUpdated = await applyMatchPointsToSeason(
       season.id,
       configMap,
-      [
-        { matches: approvedMatches, factor: 1 },
-        { matches: correctionMatches, factor: -1 },
-      ],
+      [{ matches: approvedMatches, factor: 1 }],
       settings?.captainEnabled ? { enabled: true, pointsPerWin: settings.captainBonusPerWin ?? 5 } : null
     );
 
-    // APPROVED → PROCESSED
-    if (approvedMatches.length > 0) {
-      await prisma.match.updateMany({
-        where: { id: { in: approvedMatches.map((m) => m.id) } },
-        data: { status: "PROCESSED", processedAt: new Date() },
-      });
-    }
-
-    // CORRECTION → hard delete
-    for (const match of correctionMatches) {
-      await prisma.matchPerformance.deleteMany({ where: { matchId: match.id } });
-      await prisma.match.delete({ where: { id: match.id } });
-    }
+    await prisma.match.updateMany({
+      where: { id: { in: approvedMatches.map((m) => m.id) } },
+      data: { status: "PROCESSED", processedAt: new Date() },
+    });
 
     await prisma.gameSettings.update({
       where: { id: "singleton" },
@@ -95,7 +74,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       processed: approvedMatches.length,
-      reversed: correctionMatches.length,
       playersUpdated,
     });
   } catch (error) {

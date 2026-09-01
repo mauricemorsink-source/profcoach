@@ -46,10 +46,10 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ deleted: 0, playersReverted: 0 });
   }
 
-  // PROCESSED/CORRECTION wedstrijden: punten meteen terugdraaien voordat ze verdwijnen.
-  // Hergebruikt dezelfde snapshot-logica als het normale verwerken (nu met factor -1),
-  // zodat prevPoints/prevCaptainPoints kloppen en het delta-pijltje niet scheeftrekt.
-  const needsReversal = targets.filter((m) => m.status === "PROCESSED" || m.status === "CORRECTION");
+  // PROCESSED wedstrijden: punten meteen terugdraaien voordat ze verdwijnen. Hergebruikt
+  // dezelfde snapshot-logica als het normale verwerken (nu met factor -1), zodat
+  // prevPoints/prevCaptainPoints kloppen en het delta-pijltje niet scheeftrekt.
+  const needsReversal = targets.filter((m) => m.status === "PROCESSED");
   let playersReverted = 0;
 
   if (needsReversal.length > 0) {

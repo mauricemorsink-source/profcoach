@@ -33,7 +33,6 @@ enum MatchStatus {
   APPROVED
   REJECTED
   PROCESSED
-  CORRECTION
 }
 
 enum HomeAway {

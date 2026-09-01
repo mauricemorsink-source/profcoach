@@ -21,15 +21,6 @@ export async function PATCH(
     return NextResponse.json({ error: "Wedstrijd niet gevonden" }, { status: 404 });
   }
 
-  // CORRECTION: only allow cancelling (reverting to PROCESSED)
-  if (match.status === "CORRECTION") {
-    if (status !== "PROCESSED") {
-      return NextResponse.json({ error: "Correctie-wedstrijden kunnen alleen worden geannuleerd" }, { status: 400 });
-    }
-    const updated = await prisma.match.update({ where: { id: matchId }, data: { status: "PROCESSED" } });
-    return NextResponse.json(updated);
-  }
-
   if (match.status === "PROCESSED") {
     return NextResponse.json({ error: "Verwerkte wedstrijden kunnen niet meer worden gewijzigd" }, { status: 400 });
   }
@@ -80,11 +71,11 @@ export async function DELETE(
 
   let playersReverted = 0;
 
-  // PROCESSED of CORRECTION: punten meteen terugdraaien voordat de wedstrijd verdwijnt.
-  // Hergebruikt dezelfde snapshot-logica als het normale verwerken (nu met factor -1),
-  // zodat prevPoints/prevCaptainPoints ook bij verwijderen correct opnieuw gezet worden
-  // en het delta-pijltje in de tussenstand niet scheeftrekt.
-  if (match.status === "PROCESSED" || match.status === "CORRECTION") {
+  // PROCESSED: punten meteen terugdraaien voordat de wedstrijd verdwijnt. Hergebruikt
+  // dezelfde snapshot-logica als het normale verwerken (nu met factor -1), zodat
+  // prevPoints/prevCaptainPoints ook bij verwijderen correct opnieuw gezet worden en het
+  // delta-pijltje in de tussenstand niet scheeftrekt.
+  if (match.status === "PROCESSED") {
     const season = await prisma.season.findFirst({ where: { isActive: true } });
     if (!season) return NextResponse.json({ error: "Geen actief seizoen gevonden" }, { status: 400 });
 

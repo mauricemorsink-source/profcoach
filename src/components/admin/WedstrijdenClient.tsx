@@ -55,7 +55,7 @@ type AdminMatch = {
   goalsConceded: number;
   extraScorers: { goals: number; description: string }[] | null;
   notes: string | null;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED" | "CORRECTION";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED";
   publishMomentId: string | null;
   publishMoment: { id: string; label: string; scheduledAt: string; publishedAt: string | null } | null;
   createdBy: { name: string | null; email: string } | null;
@@ -98,7 +98,6 @@ const STATUS_LABEL: Record<string, string> = {
   APPROVED: "Goedgekeurd",
   REJECTED: "Afgekeurd",
   PROCESSED: "Verwerkt",
-  CORRECTION: "Correctie",
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -106,7 +105,6 @@ const STATUS_STYLE: Record<string, string> = {
   APPROVED: "bg-green-900/40 text-green-400 border border-green-500/30",
   REJECTED: "bg-red-900/40 text-red-400 border border-red-500/30",
   PROCESSED: "bg-blue-900/40 text-blue-400 border border-blue-500/30",
-  CORRECTION: "bg-orange-900/40 text-orange-400 border border-orange-500/30",
 };
 
 const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
@@ -215,7 +213,7 @@ export default function WedstrijdenClient() {
   }, []);
 
   const STATUS_SORT_ORDER: Record<string, number> = {
-    APPROVED: 0, CORRECTION: 1, PENDING: 2, REJECTED: 3, PROCESSED: 4,
+    APPROVED: 0, PENDING: 1, REJECTED: 2, PROCESSED: 3,
   };
   const filteredMatches = adminMatches
     .filter(
@@ -231,10 +229,10 @@ export default function WedstrijdenClient() {
     });
 
   const editMatchReadOnly =
-    !!editingMatch && (editingMatch.status === "PROCESSED" || editingMatch.status === "CORRECTION");
+    !!editingMatch && editingMatch.status === "PROCESSED";
 
   function selectAllApproved() {
-    const toProcess = adminMatches.filter((m) => m.status === "APPROVED" || m.status === "CORRECTION");
+    const toProcess = adminMatches.filter((m) => m.status === "APPROVED");
     setProcessSelectedIds(new Set(toProcess.map((m) => m.id)));
   }
 
@@ -247,7 +245,7 @@ export default function WedstrijdenClient() {
   }
 
   function toggleAllProcessSelect() {
-    const processable = filteredMatches.filter((m) => m.status === "APPROVED" || m.status === "CORRECTION");
+    const processable = filteredMatches.filter((m) => m.status === "APPROVED");
     const allSelected =
       processable.length > 0 && processable.every((m) => processSelectedIds.has(m.id));
     setProcessSelectedIds(allSelected ? new Set() : new Set(processable.map((m) => m.id)));
@@ -318,7 +316,6 @@ export default function WedstrijdenClient() {
       setProcessSelectedIds(new Set());
       const parts = [];
       if (data.processed > 0) parts.push(`${data.processed} wedstrijden verwerkt`);
-      if (data.reversed > 0) parts.push(`${data.reversed} correcties teruggedraaid`);
       if (parts.length === 0) parts.push("Niets te verwerken");
       else parts.push(`${data.playersUpdated} spelers bijgewerkt`);
       setPointsMsg({ type: "ok", text: parts.join(", ") });
@@ -352,15 +349,6 @@ export default function WedstrijdenClient() {
       body: JSON.stringify({ status }),
     });
     setApprovingId(null);
-    await loadAdminMatches();
-  }
-
-  async function cancelCorrection(id: string) {
-    await fetch(`/api/admin/matches/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "PROCESSED" }),
-    });
     await loadAdminMatches();
   }
 
@@ -635,7 +623,7 @@ export default function WedstrijdenClient() {
 
         {/* Wachtrij banner */}
         {(() => {
-          const waiting = adminMatches.filter((m) => m.status === "APPROVED" || m.status === "CORRECTION");
+          const waiting = adminMatches.filter((m) => m.status === "APPROVED");
           if (waiting.length === 0) return null;
           const oldest = waiting.reduce((a, b) =>
             new Date(a.matchDate) < new Date(b.matchDate) ? a : b
@@ -695,7 +683,6 @@ export default function WedstrijdenClient() {
             <option value="APPROVED">Goedgekeurd</option>
             <option value="REJECTED">Afgekeurd</option>
             <option value="PROCESSED">Verwerkt</option>
-            <option value="CORRECTION">Correctie</option>
           </select>
           {(matchFilterTeam || matchFilterStatus) && (
             <button
@@ -770,7 +757,7 @@ export default function WedstrijdenClient() {
               </span>
               {Array.from(deleteSelectedIds).some((id) => {
                 const s = adminMatches.find((m) => m.id === id)?.status;
-                return s === "PROCESSED" || s === "CORRECTION";
+                return s === "PROCESSED";
               }) && (
                 <p className="text-xs text-amber-400 mt-0.5">
                   Verwerkte wedstrijden: punten worden eerst teruggedraaid, daarna verwijderd.
@@ -812,7 +799,7 @@ export default function WedstrijdenClient() {
             {/* Mobiel: kaartjes */}
             <div className="md:hidden space-y-2">
               {filteredMatches.map((m) => {
-                const isProcessable = m.status === "APPROVED" || m.status === "CORRECTION";
+                const isProcessable = m.status === "APPROVED";
                 return (
                   <div
                     key={m.id}
@@ -862,7 +849,7 @@ export default function WedstrijdenClient() {
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[m.status]}`}>
                               {STATUS_LABEL[m.status]}
                             </span>
-                            {(m.status === "APPROVED" || m.status === "CORRECTION") &&
+                            {(m.status === "APPROVED") &&
                               (() => {
                                 const days = Math.floor(
                                   (Date.now() - new Date(m.matchDate).getTime()) / 86400000
@@ -895,7 +882,7 @@ export default function WedstrijdenClient() {
                         </button>
                         {matchMenuId === m.id && (
                           <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden">
-                            {m.status !== "PROCESSED" && m.status !== "CORRECTION" && (
+                            {m.status !== "PROCESSED" && (
                               <button
                                 onClick={() => {
                                   openEditMatch(m);
@@ -984,17 +971,6 @@ export default function WedstrijdenClient() {
                                 {revertingMatchId === m.id ? "Bezig..." : "Terugdraaien"}
                               </button>
                             )}
-                            {m.status === "CORRECTION" && (
-                              <button
-                                onClick={() => {
-                                  cancelCorrection(m.id);
-                                  setMatchMenuId(null);
-                                }}
-                                className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors"
-                              >
-                                Annuleer correctie
-                              </button>
-                            )}
                             {m.status !== "PROCESSED" && (
                               <>
                                 <div className="border-t border-slate-700" />
@@ -1040,16 +1016,16 @@ export default function WedstrijdenClient() {
                           type="checkbox"
                           checked={
                             filteredMatches.filter(
-                              (m) => m.status === "APPROVED" || m.status === "CORRECTION"
+                              (m) => m.status === "APPROVED"
                             ).length > 0 &&
                             filteredMatches
-                              .filter((m) => m.status === "APPROVED" || m.status === "CORRECTION")
+                              .filter((m) => m.status === "APPROVED")
                               .every((m) => processSelectedIds.has(m.id))
                           }
                           ref={(el) => {
                             if (el) {
                               const p = filteredMatches.filter(
-                                (m) => m.status === "APPROVED" || m.status === "CORRECTION"
+                                (m) => m.status === "APPROVED"
                               );
                               el.indeterminate =
                                 p.some((m) => processSelectedIds.has(m.id)) &&
@@ -1071,7 +1047,7 @@ export default function WedstrijdenClient() {
                 </thead>
                 <tbody>
                   {filteredMatches.map((m) => {
-                    const isProcessable = m.status === "APPROVED" || m.status === "CORRECTION";
+                    const isProcessable = m.status === "APPROVED";
                     const isAway = m.homeAway === "AWAY";
                     return (
                       <tr
@@ -1138,7 +1114,7 @@ export default function WedstrijdenClient() {
                                 📅 {m.publishMoment.label}
                               </span>
                             )}
-                            {(m.status === "APPROVED" || m.status === "CORRECTION") &&
+                            {(m.status === "APPROVED") &&
                               !m.publishMomentId &&
                               (() => {
                                 const days = Math.floor(
@@ -1165,7 +1141,7 @@ export default function WedstrijdenClient() {
                             </button>
                             {matchMenuId === m.id && (
                               <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden">
-                                {m.status !== "PROCESSED" && m.status !== "CORRECTION" && (
+                                {m.status !== "PROCESSED" && (
                                   <button
                                     onClick={() => {
                                       openEditMatch(m);
@@ -1252,17 +1228,6 @@ export default function WedstrijdenClient() {
                                     className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors disabled:opacity-50"
                                   >
                                     {revertingMatchId === m.id ? "Bezig..." : "Terugdraaien"}
-                                  </button>
-                                )}
-                                {m.status === "CORRECTION" && (
-                                  <button
-                                    onClick={() => {
-                                      cancelCorrection(m.id);
-                                      setMatchMenuId(null);
-                                    }}
-                                    className="w-full text-left px-4 py-2.5 text-sm text-orange-400 hover:bg-slate-700 transition-colors"
-                                  >
-                                    Annuleer correctie
                                   </button>
                                 )}
                                 {m.status !== "PROCESSED" && (

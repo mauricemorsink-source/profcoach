@@ -21,7 +21,7 @@ export async function POST(
   if (match.clubTeam !== team) {
     return NextResponse.json({ error: "Geen toegang tot deze wedstrijd" }, { status: 403 });
   }
-  if (match.status === "PROCESSED" || match.status === "CORRECTION") {
+  if (match.status === "PROCESSED") {
     return NextResponse.json({ error: "Verwerkte wedstrijden kunnen niet meer worden gewijzigd" }, { status: 400 });
   }
 

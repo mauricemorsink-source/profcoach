@@ -13,7 +13,7 @@ export default async function AdminDashboardPage() {
         prisma.teamEntry.count({ where: { seasonId: season.id, betaald: true } }),
         prisma.match.count({ where: { seasonId: season.id } }),
         prisma.match.count({ where: { seasonId: season.id, status: "PENDING" } }),
-        prisma.match.count({ where: { seasonId: season.id, status: { in: ["APPROVED", "CORRECTION"] } } }),
+        prisma.match.count({ where: { seasonId: season.id, status: "APPROVED" } }),
         prisma.match.count({ where: { seasonId: season.id, status: "PROCESSED" } }),
         prisma.match.aggregate({
           where: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } },
