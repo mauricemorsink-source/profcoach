@@ -94,6 +94,14 @@ export default function TeamAanpassenClient({
       .catch(() => setLoading(false));
   }, []);
 
+  // Scrol pas naar boven nadat React de nieuwe stap daadwerkelijk heeft gerenderd — een
+  // scroll die synchroon met setStep()/setSubmitted() wordt aangeroepen kan op mobiel te
+  // vroeg uitvoeren (nog tegen de oude, langere inhoud aan), waardoor je alsnog halverwege
+  // de nieuwe stap uitkomt in plaats van bovenaan.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [step, submitted]);
+
   function handleFormationChange(newId: string) {
     const newFormation = formations.find((f) => f.id === newId);
     if (!newFormation) return;
@@ -137,18 +145,14 @@ export default function TeamAanpassenClient({
     setSelectedSlot(null);
   }
 
-  function scrollTop() { window.scrollTo({ top: 0, behavior: "instant" }); }
-
   function goNext() {
     setSubmitError(null);
     setStep(2);
-    scrollTop();
   }
 
   function goPrev() {
     setSubmitError(null);
     setStep(1);
-    scrollTop();
   }
 
   async function handleSubmit() {
@@ -165,7 +169,6 @@ export default function TeamAanpassenClient({
         setSubmitError(data.error ?? "Er is iets misgegaan.");
       } else {
         setSubmitted(true);
-        scrollTop();
       }
     } catch {
       setSubmitError("Verbindingsfout. Probeer het opnieuw.");

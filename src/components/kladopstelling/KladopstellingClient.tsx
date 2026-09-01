@@ -119,6 +119,14 @@ export default function KladopstellingClient({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [showTour, setShowTour] = useState(false);
 
+  // Scrol pas naar boven nadat React de nieuwe stap daadwerkelijk heeft gerenderd — een
+  // scroll die synchroon met setStep() wordt aangeroepen kan op mobiel te vroeg uitvoeren
+  // (nog tegen de oude, langere inhoud aan), waardoor je alsnog halverwege de nieuwe stap
+  // uitkomt in plaats van bovenaan.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [step, submitted]);
+
   const TOUR_STEPS: TourStep[] = [
     {
       target: "tour-formation",
@@ -273,14 +281,11 @@ export default function KladopstellingClient({
     setStep(1);
   }
 
-  function scrollTop() { window.scrollTo({ top: 0, behavior: "instant" }); }
-
   function goNext() {
     setSubmitError(null);
     const next = step === 1 ? (captainEnabled ? 2 : 3) : step === 2 ? 3 : step === 3 ? 4 : step;
     setStep(next);
     trackEvent("team_indienen_stap", { stap: next, stap_naam: STEP_NAMES[next] });
-    scrollTop();
   }
 
   function goPrev() {
@@ -288,7 +293,6 @@ export default function KladopstellingClient({
     if (step === 4) setStep(3);
     else if (step === 3) setStep(captainEnabled ? 2 : 1);
     else if (step === 2) setStep(1);
-    scrollTop();
   }
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -520,7 +524,7 @@ export default function KladopstellingClient({
       {showTour && step !== 4 && (
         <SpotlightTour
           steps={TOUR_STEPS}
-          onDone={() => { setShowTour(false); setStep(1); window.scrollTo({ top: 0, behavior: "instant" }); }}
+          onDone={() => { setShowTour(false); setStep(1); }}
           onStepEnter={handleTourStepEnter}
           onStepLeave={handleTourStepLeave}
         />
