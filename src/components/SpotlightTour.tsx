@@ -82,7 +82,11 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
     onDone();
   }
 
-  if (!rect) return null;
+  // Tijdens het meten (elke stapwissel, incl. de eerste) is de positie van het volgende
+  // spotlight-doel nog niet bekend. Zonder afdekking zou de onderliggende pagina in dat
+  // venster van ~600ms gewoon volledig klikbaar/typbaar zijn — vandaar deze volledige
+  // afdekking in plaats van niets renderen.
+  if (!rect) return <div className="fixed inset-0 z-[90] bg-black/75" />;
 
   const top = rect.top - PAD;
   const left = rect.left - PAD;
