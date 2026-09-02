@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { computeDeelnemersStandings, computeTopStats } from "@/lib/standings";
+import { computeDeelnemersStandings, computeTopStats, getVisibleStandingsPublication, type PublishedStandingsData } from "@/lib/standings";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -17,9 +17,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Geen actief seizoen gevonden" }, { status: 400 });
   }
 
+  // Delta's altijd t.o.v. de vorige publicatie (niet de laatste verwerkronde) — anders raakt de
+  // groei tussen twee publicaties zoek zodra er tussentijds meerdere keren verwerkt is.
+  const previous = await getVisibleStandingsPublication(season.id);
+  const prevData = previous?.data as PublishedStandingsData | undefined;
+
   const [deelnemers, stats, settings] = await Promise.all([
-    computeDeelnemersStandings(season.id),
-    computeTopStats(season.id),
+    computeDeelnemersStandings(season.id, prevData?.deelnemers),
+    computeTopStats(season.id, prevData?.stats),
     prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
   ]);
 

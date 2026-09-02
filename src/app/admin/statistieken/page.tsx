@@ -66,7 +66,7 @@ export default async function AdminStatistiekenPage() {
     return <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>;
   }
 
-  const [entries, activePlayers, goalsAgg, yellowCardsAgg, topScorerStats, topAssistStats, topCleanSheetStats] = await Promise.all([
+  const [entries, activePlayers, goalsAgg, yellowCardsAgg, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats] = await Promise.all([
     prisma.teamEntry.findMany({
       where: { seasonId: season.id },
       include: {
@@ -109,6 +109,11 @@ export default async function AdminStatistiekenPage() {
       orderBy: { cleanSheets: "desc" },
       take: 7,
       include: { player: { select: { name: true, clubTeam: true } } },
+    }),
+    prisma.playerSeasonStats.findMany({
+      where: { seasonId: season.id, totalPoints: { gt: 0 } },
+      orderBy: { totalPoints: "desc" },
+      include: { player: { select: { name: true, clubTeam: true, position: true } } },
     }),
   ]);
 
@@ -227,6 +232,23 @@ export default async function AdminStatistiekenPage() {
       .slice(0, 5);
   }
 
+  // Beste speler per positie (op punten, niet op populariteit) + speler van het jaar
+  const bestByPosition: Record<string, ListItem[]> = {};
+  for (const pos of POSITION_ORDER) {
+    bestByPosition[pos] = topPointsStats
+      .filter((s) => s.player.position === pos)
+      .slice(0, 5)
+      .map((s, i) => ({
+        key: s.playerId, rank: i + 1, primary: s.player.name,
+        secondary: TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam, value: `${s.totalPoints} pt`,
+      }));
+  }
+  const playerOfTheYear: ListItem[] = topPointsStats.slice(0, 10).map((s, i) => ({
+    key: s.playerId, rank: i + 1, primary: s.player.name,
+    secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam} · ${POSITION_LABEL[s.player.position]}`,
+    value: `${s.totalPoints} pt`,
+  }));
+
   return (
     <div className="space-y-4">
       <div className="bg-slate-900 neon-border rounded-2xl p-5 flex items-center justify-between flex-wrap gap-2">
@@ -332,6 +354,24 @@ export default async function AdminStatistiekenPage() {
                 </StatCard>
               ))}
             </div>
+          </div>
+
+          <div>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Beste speler per positie (op punten)</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {POSITION_ORDER.map((pos) => (
+                <StatCard key={pos} title={POSITION_LABEL[pos]}>
+                  <RankedList items={bestByPosition[pos]} emptyText="Nog geen punten verwerkt." />
+                </StatCard>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Speler van het jaar</h2>
+            <StatCard title="Meeste punten (alle posities)">
+              <RankedList items={playerOfTheYear} emptyText="Nog geen punten verwerkt." />
+            </StatCard>
           </div>
         </>
       )}
