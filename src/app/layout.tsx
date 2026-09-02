@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import NavBar from "@/components/NavBar";
@@ -42,6 +42,13 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
+// viewportFit: "cover" laat env(safe-area-inset-*) op iOS echte waarden teruggeven i.p.v. 0,
+// nodig om de footer (met de beheerderslogin) niet onder de in-/uitklappende Chrome/Safari-
+// werkbalk te laten verdwijnen.
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -56,7 +63,7 @@ export default function RootLayout({
         'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
         })(window,document,'script','dataLayer','${GTM_ID}');`}
       </Script>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-dvh`}>
         <noscript>
           <iframe
             src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}

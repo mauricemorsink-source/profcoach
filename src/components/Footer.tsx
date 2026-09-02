@@ -2,7 +2,10 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-800/40 py-5 mt-auto">
+    <footer
+      className="border-t border-slate-800/40 pt-5 mt-auto"
+      style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+    >
       <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
         <span className="text-xs text-slate-700">© ProfCoach</span>
         <Link
