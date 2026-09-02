@@ -377,7 +377,6 @@ export default function TeamAanpassenClient({
             </div>
             <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex gap-2">
               <input
-                autoFocus
                 type="text"
                 placeholder="Zoek speler…"
                 value={playerSearch}

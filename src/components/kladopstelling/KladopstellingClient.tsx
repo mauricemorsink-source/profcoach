@@ -394,7 +394,7 @@ export default function KladopstellingClient({
         {isOpen && (
           <div className="absolute top-full left-0 right-0 z-[47] mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
             <div className="p-2 border-b border-slate-800">
-              <input autoFocus type="text" placeholder="Zoek op naam of elftal..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
+              <input type="text" placeholder="Zoek op naam of elftal..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
             </div>
             <div className="overflow-y-auto max-h-[352px]">
@@ -834,7 +834,7 @@ export default function KladopstellingClient({
               </div>
             </div>
             <div className="px-5 pt-3 pb-2">
-              <input type="text" autoFocus placeholder="Zoek op naam of elftal..." value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)}
+              <input type="text" placeholder="Zoek op naam of elftal..." value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
             </div>
             <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-1.5">

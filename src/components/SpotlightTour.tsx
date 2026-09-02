@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export const TOUR_KEY = "profcoach_tour_seen_v1";
 const PAD = 10;
 const TOTAL_DELAY = 600; // ms: React render + smooth scroll
+const TW = 288;
+const TH_ESTIMATE = 195; // eerste gok voor de tooltip-hoogte, vóór de echte meting
+const MARGIN = 12;
 
 export interface TourStep {
   target: string;
@@ -28,6 +31,8 @@ function readRect(target: string): DOMRect | null {
 export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave }: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [adjustedTop, setAdjustedTop] = useState<number | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   // Blokkeer gebruikersscroll via wheel + touchmove, maar laat programmatisch scrollen intact
   useEffect(() => {
@@ -44,6 +49,7 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
   // wacht altijd TOTAL_DELAY ms zodat React kan renderen én scroll afloopt, dan meten.
   useEffect(() => {
     setRect(null);
+    setAdjustedTop(null);
     onStepEnter?.(stepIdx);
 
     const target = steps[stepIdx].target;
@@ -60,7 +66,7 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx]);
 
-  // Resize: opnieuw meten
+  // Resize: opnieuw meten (ook de tooltip zelf, via de rect-wijziging hieronder)
   useEffect(() => {
     const update = () => setRect(readRect(steps[stepIdx].target));
     window.addEventListener("resize", update);
@@ -82,47 +88,66 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
     onDone();
   }
 
+  const currentStep = steps[stepIdx];
+  const fixedBottom = currentStep.tooltipPosition === "fixed-bottom";
+
+  const top = (rect?.top ?? 0) - PAD;
+  const left = (rect?.left ?? 0) - PAD;
+  const w = (rect?.width ?? 0) + PAD * 2;
+  const h = (rect?.height ?? 0) + PAD * 2;
+  const bottom = top + h;
+  const right = left + w;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 400;
+
+  const tooltipLeft = Math.max(MARGIN, Math.min(left + w / 2 - TW / 2, vw - TW - MARGIN));
+
+  let estimatedTop: number;
+  let showBelow: boolean;
+  if (fixedBottom) {
+    estimatedTop = vh - TH_ESTIMATE - MARGIN;
+    showBelow = false;
+  } else if (bottom + 14 + TH_ESTIMATE <= vh - MARGIN) {
+    estimatedTop = bottom + 14;
+    showBelow = true;
+  } else if (top - 14 - TH_ESTIMATE >= MARGIN) {
+    estimatedTop = top - 14 - TH_ESTIMATE;
+    showBelow = false;
+  } else {
+    estimatedTop = vh - TH_ESTIMATE - MARGIN;
+    showBelow = false;
+  }
+
+  // De tooltip-hoogte hangt af van de teksten (varieert per stap/schermbreedte) en is dus
+  // niet exact TH_ESTIMATE — vooral op mobiel, met meer regeltekst, kan hij hoger uitvallen
+  // dan geschat. Zonder correctie zou het onderste stuk (met de knoppen) buiten beeld kunnen
+  // vallen. Na het renderen meten we de ECHTE hoogte en schuiven zo nodig bij.
+  useEffect(() => {
+    if (!rect || !tooltipRef.current) return;
+    const measure = () => {
+      const el = tooltipRef.current;
+      if (!el) return;
+      const height = el.getBoundingClientRect().height;
+      const viewportH = window.innerHeight;
+      let finalTop = estimatedTop;
+      if (finalTop + height > viewportH - MARGIN) finalTop = viewportH - MARGIN - height;
+      if (finalTop < MARGIN) finalTop = MARGIN;
+      setAdjustedTop(finalTop);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rect, stepIdx, estimatedTop]);
+
+  const tooltipTop = adjustedTop ?? estimatedTop;
+  const arrowLeft = Math.min(Math.max(left + w / 2 - tooltipLeft - 6, 12), TW - 24);
+
   // Tijdens het meten (elke stapwissel, incl. de eerste) is de positie van het volgende
   // spotlight-doel nog niet bekend. Zonder afdekking zou de onderliggende pagina in dat
   // venster van ~600ms gewoon volledig klikbaar/typbaar zijn — vandaar deze volledige
   // afdekking in plaats van niets renderen.
   if (!rect) return <div className="fixed inset-0 z-[90] bg-black/75" />;
-
-  const top = rect.top - PAD;
-  const left = rect.left - PAD;
-  const w = rect.width + PAD * 2;
-  const h = rect.height + PAD * 2;
-  const bottom = top + h;
-  const right = left + w;
-  const vh = window.innerHeight;
-  const vw = window.innerWidth;
-
-  const TW = 288;
-  const TH = 195;
-  const MARGIN = 12;
-
-  const currentStep = steps[stepIdx];
-  const fixedBottom = currentStep.tooltipPosition === "fixed-bottom";
-
-  const tooltipLeft = Math.max(MARGIN, Math.min(left + w / 2 - TW / 2, vw - TW - MARGIN));
-
-  let tooltipTop: number;
-  let showBelow: boolean;
-  if (fixedBottom) {
-    tooltipTop = vh - TH - MARGIN;
-    showBelow = false;
-  } else if (bottom + 14 + TH <= vh - MARGIN) {
-    tooltipTop = bottom + 14;
-    showBelow = true;
-  } else if (top - 14 - TH >= MARGIN) {
-    tooltipTop = top - 14 - TH;
-    showBelow = false;
-  } else {
-    tooltipTop = vh - TH - MARGIN;
-    showBelow = false;
-  }
-
-  const arrowLeft = Math.min(Math.max(left + w / 2 - tooltipLeft - 6, 12), TW - 24);
 
   return (
     <>
@@ -145,8 +170,9 @@ export default function SpotlightTour({ steps, onDone, onStepEnter, onStepLeave 
 
       {/* Tooltip */}
       <div
-        className="fixed z-[96] bg-slate-900 border border-cyan-500/40 rounded-2xl p-4 shadow-2xl"
-        style={{ top: tooltipTop, left: tooltipLeft, width: TW }}
+        ref={tooltipRef}
+        className="fixed z-[96] bg-slate-900 border border-cyan-500/40 rounded-2xl p-4 shadow-2xl overflow-y-auto"
+        style={{ top: tooltipTop, left: tooltipLeft, width: TW, maxHeight: vh - MARGIN * 2, visibility: adjustedTop === null ? "hidden" : "visible" }}
       >
         {!fixedBottom && (
           <div
