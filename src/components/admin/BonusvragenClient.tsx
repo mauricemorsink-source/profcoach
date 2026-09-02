@@ -102,9 +102,11 @@ export default function BonusvragenClient() {
     setLoadingPredConfig(false);
   }
 
-  async function savePredConfig() {
-    setPredConfigSaving(true);
-    setPredConfigMsg(null);
+  // Gedeeld door savePredConfig (expliciete "Opslaan"-knop) en openPredPreview: de
+  // bevestigingspopup moet ALTIJD de punten laten zien die net in het formulier staan, niet
+  // een eerder opgeslagen stand — anders zag je daar (zoals gemeld) nog de oude/standaard 5 pt
+  // als je de puntenvelden had aangepast maar nog niet apart had opgeslagen.
+  async function saveConfigToServer(): Promise<{ ok: boolean; data: PredConfig | { error?: string } }> {
     const res = await fetch("/api/admin/prediction-config", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -123,12 +125,19 @@ export default function BonusvragenClient() {
       }),
     });
     const data = await res.json();
+    return { ok: res.ok, data };
+  }
+
+  async function savePredConfig() {
+    setPredConfigSaving(true);
+    setPredConfigMsg(null);
+    const { ok, data } = await saveConfigToServer();
     setPredConfigSaving(false);
-    if (!res.ok) {
-      setPredConfigMsg({ type: "err", text: data.error || "Opslaan mislukt" });
+    if (!ok) {
+      setPredConfigMsg({ type: "err", text: (data as { error?: string }).error || "Opslaan mislukt" });
       return;
     }
-    setPredConfig(data);
+    setPredConfig(data as PredConfig);
     setPredConfigMsg({ type: "ok", text: "Opgeslagen" });
   }
 
@@ -136,6 +145,15 @@ export default function BonusvragenClient() {
     setLoadingPredPreview(true);
     setShowPredPreview(true);
     setPredPreview(null);
+    setPredConfigMsg(null);
+    const { ok, data } = await saveConfigToServer();
+    if (!ok) {
+      setLoadingPredPreview(false);
+      setShowPredPreview(false);
+      setPredConfigMsg({ type: "err", text: (data as { error?: string }).error || "Opslaan mislukt" });
+      return;
+    }
+    setPredConfig(data as PredConfig);
     const res = await fetch("/api/admin/prediction-config/preview");
     if (res.ok) setPredPreview(await res.json());
     setLoadingPredPreview(false);
