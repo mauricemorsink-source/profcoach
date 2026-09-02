@@ -5,6 +5,7 @@ import AdminTeamEditModal from "./AdminTeamEditModal";
 
 type TeamPlayer = {
   slotIndex: number;
+  totalPoints: number;
   player: { id: string; name: string; position: string; clubTeam: string };
 };
 
@@ -32,6 +33,7 @@ type Deelnemer = {
   betaaldAkkoord: boolean;
   betaald: boolean;
   bonusPoints: number;
+  captainPoints: number;
   captainSlot: number | null;
   createdAt: string;
   formation: { id: string; code: string } | null;
@@ -272,27 +274,51 @@ export default function DeelnemersClient() {
                   {modal.formation && (
                     <span className="text-xs bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded font-semibold mb-2 inline-block">{modal.formation.code}</span>
                   )}
-                  <table className="w-full text-xs mt-1">
+                  <div className="overflow-x-auto">
+                  <table className="w-full text-xs mt-1 min-w-[360px]">
                     <thead>
                       <tr className="text-left text-slate-600 border-b border-slate-800">
                         <th className="pb-1 font-semibold">Naam</th>
                         <th className="pb-1 font-semibold">Pos</th>
                         <th className="pb-1 font-semibold">Elftal</th>
+                        <th className="pb-1 font-semibold text-right">Punten</th>
+                        <th className="pb-1 font-semibold text-right">Aanvoerdersbonus</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {modal.players.map((tp) => (
-                        <tr key={tp.slotIndex} className="border-b border-slate-800/40">
-                          <td className="py-1 text-slate-300">
-                            {tp.player.name}
-                            {modal.captainSlot === tp.slotIndex && <span className="ml-1 text-yellow-400 font-bold">C</span>}
-                          </td>
-                          <td className="py-1 text-slate-500">{POSITION_SHORT[tp.player.position] ?? tp.player.position}</td>
-                          <td className="py-1 text-slate-500">{TEAM_LABEL[tp.player.clubTeam] ?? tp.player.clubTeam}</td>
-                        </tr>
-                      ))}
+                      {modal.players.map((tp) => {
+                        const isCaptain = modal.captainSlot === tp.slotIndex;
+                        return (
+                          <tr key={tp.slotIndex} className="border-b border-slate-800/40">
+                            <td className="py-1 text-slate-300">
+                              {tp.player.name}
+                              {isCaptain && <span className="ml-1 text-yellow-400 font-bold">C</span>}
+                            </td>
+                            <td className="py-1 text-slate-500">{POSITION_SHORT[tp.player.position] ?? tp.player.position}</td>
+                            <td className="py-1 text-slate-500">{TEAM_LABEL[tp.player.clubTeam] ?? tp.player.clubTeam}</td>
+                            <td className="py-1 text-right text-cyan-400 font-semibold">{tp.totalPoints}</td>
+                            <td className="py-1 text-right">
+                              {isCaptain
+                                ? <span className="text-yellow-400 font-semibold">+{modal.captainPoints}</span>
+                                : <span className="text-slate-700">—</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t border-slate-800 font-semibold">
+                        <td className="pt-1.5 text-slate-400" colSpan={3}>Totaal</td>
+                        <td className="pt-1.5 text-right text-cyan-400">
+                          {modal.players.reduce((s, tp) => s + tp.totalPoints, 0)}
+                        </td>
+                        <td className="pt-1.5 text-right text-yellow-400">
+                          {modal.captainPoints > 0 ? `+${modal.captainPoints}` : "—"}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
+                  </div>
                 </>
               )}
             </div>
