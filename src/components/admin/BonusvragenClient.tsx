@@ -273,21 +273,32 @@ export default function BonusvragenClient() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => {
-                    setPredActiveField("topscorer");
-                    setPredPlayerSearch("");
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${
-                    predConfigForm.topScorerId
-                      ? "border-cyan-500/40 bg-cyan-500/10 text-white"
-                      : "border-slate-600 bg-slate-900/50 text-slate-400 hover:border-slate-500"
-                  }`}
-                >
-                  {predConfigForm.topScorerId
-                    ? players.find((p) => p.id === predConfigForm.topScorerId)?.name ?? "Gekozen"
-                    : "Kies de topscorer..."}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setPredActiveField("topscorer");
+                      setPredPlayerSearch("");
+                    }}
+                    className={`flex-1 text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${
+                      predConfigForm.topScorerId
+                        ? "border-cyan-500/40 bg-cyan-500/10 text-white"
+                        : "border-slate-600 bg-slate-900/50 text-slate-400 hover:border-slate-500"
+                    }`}
+                  >
+                    {predConfigForm.topScorerId
+                      ? players.find((p) => p.id === predConfigForm.topScorerId)?.name ?? "Gekozen"
+                      : "Kies de topscorer..."}
+                  </button>
+                  {predConfigForm.topScorerId && (
+                    <button
+                      onClick={() => setPredConfigForm((f) => ({ ...f, topScorerId: "" }))}
+                      title="Wis keuze"
+                      className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl border border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -354,21 +365,32 @@ export default function BonusvragenClient() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => {
-                    setPredActiveField("assistkoning");
-                    setPredPlayerSearch("");
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${
-                    predConfigForm.assistKoningId
-                      ? "border-cyan-500/40 bg-cyan-500/10 text-white"
-                      : "border-slate-600 bg-slate-900/50 text-slate-400 hover:border-slate-500"
-                  }`}
-                >
-                  {predConfigForm.assistKoningId
-                    ? players.find((p) => p.id === predConfigForm.assistKoningId)?.name ?? "Gekozen"
-                    : "Kies de assistkoning..."}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setPredActiveField("assistkoning");
+                      setPredPlayerSearch("");
+                    }}
+                    className={`flex-1 text-left px-3 py-2.5 rounded-xl border text-sm transition-colors ${
+                      predConfigForm.assistKoningId
+                        ? "border-cyan-500/40 bg-cyan-500/10 text-white"
+                        : "border-slate-600 bg-slate-900/50 text-slate-400 hover:border-slate-500"
+                    }`}
+                  >
+                    {predConfigForm.assistKoningId
+                      ? players.find((p) => p.id === predConfigForm.assistKoningId)?.name ?? "Gekozen"
+                      : "Kies de assistkoning..."}
+                  </button>
+                  {predConfigForm.assistKoningId && (
+                    <button
+                      onClick={() => setPredConfigForm((f) => ({ ...f, assistKoningId: "" }))}
+                      title="Wis keuze"
+                      className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl border border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -408,6 +430,14 @@ export default function BonusvragenClient() {
                   className={INPUT + " w-24"}
                 />
                 <span className="text-slate-500 text-xs">kaarten</span>
+                {(predConfigForm.yellowCardsMin || predConfigForm.yellowCardsMax) && (
+                  <button
+                    onClick={() => setPredConfigForm((f) => ({ ...f, yellowCardsMin: "", yellowCardsMax: "" }))}
+                    className="text-xs text-slate-500 hover:text-red-400 transition-colors ml-auto"
+                  >
+                    Wis
+                  </button>
+                )}
               </div>
             </div>
 
@@ -450,6 +480,14 @@ export default function BonusvragenClient() {
                   className={INPUT + " w-24"}
                 />
                 <span className="text-slate-500 text-xs">doelpunten</span>
+                {(predConfigForm.totalGoalsMin || predConfigForm.totalGoalsMax) && (
+                  <button
+                    onClick={() => setPredConfigForm((f) => ({ ...f, totalGoalsMin: "", totalGoalsMax: "" }))}
+                    className="text-xs text-slate-500 hover:text-red-400 transition-colors ml-auto"
+                  >
+                    Wis
+                  </button>
+                )}
               </div>
             </div>
 
