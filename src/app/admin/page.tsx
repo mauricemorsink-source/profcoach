@@ -2,12 +2,16 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminDashboardPage() {
-  const [season, settings] = await Promise.all([
+  const [season, settings, predictionConfig] = await Promise.all([
     prisma.season.findFirst({ where: { isActive: true } }),
     prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
+    prisma.predictionConfig.findUnique({ where: { id: "singleton" } }),
   ]);
 
-  const [teamEntryCount, paidTeamEntryCount, totalMatches, pendingMatches, waitingMatches, processedMatches, goalsAgg, yellowCardsAgg] = season
+  const [
+    teamEntryCount, paidTeamEntryCount, totalMatches, pendingMatches, waitingMatches, processedMatches,
+    goalsAgg, yellowCardsAgg, latestPublication,
+  ] = season
     ? await Promise.all([
         prisma.teamEntry.count({ where: { seasonId: season.id } }),
         prisma.teamEntry.count({ where: { seasonId: season.id, betaald: true } }),
@@ -23,8 +27,9 @@ export default async function AdminDashboardPage() {
           where: { match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
           _sum: { yellowCards: true },
         }),
+        prisma.standingsPublication.findFirst({ where: { seasonId: season.id }, orderBy: { revealAt: "desc" } }),
       ])
-    : [0, 0, 0, 0, 0, 0, { _sum: { goalsScored: 0 } }, { _sum: { yellowCards: 0 } }];
+    : [0, 0, 0, 0, 0, 0, { _sum: { goalsScored: 0 } }, { _sum: { yellowCards: 0 } }, null];
 
   const totalGoalsScored = goalsAgg._sum.goalsScored ?? 0;
   const totalYellowCards = yellowCardsAgg._sum.yellowCards ?? 0;
@@ -32,6 +37,44 @@ export default async function AdminDashboardPage() {
   const deadline = settings?.deadline ? new Date(settings.deadline) : null;
   const deadlinePassed = !!deadline && deadline <= new Date();
   const registrationOpen = (settings?.registrationOpen ?? false) && !deadlinePassed;
+
+  // Zijn er wedstrijden verwerkt ná de laatste publicatie? Dan staat er een update klaar die
+  // deelnemers nog niet zien — precies het soort dingen waar een dashboard voor is bedoeld.
+  const hasUnpublishedChanges =
+    !!settings?.standingsUpdatedAt &&
+    (!latestPublication || settings.standingsUpdatedAt > latestPublication.revealAt);
+
+  const alerts: { text: string; href: string; tone: "amber" | "cyan" }[] = [];
+  if (pendingMatches > 0) {
+    alerts.push({
+      text: `${pendingMatches} wedstrijd${pendingMatches !== 1 ? "en" : ""} wacht${pendingMatches === 1 ? "" : "en"} op goedkeuring`,
+      href: "/admin/wedstrijden",
+      tone: "amber",
+    });
+  }
+  if (waitingMatches > 0) {
+    alerts.push({
+      text: `${waitingMatches} wedstrijd${waitingMatches !== 1 ? "en" : ""} wacht${waitingMatches === 1 ? "" : "en"} op verwerking`,
+      href: "/admin/wedstrijden",
+      tone: "amber",
+    });
+  }
+  if (hasUnpublishedChanges) {
+    alerts.push({
+      text: latestPublication
+        ? "Er staat een nieuwe tussenstand klaar die nog niet gepubliceerd is"
+        : "De tussenstand is nog nooit gepubliceerd",
+      href: "/admin/tussenstand",
+      tone: "cyan",
+    });
+  }
+  if (predictionConfig && !predictionConfig.processed && (predictionConfig.topScorerId || predictionConfig.assistKoningId)) {
+    alerts.push({
+      text: "Bonusvragen zijn ingesteld maar nog niet verwerkt",
+      href: "/admin/instellingen",
+      tone: "cyan",
+    });
+  }
 
   const deelnemersStats = [
     { label: "Deelnemers", value: teamEntryCount },
@@ -51,13 +94,14 @@ export default async function AdminDashboardPage() {
   ];
 
   const shortcuts = [
-    { href: "/admin/instellingen", label: "Spelinstellingen", description: "Budget, deadline, inschrijving, puntensysteem" },
-    { href: "/admin/content", label: "Content", description: "Spelregels, voorwaarden en meldingen" },
     { href: "/admin/wedstrijden", label: "Wedstrijden", description: "Goedkeuren, verwerken en beheren" },
     { href: "/admin/spelers", label: "Spelersbeheer", description: "Spelers en waardes beheren" },
     { href: "/admin/totw", label: "Team of the Week", description: "TOTW samenstellen" },
     { href: "/admin/gebruikers", label: "Deelnemers", description: "Ingeschreven teams beheren" },
+    { href: "/admin/tussenstand", label: "Tussenstand", description: "Live stand bekijken en publiceren" },
     { href: "/admin/statistieken", label: "Statistieken", description: "Meest gekozen spelers en meer" },
+    { href: "/admin/instellingen", label: "Spelinstellingen", description: "Budget, deadline, inschrijving, puntensysteem, bonusvragen" },
+    { href: "/admin/content", label: "Content", description: "Spelregels, voorwaarden en meldingen" },
   ];
 
   return (
@@ -111,10 +155,35 @@ export default async function AdminDashboardPage() {
                   <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
                 </div>
               ))}
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
+                <p className="text-2xl font-black text-white">
+                  {predictionConfig?.processed ? "Ja" : "Nee"}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">Verwerkt</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.map((a) => (
+            <Link
+              key={a.text}
+              href={a.href}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 border text-sm font-medium transition-colors block ${
+                a.tone === "amber"
+                  ? "bg-amber-900/20 border-amber-500/30 text-amber-300 hover:bg-amber-900/30"
+                  : "bg-cyan-900/20 border-cyan-500/30 text-cyan-300 hover:bg-cyan-900/30"
+              }`}
+            >
+              <span className="flex-1">{a.text}</span>
+              <span className="text-xs opacity-70">Bekijk →</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Snelkoppelingen</h2>
