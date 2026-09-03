@@ -59,6 +59,12 @@ model User {
   standingsPublications StandingsPublication[]
 }
 
+model ManagerShareLink {
+  id        String   @id @default("singleton")
+  token     String   @unique
+  createdAt DateTime @default(now())
+}
+
 model GameSettings {
   id                 String    @id @default("singleton")
   budget             Int       @default(1750)
