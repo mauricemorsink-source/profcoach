@@ -730,8 +730,9 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
 
             <div>
               <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                Totaal gele kaarten (dit seizoen) {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.yellowCardsPoints} pt)</span>}
+                Totaal gele kaarten VV Rietmolen (dit seizoen) {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.yellowCardsPoints} pt)</span>}
               </label>
+              <p className="text-xs text-slate-600 mb-1.5">Enkel gele kaarten voor spelers van VV Rietmolen. Gele kaarten van de tegenstander tellen niet mee.</p>
               <input type="number" min="0" value={predYellowCards} onChange={(e) => setPredYellowCards(e.target.value)}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
             </div>
@@ -875,7 +876,8 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
                 <PredPlayerPicker field="assistkoning" value={predAssistKoningId} onSelect={setPredAssistKoningId} />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Totaal gele kaarten (dit seizoen) {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.yellowCardsPoints} pt)</span>}</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">Totaal gele kaarten VV Rietmolen (dit seizoen) {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.yellowCardsPoints} pt)</span>}</label>
+                <p className="text-xs text-slate-600 mb-1.5">Enkel gele kaarten voor spelers van VV Rietmolen. Gele kaarten van de tegenstander tellen niet mee.</p>
                 <input type="number" min="0" value={predYellowCards} onChange={(e) => setPredYellowCards(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
               </div>

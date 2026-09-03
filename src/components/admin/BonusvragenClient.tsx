@@ -397,8 +397,13 @@ export default function BonusvragenClient() {
             {/* Vraag 3: Gele kaarten */}
             <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-white">Totaal gele kaarten</p>
-                <div className="flex items-center gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">Totaal gele kaarten VV Rietmolen</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Enkel gele kaarten voor spelers van VV Rietmolen. Gele kaarten van de tegenstander tellen niet mee.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
                   <label className="text-xs text-slate-500">Punten:</label>
                   <input
                     type="number"
