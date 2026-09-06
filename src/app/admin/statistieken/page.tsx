@@ -324,14 +324,6 @@ export default async function AdminStatistiekenPage() {
               <RankedList items={toItems(mostPicked)} emptyText="Nog geen selecties." />
             </StatCard>
 
-            <StatCard title="Vaakst gespeeld" hint="Aantal wedstrijden gespeeld dit seizoen, inclusief invalbeurten voor een ander elftal">
-              <RankedList items={mostPlayedItems} emptyText="Nog geen wedstrijden verwerkt." />
-            </StatCard>
-
-            <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per euro waarde">
-              <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
-            </StatCard>
-
             <StatCard title="Vaakst gekozen aanvoerder">
               <RankedList items={toItems(topCaptains)} emptyText="Nog geen aanvoerders gekozen." />
             </StatCard>
@@ -387,6 +379,19 @@ export default async function AdminStatistiekenPage() {
                   <RankedList items={toItems(byPosition[pos])} emptyText="Nog geen selecties." />
                 </StatCard>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Daadwerkelijke prestaties</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <StatCard title="Vaakst gespeeld" hint="Aantal wedstrijden gespeeld dit seizoen, inclusief invalbeurten voor een ander elftal">
+                <RankedList items={mostPlayedItems} emptyText="Nog geen wedstrijden verwerkt." />
+              </StatCard>
+
+              <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per euro waarde">
+                <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
+              </StatCard>
             </div>
           </div>
 
