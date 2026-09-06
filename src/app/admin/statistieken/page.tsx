@@ -66,7 +66,7 @@ export default async function AdminStatistiekenPage() {
     return <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>;
   }
 
-  const [entries, activePlayers, goalsAgg, yellowCardsAgg, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats] = await Promise.all([
+  const [entries, activePlayers, goalsAgg, yellowCardsAgg, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats, mostPlayedStats] = await Promise.all([
     prisma.teamEntry.findMany({
       where: { seasonId: season.id },
       include: {
@@ -113,7 +113,13 @@ export default async function AdminStatistiekenPage() {
     prisma.playerSeasonStats.findMany({
       where: { seasonId: season.id, totalPoints: { gt: 0 } },
       orderBy: { totalPoints: "desc" },
-      include: { player: { select: { name: true, clubTeam: true, position: true } } },
+      include: { player: { select: { name: true, clubTeam: true, position: true, value: true } } },
+    }),
+    prisma.playerSeasonStats.findMany({
+      where: { seasonId: season.id, matchesPlayed: { gt: 0 } },
+      orderBy: { matchesPlayed: "desc" },
+      take: 10,
+      include: { player: { select: { name: true, clubTeam: true } } },
     }),
   ]);
 
@@ -249,6 +255,26 @@ export default async function AdminStatistiekenPage() {
     value: `${s.totalPoints} pt`,
   }));
 
+  // Vaakst gespeeld (matchesPlayed telt wedstrijden van elk elftal mee waarin de speler
+  // een MatchPerformance-record heeft, dus ook invalbeurten voor een ander elftal).
+  const mostPlayedItems: ListItem[] = mostPlayedStats.map((s, i) => ({
+    key: s.playerId, rank: i + 1, primary: s.player.name,
+    secondary: TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam,
+    value: `${s.matchesPlayed}x`,
+  }));
+
+  // Beste prijs-kwaliteit: punten per euro waarde. Alleen spelers met een waarde > 0.
+  const bestValueItems: ListItem[] = topPointsStats
+    .filter((s) => s.player.value > 0)
+    .map((s) => ({ ...s, ratio: s.totalPoints / s.player.value }))
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, 5)
+    .map((s, i) => ({
+      key: s.playerId, rank: i + 1, primary: s.player.name,
+      secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam} · €${s.player.value} · ${s.totalPoints} pt`,
+      value: `${s.ratio.toFixed(2)} pt/€`,
+    }));
+
   return (
     <div className="space-y-4">
       <div className="bg-slate-900 neon-border rounded-2xl p-5 flex items-center justify-between flex-wrap gap-2">
@@ -296,6 +322,14 @@ export default async function AdminStatistiekenPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <StatCard title="Meest gekozen spelers">
               <RankedList items={toItems(mostPicked)} emptyText="Nog geen selecties." />
+            </StatCard>
+
+            <StatCard title="Vaakst gespeeld" hint="Aantal wedstrijden gespeeld dit seizoen, inclusief invalbeurten voor een ander elftal">
+              <RankedList items={mostPlayedItems} emptyText="Nog geen wedstrijden verwerkt." />
+            </StatCard>
+
+            <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per euro waarde">
+              <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
             </StatCard>
 
             <StatCard title="Vaakst gekozen aanvoerder">
