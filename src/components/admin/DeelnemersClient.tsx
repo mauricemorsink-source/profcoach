@@ -197,18 +197,23 @@ export default function DeelnemersClient() {
                         : <span className="text-slate-500 italic">Geen naam</span>}
                     </td>
                     <td className="py-2 text-slate-400 text-xs hidden sm:table-cell">{d.email ?? "—"}</td>
-                    <td className="py-2">
+                    <td className="py-2 whitespace-nowrap">
                       {d.formation
-                        ? <span className="text-xs bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded font-semibold">{d.formation.code}</span>
+                        ? <span className="text-xs bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded font-semibold whitespace-nowrap">{d.formation.code}</span>
                         : <span className="text-slate-600 text-xs">—</span>}
                     </td>
-                    <td className="py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${d.betaald ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"}`}>
+                    <td className="py-2 whitespace-nowrap">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border whitespace-nowrap ${d.betaald ? "bg-green-900/40 text-green-400 border-green-500/30" : "bg-slate-800 text-slate-500 border-slate-700"}`}>
                         {d.betaald ? "Betaald" : "Niet betaald"}
                       </span>
                     </td>
-                    <td className="py-2 text-right">
-                      <button onClick={() => openModal(d)} className={BTN_SMALL}>Details</button>
+                    <td className="py-2 text-right whitespace-nowrap">
+                      <button onClick={() => openModal(d)} className={BTN_SMALL} aria-label="Details">
+                        <svg className="w-3.5 h-3.5 sm:hidden" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path d="M10 3.5c-4.14 0-7.4 3.06-8.5 6.5 1.1 3.44 4.36 6.5 8.5 6.5s7.4-3.06 8.5-6.5c-1.1-3.44-4.36-6.5-8.5-6.5Zm0 11a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                        </svg>
+                        <span className="hidden sm:inline">Details</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
