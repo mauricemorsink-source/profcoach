@@ -815,75 +815,79 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
                   ) : (
                     <div>
                       <p className="text-slate-400 text-xs mb-3">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
-                      <table className="w-full text-sm min-w-[540px]">
-                          <thead className="sticky top-0 z-10">
-                            <tr className="text-left text-slate-500 text-xs">
-                              <th className="py-2 font-medium bg-slate-800">Speler</th>
-                              <th className="px-2 py-2 font-medium bg-slate-800">Pos.</th>
-                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Mee</th>
-                              <th className="px-2 py-2 font-medium text-center bg-slate-800">⚽</th>
-                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Pen</th>
-                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Ass</th>
-                              <th className="px-2 py-2 font-medium text-center bg-slate-800">EG</th>
-                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Kaart</th>
-                              <th className="px-2 py-2 w-6 bg-slate-800"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {addPerfs.map((p) => (
-                              <tr key={p.playerId} className={`border-b border-slate-800 ${p.played ? "" : "opacity-40"}`}>
-                                <td className="py-2 font-medium text-white text-xs">
-                                  <div className="flex items-center gap-1.5">
-                                    {p.playerName}
-                                    {p.isGuest && (
-                                      <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded">GAST</span>
-                                    )}
-                                    {!p.isGuest && p.altTeam && (
-                                      <span className="text-[9px] font-bold text-violet-400 bg-violet-900/30 border border-violet-500/30 px-1 py-0.5 rounded">FLEX</span>
-                                    )}
-                                  </div>
-                                  {p.isGuest && p.clubTeam && (
-                                    <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
-                                  )}
-                                  {!p.isGuest && p.altTeam && p.clubTeam && (
-                                    <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
-                                  )}
-                                </td>
-                                <td className="px-2 py-2">
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[p.position] ?? "text-slate-400"}`}>
-                                    {POSITION_LABEL[p.position] ?? p.position}
-                                  </span>
-                                </td>
-                                <td className="px-2 py-2 text-center">
-                                  <input type="checkbox" checked={p.played} onChange={(e) => updateAddPerf(p.playerId, "played", e.target.checked)} className="accent-cyan-500 w-4 h-4 cursor-pointer" />
-                                </td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.goals} onChange={(e) => updateAddPerf(p.playerId, "goals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => updateAddPerf(p.playerId, "penaltyGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.assists} onChange={(e) => updateAddPerf(p.playerId, "assists", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2"><input type="number" min="0" value={p.ownGoals} onChange={(e) => updateAddPerf(p.playerId, "ownGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
-                                <td className="px-2 py-2">
-                                  <select
-                                    value={toCardValue(p.yellowCards, p.redCard)}
-                                    onChange={(e) => { const c = fromCardValue(e.target.value); updateAddPerf(p.playerId, "yellowCards", c.yellowCards); updateAddPerf(p.playerId, "redCard", c.redCard); }}
-                                    disabled={!p.played}
-                                    className="bg-slate-800 border border-slate-700 text-white rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30"
-                                  >
-                                    <option value="">–</option>
-                                    <option value="1y">🟡 1× geel</option>
-                                    <option value="2y">🟡🟡 2× geel</option>
-                                    <option value="r">🔴 Direct rood</option>
-                                    <option value="1yr">🟡🔴 Geel + direct rood</option>
-                                  </select>
-                                </td>
-                                <td className="px-2 py-2 text-center">
-                                  {p.isGuest && (
-                                    <button onClick={() => removeGuest(p.playerId, true)} className="text-slate-600 hover:text-red-400 transition-colors text-sm">✕</button>
-                                  )}
-                                </td>
+                      <div className="border border-slate-800 rounded-xl overflow-x-auto overscroll-x-contain">
+                        <div className="overflow-y-auto overscroll-y-contain max-h-[45vh]">
+                          <table className="w-full text-sm min-w-[540px]">
+                            <thead className="sticky top-0 z-10 bg-slate-800">
+                              <tr className="text-left text-slate-500 text-xs">
+                                <th className="py-2 font-medium">Speler</th>
+                                <th className="px-2 py-2 font-medium">Pos.</th>
+                                <th className="px-2 py-2 font-medium text-center">Mee</th>
+                                <th className="px-2 py-2 font-medium text-center">⚽</th>
+                                <th className="px-2 py-2 font-medium text-center">Pen</th>
+                                <th className="px-2 py-2 font-medium text-center">Ass</th>
+                                <th className="px-2 py-2 font-medium text-center">EG</th>
+                                <th className="px-2 py-2 font-medium text-center">Kaart</th>
+                                <th className="px-2 py-2 w-6"></th>
                               </tr>
-                            ))}
-                          </tbody>
-                      </table>
+                            </thead>
+                            <tbody>
+                              {addPerfs.map((p) => (
+                                <tr key={p.playerId} className={`border-b border-slate-800 ${p.played ? "" : "opacity-40"}`}>
+                                  <td className="py-2 font-medium text-white text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                      {p.playerName}
+                                      {p.isGuest && (
+                                        <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded">GAST</span>
+                                      )}
+                                      {!p.isGuest && p.altTeam && (
+                                        <span className="text-[9px] font-bold text-violet-400 bg-violet-900/30 border border-violet-500/30 px-1 py-0.5 rounded">FLEX</span>
+                                      )}
+                                    </div>
+                                    {p.isGuest && p.clubTeam && (
+                                      <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
+                                    )}
+                                    {!p.isGuest && p.altTeam && p.clubTeam && (
+                                      <div className="text-[10px] text-slate-500">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</div>
+                                    )}
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${POSITION_COLOR[p.position] ?? "text-slate-400"}`}>
+                                      {POSITION_LABEL[p.position] ?? p.position}
+                                    </span>
+                                  </td>
+                                  <td className="px-2 py-2 text-center">
+                                    <input type="checkbox" checked={p.played} onChange={(e) => updateAddPerf(p.playerId, "played", e.target.checked)} className="accent-cyan-500 w-4 h-4 cursor-pointer" />
+                                  </td>
+                                  <td className="px-2 py-2"><input type="number" min="0" value={p.goals} onChange={(e) => updateAddPerf(p.playerId, "goals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
+                                  <td className="px-2 py-2"><input type="number" min="0" value={p.penaltyGoals} onChange={(e) => updateAddPerf(p.playerId, "penaltyGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
+                                  <td className="px-2 py-2"><input type="number" min="0" value={p.assists} onChange={(e) => updateAddPerf(p.playerId, "assists", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
+                                  <td className="px-2 py-2"><input type="number" min="0" value={p.ownGoals} onChange={(e) => updateAddPerf(p.playerId, "ownGoals", Number(e.target.value))} onFocus={(e) => e.target.select()} disabled={!p.played} className={NUM_INPUT} /></td>
+                                  <td className="px-2 py-2">
+                                    <select
+                                      value={toCardValue(p.yellowCards, p.redCard)}
+                                      onChange={(e) => { const c = fromCardValue(e.target.value); updateAddPerf(p.playerId, "yellowCards", c.yellowCards); updateAddPerf(p.playerId, "redCard", c.redCard); }}
+                                      disabled={!p.played}
+                                      className="bg-slate-800 border border-slate-700 text-white rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30"
+                                    >
+                                      <option value="">–</option>
+                                      <option value="1y">🟡 1× geel</option>
+                                      <option value="2y">🟡🟡 2× geel</option>
+                                      <option value="r">🔴 Direct rood</option>
+                                      <option value="1yr">🟡🔴 Geel + direct rood</option>
+                                    </select>
+                                  </td>
+                                  <td className="px-2 py-2 text-center">
+                                    {p.isGuest && (
+                                      <button onClick={() => removeGuest(p.playerId, true)} className="text-slate-600 hover:text-red-400 transition-colors text-sm">✕</button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
 
                       {/* Gastspeler */}
                       <div className="mt-4">
