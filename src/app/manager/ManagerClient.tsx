@@ -174,7 +174,7 @@ function PerfRow({
 }) {
   return (
     <tr className={`border-b border-slate-800 transition-colors ${p.played ? "bg-slate-800/20" : "opacity-40"}`}>
-      <td className="px-4 py-2.5">
+      <td className="px-4 py-2.5 whitespace-nowrap">
         <div className="flex items-center gap-2">
           <span className="font-medium text-white">{p.playerName}</span>
           {p.isGuest && (
@@ -329,8 +329,9 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
   }
 
   function addGuestToAdd(player: AllPlayer) {
+    // Vooraan toevoegen (i.p.v. achteraan) zodat de nieuwe gastspeler direct zichtbaar is
+    // onder de sticky koptekst, zonder dat er in de tabel naar beneden gescrold hoeft te worden.
     setAddPerfs((prev) => [
-      ...prev,
       {
         playerId: player.id,
         playerName: player.name,
@@ -340,13 +341,13 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
         played: true,
         goals: 0, penaltyGoals: 0, assists: 0, ownGoals: 0, yellowCards: 0, redCard: false,
       },
+      ...prev,
     ]);
     setShowGuestPickerAdd(false);
   }
 
   function addGuestToPerf(player: AllPlayer) {
     setPerfs((prev) => [
-      ...prev,
       {
         playerId: player.id,
         playerName: player.name,
@@ -356,6 +357,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
         played: true,
         goals: 0, penaltyGoals: 0, assists: 0, ownGoals: 0, yellowCards: 0, redCard: false,
       },
+      ...prev,
     ]);
     setShowGuestPickerPerf(false);
   }
@@ -820,7 +822,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
                           <table className="w-full text-sm min-w-[540px]">
                             <thead className="sticky top-0 z-10 bg-slate-800">
                               <tr className="text-left text-slate-500 text-xs">
-                                <th className="py-2 font-medium">Speler</th>
+                                <th className="py-2 pl-3 pr-2 font-medium">Speler</th>
                                 <th className="px-2 py-2 font-medium">Pos.</th>
                                 <th className="px-2 py-2 font-medium text-center">Mee</th>
                                 <th className="px-2 py-2 font-medium text-center">⚽</th>
@@ -834,7 +836,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
                             <tbody>
                               {addPerfs.map((p) => (
                                 <tr key={p.playerId} className={`border-b border-slate-800 ${p.played ? "" : "opacity-40"}`}>
-                                  <td className="py-2 font-medium text-white text-xs">
+                                  <td className="py-2 pl-3 pr-2 font-medium text-white text-xs whitespace-nowrap">
                                     <div className="flex items-center gap-1.5">
                                       {p.playerName}
                                       {p.isGuest && (
@@ -1009,7 +1011,8 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
                             <p className="text-amber-400 font-semibold text-sm mb-1">Doelpunten komen niet overeen</p>
                             <p className="text-amber-300/80 text-xs mb-3">
                               Geregistreerd: {totalGoals} · Eindstand: {expectedGoals} voor {TEAM_LABEL[managedTeam] ?? managedTeam}.
-                              Voeg doelpuntenmakers toe die niet in de selectie staan (jeugdspeler, eigen goal tegenstander).
+                              Pas de doelpuntenmakers in de vorige stap aan, of voeg hier spelers toe die niet in de selectie zitten
+                              (denk aan nieuwe spelers, jeugdspelers of eigen goals van tegenstanders).
                             </p>
                           </>
                         ) : (
