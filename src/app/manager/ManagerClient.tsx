@@ -258,6 +258,11 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
   const [guestSearchAdd, setGuestSearchAdd] = useState("");
   const [showGuestPickerPerf, setShowGuestPickerPerf] = useState(false);
   const [guestSearchPerf, setGuestSearchPerf] = useState("");
+  // Verwijzen naar het scrollende tabelvak, zodat een net toegevoegde gastspeler (die
+  // onderaan de lijst komt) meteen in beeld gescrold kan worden i.p.v. buiten het
+  // begrensde scrollvak te blijven staan.
+  const addPerfsBoxRef = useRef<HTMLDivElement>(null);
+  const perfsBoxRef = useRef<HTMLDivElement>(null);
 
   const authSuffix = isAdmin
     ? `?adminTeam=${managedTeam}`
@@ -328,10 +333,18 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
     setAddPerfs((prev) => prev.map((p) => p.playerId === playerId ? { ...p, [field]: value } : p));
   }
 
+  // Scrolt het begrensde tabelvak naar beneden zodat een net toegevoegde gastspeler
+  // (onderaan de lijst) meteen zichtbaar is, zonder handmatig te hoeven scrollen.
+  function scrollBoxToBottom(ref: React.RefObject<HTMLDivElement | null>) {
+    requestAnimationFrame(() => {
+      const el = ref.current;
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    });
+  }
+
   function addGuestToAdd(player: AllPlayer) {
-    // Vooraan toevoegen (i.p.v. achteraan) zodat de nieuwe gastspeler direct zichtbaar is
-    // onder de sticky koptekst, zonder dat er in de tabel naar beneden gescrold hoeft te worden.
     setAddPerfs((prev) => [
+      ...prev,
       {
         playerId: player.id,
         playerName: player.name,
@@ -341,13 +354,14 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
         played: true,
         goals: 0, penaltyGoals: 0, assists: 0, ownGoals: 0, yellowCards: 0, redCard: false,
       },
-      ...prev,
     ]);
     setShowGuestPickerAdd(false);
+    scrollBoxToBottom(addPerfsBoxRef);
   }
 
   function addGuestToPerf(player: AllPlayer) {
     setPerfs((prev) => [
+      ...prev,
       {
         playerId: player.id,
         playerName: player.name,
@@ -357,9 +371,9 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
         played: true,
         goals: 0, penaltyGoals: 0, assists: 0, ownGoals: 0, yellowCards: 0, redCard: false,
       },
-      ...prev,
     ]);
     setShowGuestPickerPerf(false);
+    scrollBoxToBottom(perfsBoxRef);
   }
 
   function removeGuest(playerId: string, fromAdd: boolean) {
@@ -619,7 +633,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
 
                 <div className="relative">
                   <div className="bg-slate-900 neon-border rounded-xl overflow-x-auto overscroll-x-contain">
-                    <div className="overflow-y-auto overscroll-y-contain max-h-[60vh]">
+                    <div ref={perfsBoxRef} className="overflow-y-auto overscroll-y-contain max-h-[60vh]">
                       <table className="w-full text-sm min-w-[540px]">
                         <thead className="sticky top-0 z-10 bg-slate-800">{perfTableHeader}</thead>
                         <tbody>
@@ -818,7 +832,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
                     <div>
                       <p className="text-slate-400 text-xs mb-3">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
                       <div className="border border-slate-800 rounded-xl overflow-x-auto overscroll-x-contain">
-                        <div className="overflow-y-auto overscroll-y-contain max-h-[45vh]">
+                        <div ref={addPerfsBoxRef} className="overflow-y-auto overscroll-y-contain max-h-[45vh]">
                           <table className="w-full text-sm min-w-[540px]">
                             <thead className="sticky top-0 z-10 bg-slate-800">
                               <tr className="text-left text-slate-500 text-xs">
