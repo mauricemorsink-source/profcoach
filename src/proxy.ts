@@ -71,8 +71,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Manager route: vereist MANAGER of ADMIN rol
-  if (pathname.startsWith("/manager")) {
+  // Manager route: vereist MANAGER of ADMIN rol. Uitzondering: /manager/[token](/[team]) is
+  // de publieke, tokengebaseerde gedeelde wedstrijdlink — die regelt zijn eigen toegang via
+  // de token (zie isValidManagerShareToken) en mag nooit achter de sessie-check vallen, anders
+  // werkt de link niet voor iemand zonder account én pikt een toevallige sessie in dezelfde
+  // browser stilletjes het verkeerde elftal.
+  if (pathname === "/manager") {
     const session = await getSessionFromRequest(req);
     if (!session) {
       return NextResponse.redirect(new URL("/login?redirect=/manager", req.url));
