@@ -1084,7 +1084,7 @@ export default function WedstrijdenClient() {
                             >
                               Prestaties
                             </button>
-                            {m.status === "PENDING" && (
+                            {(m.status === "PENDING" || m.status === "REJECTED") && (
                               <button
                                 onClick={() => {
                                   approveMatch(m.id, "APPROVED");
@@ -1390,7 +1390,7 @@ export default function WedstrijdenClient() {
                                 >
                                   Prestaties
                                 </button>
-                                {m.status === "PENDING" && (
+                                {(m.status === "PENDING" || m.status === "REJECTED") && (
                                   <button
                                     onClick={() => {
                                       approveMatch(m.id, "APPROVED");
@@ -1988,7 +1988,7 @@ export default function WedstrijdenClient() {
                   <button onClick={closeEditMatch} className={BTN_SECONDARY}>
                     Annuleer
                   </button>
-                  {editingMatch.status === "PENDING" && (
+                  {(editingMatch.status === "PENDING" || editingMatch.status === "REJECTED") && (
                     <button
                       onClick={() => approveFromModal("APPROVED")}
                       disabled={editMatchSaving}
