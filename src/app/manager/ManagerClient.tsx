@@ -66,7 +66,7 @@ type MatchDetail = {
 
 type AllPlayer = { id: string; name: string; position: string; clubTeam: string; altTeam?: string | null };
 
-type Props = { managedTeam: string; managerName: string; isAdmin?: boolean };
+type Props = { managedTeam: string; managerName: string; isAdmin?: boolean; shareToken?: string };
 
 // Sub-component: guest player picker
 function GuestPicker({
@@ -228,7 +228,7 @@ function PerfRow({
   );
 }
 
-export default function ManagerClient({ managedTeam, managerName, isAdmin }: Props) {
+export default function ManagerClient({ managedTeam, managerName, isAdmin, shareToken }: Props) {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "performances">("list");
@@ -259,18 +259,22 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
   const [showGuestPickerPerf, setShowGuestPickerPerf] = useState(false);
   const [guestSearchPerf, setGuestSearchPerf] = useState("");
 
-  const adminSuffix = isAdmin ? `?adminTeam=${managedTeam}` : "";
+  const authSuffix = isAdmin
+    ? `?adminTeam=${managedTeam}`
+    : shareToken
+    ? `?shareToken=${shareToken}&team=${managedTeam}`
+    : "";
 
   async function loadMatches() {
     setLoading(true);
-    const res = await fetch(`/api/manager/matches${adminSuffix}`);
+    const res = await fetch(`/api/manager/matches${authSuffix}`);
     if (res.ok) setMatches(await res.json());
     setLoading(false);
   }
 
   async function loadTeamPlayers() {
     setLoadingPlayers(true);
-    const res = await fetch(`/api/manager/players${adminSuffix}`);
+    const res = await fetch(`/api/manager/players${authSuffix}`);
     if (res.ok) {
       const players: AllPlayer[] = await res.json();
       setAddPerfs(players.map((p) => ({
@@ -294,7 +298,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
 
   async function loadAllPlayers() {
     if (allPlayers.length > 0) return;
-    const suffix = isAdmin ? `?all=true&adminTeam=${managedTeam}` : "?all=true";
+    const suffix = authSuffix ? `${authSuffix}&all=true` : "?all=true";
     const res = await fetch(`/api/manager/players${suffix}`);
     if (res.ok) setAllPlayers(await res.json());
   }
@@ -368,7 +372,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
     setAddLoading(true);
     setAddError("");
 
-    const res = await fetch(`/api/manager/matches${adminSuffix}`, {
+    const res = await fetch(`/api/manager/matches${authSuffix}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -388,7 +392,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
     const played = addPerfs.filter((p) => p.played);
     if (played.length > 0) {
       const perfRes = await fetch(
-        `/api/manager/matches/${matchId}/performances${adminSuffix}`,
+        `/api/manager/matches/${matchId}/performances${authSuffix}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -416,7 +420,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
     setSaveMsg(null);
     setShowGuestPickerPerf(false);
     setGuestSearchPerf("");
-    const res = await fetch(`/api/manager/matches/${matchId}${adminSuffix}`);
+    const res = await fetch(`/api/manager/matches/${matchId}${authSuffix}`);
     if (res.ok) {
       const data: MatchDetail = await res.json();
       setMatchDetail(data);
@@ -429,7 +433,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
     if (!selectedMatchId) return;
     setSaving(true);
     setSaveMsg(null);
-    const res = await fetch(`/api/manager/matches/${selectedMatchId}/performances${adminSuffix}`, {
+    const res = await fetch(`/api/manager/matches/${selectedMatchId}/performances${authSuffix}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ performances: perfs }),
@@ -440,7 +444,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
       // Status kan zijn teruggezet naar PENDING — refresh zodat UI klopt
       await loadMatches();
       if (selectedMatchId) {
-        const refreshed = await fetch(`/api/manager/matches/${selectedMatchId}${adminSuffix}`);
+        const refreshed = await fetch(`/api/manager/matches/${selectedMatchId}${authSuffix}`);
         if (refreshed.ok) {
           const data: MatchDetail = await refreshed.json();
           setMatchDetail(data);
@@ -460,7 +464,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
   const LABEL = "block text-xs font-medium text-slate-400 mb-1";
   const NUM_INPUT = "w-10 bg-slate-800 border border-slate-600 text-white rounded px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-cyan-500/50 disabled:opacity-30 disabled:cursor-not-allowed";
 
-  const TH = "px-3 py-3 font-medium sticky top-0 bg-slate-800 z-10";
+  const TH = "px-3 py-3 font-medium bg-slate-800";
   const perfTableHeader = (
     <tr className="text-left text-slate-500 border-b border-slate-700/50">
       <th className={`${TH} px-4`}>Speler</th>
@@ -612,23 +616,25 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                 </div>
 
                 <div className="relative">
-                  <div className="bg-slate-900 neon-border rounded-xl overflow-x-auto overflow-y-auto max-h-[60vh]">
-                  <table className="w-full text-sm min-w-[540px]">
-                    <thead>{perfTableHeader}</thead>
-                    <tbody>
-                      {perfs.map((p) => (
-                        <PerfRow
-                          key={p.playerId}
-                          p={p}
-                          locked={matchDetail.match.status === "PROCESSED"}
-                          onChange={(field, value) => updatePerf(p.playerId, field, value)}
-                          onRemove={p.isGuest ? () => removeGuest(p.playerId, false) : undefined}
-                          numInputClass={NUM_INPUT}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                  <div className="bg-slate-900 neon-border rounded-xl overflow-x-auto overscroll-x-contain">
+                    <div className="overflow-y-auto overscroll-y-contain max-h-[60vh]">
+                      <table className="w-full text-sm min-w-[540px]">
+                        <thead className="sticky top-0 z-10 bg-slate-800">{perfTableHeader}</thead>
+                        <tbody>
+                          {perfs.map((p) => (
+                            <PerfRow
+                              key={p.playerId}
+                              p={p}
+                              locked={matchDetail.match.status === "PROCESSED"}
+                              onChange={(field, value) => updatePerf(p.playerId, field, value)}
+                              onRemove={p.isGuest ? () => removeGuest(p.playerId, false) : undefined}
+                              numInputClass={NUM_INPUT}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                   <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-900 to-transparent rounded-r-xl sm:hidden" />
                 </div>
 
@@ -716,7 +722,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
             </div>
 
             {/* Modal body */}
-            <div className="flex-1 overflow-y-auto overflow-x-auto px-6 py-5">
+            <div className="flex-1 overflow-y-auto overflow-x-auto overscroll-contain px-6 py-5">
 
               {/* Step 1: Match details */}
               {modalStep === 1 && (
@@ -810,17 +816,17 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin }: Pro
                     <div>
                       <p className="text-slate-400 text-xs mb-3">Vink aan wie heeft meegespeeld en vul hun statistieken in.</p>
                       <table className="w-full text-sm min-w-[540px]">
-                          <thead>
+                          <thead className="sticky top-0 z-10">
                             <tr className="text-left text-slate-500 text-xs">
-                              <th className="py-2 font-medium sticky top-0 bg-slate-800 z-10">Speler</th>
-                              <th className="px-2 py-2 font-medium sticky top-0 bg-slate-800 z-10">Pos.</th>
-                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Mee</th>
-                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">⚽</th>
-                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Pen</th>
-                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Ass</th>
-                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">EG</th>
-                              <th className="px-2 py-2 font-medium text-center sticky top-0 bg-slate-800 z-10">Kaart</th>
-                              <th className="px-2 py-2 w-6 sticky top-0 bg-slate-800 z-10"></th>
+                              <th className="py-2 font-medium bg-slate-800">Speler</th>
+                              <th className="px-2 py-2 font-medium bg-slate-800">Pos.</th>
+                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Mee</th>
+                              <th className="px-2 py-2 font-medium text-center bg-slate-800">⚽</th>
+                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Pen</th>
+                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Ass</th>
+                              <th className="px-2 py-2 font-medium text-center bg-slate-800">EG</th>
+                              <th className="px-2 py-2 font-medium text-center bg-slate-800">Kaart</th>
+                              <th className="px-2 py-2 w-6 bg-slate-800"></th>
                             </tr>
                           </thead>
                           <tbody>

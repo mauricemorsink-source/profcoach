@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-
-function getEffectiveTeam(session: { role: string; managedTeam?: string | null }, req: NextRequest): string | null {
-  if (session.managedTeam) return session.managedTeam;
-  if (session.role === "ADMIN") return req.nextUrl.searchParams.get("adminTeam");
-  return null;
-}
+import { getManagerAuthContext } from "@/lib/managerAuth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ matchId: string }> }
 ) {
-  const session = await getSession();
-  if (!session || (session.role !== "MANAGER" && session.role !== "ADMIN")) {
-    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
-  }
-
-  const team = getEffectiveTeam(session, req);
-  if (!team) return NextResponse.json({ error: "Geen elftal toegewezen" }, { status: 403 });
+  const auth = await getManagerAuthContext(req);
+  if (!auth) return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  const { team } = auth;
 
   const { matchId } = await params;
   const match = await prisma.match.findUnique({ where: { id: matchId } });
@@ -89,13 +79,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ matchId: string }> }
 ) {
-  const session = await getSession();
-  if (!session || (session.role !== "MANAGER" && session.role !== "ADMIN")) {
-    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
-  }
-
-  const team = getEffectiveTeam(session, req);
-  if (!team) return NextResponse.json({ error: "Geen elftal toegewezen" }, { status: 403 });
+  const auth = await getManagerAuthContext(req);
+  if (!auth) return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  const { team } = auth;
 
   const { matchId } = await params;
   const match = await prisma.match.findUnique({ where: { id: matchId } });

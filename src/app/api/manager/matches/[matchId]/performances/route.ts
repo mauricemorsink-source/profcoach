@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getManagerAuthContext } from "@/lib/managerAuth";
 import { validatePerformanceInput } from "@/lib/performanceValidation";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ matchId: string }> }
 ) {
-  const session = await getSession();
-  if (!session || (session.role !== "MANAGER" && session.role !== "ADMIN")) {
-    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
-  }
-
-  const team = session.managedTeam || (session.role === "ADMIN" ? req.nextUrl.searchParams.get("adminTeam") : null);
-  if (!team) return NextResponse.json({ error: "Geen elftal toegewezen" }, { status: 403 });
+  const auth = await getManagerAuthContext(req);
+  if (!auth) return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  const { team } = auth;
 
   const { matchId } = await params;
   const match = await prisma.match.findUnique({ where: { id: matchId } });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 function toCardValue(yellowCards: number, redCard: boolean): string {
   if (yellowCards >= 2 && redCard) return "2y";
@@ -149,6 +150,22 @@ export default function WedstrijdenClient() {
   const [editMatchSaving, setEditMatchSaving] = useState(false);
   const [editMatchError, setEditMatchError] = useState("");
   const [matchMenuId, setMatchMenuId] = useState<string | null>(null);
+  // Positie van het desktop "Acties"-dropdownpaneel, dat via een portal buiten de
+  // horizontaal scrollende tabel wordt gerenderd zodat overflow-x-auto het niet afkapt.
+  const [desktopMenuPos, setDesktopMenuPos] = useState<{ top: number; right: number } | null>(null);
+
+  useEffect(() => {
+    if (!matchMenuId) return;
+    // Sluit het menu bij scrollen (tabel of pagina) i.p.v. de vaste positie te laten
+    // desynchroniseren met de knop waar het bij hoort.
+    const close = () => setMatchMenuId(null);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [matchMenuId]);
   const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null);
   const [revertingMatchId, setRevertingMatchId] = useState<string | null>(null);
   const [editPerfsData, setEditPerfsData] = useState<
@@ -1335,13 +1352,24 @@ export default function WedstrijdenClient() {
                         <td className="py-2 text-right">
                           <div className="relative inline-block">
                             <button
-                              onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)}
+                              onClick={(e) => {
+                                if (matchMenuId === m.id) {
+                                  setMatchMenuId(null);
+                                  return;
+                                }
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDesktopMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                                setMatchMenuId(m.id);
+                              }}
                               className={BTN_SMALL}
                             >
                               Acties ▾
                             </button>
-                            {matchMenuId === m.id && (
-                              <div className="absolute right-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden">
+                            {matchMenuId === m.id && desktopMenuPos && createPortal(
+                              <div
+                                style={{ position: "fixed", top: desktopMenuPos.top, right: desktopMenuPos.right }}
+                                className="z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden"
+                              >
                                 {m.status !== "PROCESSED" && (
                                   <button
                                     onClick={() => {
@@ -1443,7 +1471,8 @@ export default function WedstrijdenClient() {
                                     </button>
                                   </>
                                 )}
-                              </div>
+                              </div>,
+                              document.body
                             )}
                           </div>
                         </td>

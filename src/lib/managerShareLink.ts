@@ -1,6 +1,5 @@
 import { randomBytes, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
 
 export const CLUB_TEAM_CODES = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"] as const;
 export type ClubTeamCode = (typeof CLUB_TEAM_CODES)[number];
@@ -16,10 +15,6 @@ export const CLUB_TEAM_LABEL: Record<ClubTeamCode, string> = {
 export function isClubTeamCode(value: string): value is ClubTeamCode {
   return (CLUB_TEAM_CODES as readonly string[]).includes(value);
 }
-
-// E-mailadres van de systeemgebruiker die als "auteur" dient voor wedstrijden die via de
-// gedeelde link zijn ingediend — puur een FK-anker, logt nooit ergens mee in.
-const SHARE_USER_EMAIL = "wedstrijdlink@profcoach.systeem";
 
 export async function getManagerShareLink() {
   return prisma.managerShareLink.findUnique({ where: { id: "singleton" } });
@@ -42,18 +37,4 @@ export async function isValidManagerShareToken(token: string): Promise<boolean> 
   const expected = Buffer.from(link.token);
   if (provided.length !== expected.length) return false;
   return timingSafeEqual(provided, expected);
-}
-
-export async function ensureManagerShareUser() {
-  return prisma.user.upsert({
-    where: { email: SHARE_USER_EMAIL },
-    create: {
-      email: SHARE_USER_EMAIL,
-      password: hashPassword(randomBytes(16).toString("hex")),
-      name: "Gedeelde wedstrijd-link (systeem)",
-      role: "MANAGER",
-      isParticipant: false,
-    },
-    update: {},
-  });
 }

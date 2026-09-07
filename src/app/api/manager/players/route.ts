@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getManagerAuthContext } from "@/lib/managerAuth";
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session || (session.role !== "MANAGER" && session.role !== "ADMIN")) {
-    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
-  }
-
-  const team = session.managedTeam || (session.role === "ADMIN" ? req.nextUrl.searchParams.get("adminTeam") : null);
-  if (!team) return NextResponse.json({ error: "Geen elftal toegewezen" }, { status: 403 });
+  const auth = await getManagerAuthContext(req);
+  if (!auth) return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+  const { team } = auth;
 
   // ?all=true → alle spelers van alle elftallen (voor gastspelers)
   const all = req.nextUrl.searchParams.get("all") === "true";
