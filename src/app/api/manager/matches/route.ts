@@ -28,8 +28,11 @@ export async function POST(req: NextRequest) {
   if (!season) return NextResponse.json({ error: "Geen actief seizoen gevonden" }, { status: 400 });
 
   const body = await req.json();
-  const { name, homeAway, matchDate, goalsScored, goalsConceded, extraScorers, notes } = body;
+  const { submittedByName, name, homeAway, matchDate, goalsScored, goalsConceded, extraScorers, notes } = body;
 
+  if (!submittedByName?.trim()) {
+    return NextResponse.json({ error: "Vul in wie deze wedstrijd indient" }, { status: 400 });
+  }
   if (!name?.trim() || !matchDate) {
     return NextResponse.json({ error: "Naam en datum zijn verplicht" }, { status: 400 });
   }
@@ -43,6 +46,7 @@ export async function POST(req: NextRequest) {
     data: {
       seasonId: season.id,
       clubTeam: team as any,
+      submittedByName: submittedByName.trim(),
       name: name.trim(),
       homeAway: homeAway ?? "HOME",
       matchDate: new Date(matchDate),

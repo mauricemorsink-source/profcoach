@@ -243,7 +243,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalStep, setModalStep] = useState<1 | 2 | 3>(1);
   const [addForm, setAddForm] = useState({
-    name: "", homeAway: "HOME", matchDate: "", goalsScored: "", goalsConceded: "",
+    submittedByName: "", name: "", homeAway: "HOME", matchDate: "", goalsScored: "", goalsConceded: "",
     notes: "",
   });
   const [extraScorers, setExtraScorers] = useState<{ goals: string; description: string }[]>([]);
@@ -311,7 +311,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
   useEffect(() => { loadMatches(); }, []);
 
   function openAddModal() {
-    setAddForm({ name: "", homeAway: "HOME", matchDate: "", goalsScored: "", goalsConceded: "", notes: "" });
+    setAddForm({ submittedByName: "", name: "", homeAway: "HOME", matchDate: "", goalsScored: "", goalsConceded: "", notes: "" });
     setExtraScorers([]);
     setAddError("");
     setModalStep(1);
@@ -392,6 +392,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        submittedByName: addForm.submittedByName.trim(),
         name: addForm.name.trim(),
         homeAway: addForm.homeAway,
         matchDate: addForm.matchDate ? new Date(addForm.matchDate).toISOString() : null,
@@ -743,6 +744,19 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
               {/* Step 1: Match details */}
               {modalStep === 1 && (
                 <div className="space-y-4">
+                  <div>
+                    <label className={LABEL}>Wie dient deze wedstrijd in?</label>
+                    <input
+                      type="text"
+                      value={addForm.submittedByName}
+                      onChange={(e) => setAddForm({ ...addForm, submittedByName: e.target.value })}
+                      className={INPUT}
+                      placeholder="Voor- en achternaam"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Bij vragen over het verloop van de wedstrijd kan de organisatie hierover contact opnemen.
+                    </p>
+                  </div>
                   <div>
                     <label className={LABEL}>Tegenstander</label>
                     <input type="text" value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} className={INPUT} placeholder="Naam tegenstander" />
@@ -1106,6 +1120,7 @@ export default function ManagerClient({ managedTeam, managerName, isAdmin, share
               {modalStep < 3 ? (
                 <button
                   onClick={() => {
+                    if (modalStep === 1 && !addForm.submittedByName.trim()) { setAddError("Vul in wie deze wedstrijd indient."); return; }
                     if (modalStep === 1 && !addForm.name.trim()) { setAddError("Naam tegenstander is verplicht."); return; }
                     if (modalStep === 1 && !addForm.matchDate) { setAddError("Datum is verplicht."); return; }
                     setAddError("");

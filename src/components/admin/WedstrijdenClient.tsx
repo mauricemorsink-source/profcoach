@@ -72,6 +72,7 @@ type AdminMatch = {
   goalsConceded: number;
   extraScorers: { goals: number; description: string }[] | null;
   notes: string | null;
+  submittedByName: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED";
   publishMomentId: string | null;
   publishMoment: { id: string; label: string; scheduledAt: string; publishedAt: string | null } | null;
@@ -1663,6 +1664,9 @@ export default function WedstrijdenClient() {
                 </h3>
                 <p className="text-sm text-slate-500">
                   {TEAM_LABEL[editingMatch.clubTeam] ?? editingMatch.clubTeam}
+                  {editingMatch.submittedByName && (
+                    <> · ingediend door <span className="text-slate-300">{editingMatch.submittedByName}</span></>
+                  )}
                 </p>
               </div>
               <button
