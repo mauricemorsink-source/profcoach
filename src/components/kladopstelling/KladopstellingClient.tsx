@@ -824,51 +824,49 @@ export default function KladopstellingClient({
           <>
             <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
               <div>
-                <p className="text-base font-bold text-white mb-1">Kies je betalingsmethode</p>
+                <p className="text-base font-bold text-white mb-1">Inschrijfgeld betalen</p>
                 <p className="text-slate-400 text-sm">Je team is ingediend! Kies nu hoe je het inschrijfgeld wilt betalen.</p>
               </div>
 
               <div className="space-y-3">
                 {/* Betaal nu €7,50 */}
                 <button
-                  onClick={() => setPaymentMethod("betaald_750")}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    paymentMethod === "betaald_750"
-                      ? "border-cyan-500/50 bg-cyan-500/10"
-                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
-                  }`}
+                  onClick={() => {
+                    window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank");
+                    setPaymentMethod("betaald_750");
+                  }}
+                  className="w-full p-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:border-cyan-500/30 hover:bg-slate-800 transition-all text-left"
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                      paymentMethod === "betaald_750" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
-                    }`}>
-                      {paymentMethod === "betaald_750" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
+                    <div className="shrink-0 mt-0.5">
+                      <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
                     </div>
                     <div>
                       <p className="text-white font-semibold">Betaal nu €7,50</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar. Klik hieronder om direct via Rabobank te betalen.</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar. Klik hier om direct via Rabobank te betalen (opent in nieuw tabblad).</p>
                     </div>
                   </div>
                 </button>
 
                 {/* Betaal nu €15,00 */}
                 <button
-                  onClick={() => setPaymentMethod("betaald_1500")}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    paymentMethod === "betaald_1500"
-                      ? "border-cyan-500/50 bg-cyan-500/10"
-                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
-                  }`}
+                  onClick={() => {
+                    window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank");
+                    setPaymentMethod("betaald_1500");
+                  }}
+                  className="w-full p-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:border-cyan-500/30 hover:bg-slate-800 transition-all text-left"
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                      paymentMethod === "betaald_1500" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
-                    }`}>
-                      {paymentMethod === "betaald_1500" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
+                    <div className="shrink-0 mt-0.5">
+                      <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
                     </div>
                     <div>
                       <p className="text-white font-semibold">Betaal nu €15,00</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Standaardtarief voor deelnemers van 18 jaar en ouder. Klik hieronder om direct via Rabobank te betalen.</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Standaardtarief voor deelnemers van 18 jaar en ouder. Klik hier om direct via Rabobank te betalen (opent in nieuw tabblad).</p>
                     </div>
                   </div>
                 </button>
@@ -878,63 +876,47 @@ export default function KladopstellingClient({
                   onClick={() => setPaymentMethod("later")}
                   className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
                     paymentMethod === "later"
-                      ? "border-cyan-500/50 bg-cyan-500/10"
-                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
+                      ? "border-emerald-500/50 bg-emerald-500/10"
+                      : "border-slate-700 bg-slate-800/50 hover:border-emerald-500/30"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                      paymentMethod === "later" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
+                      paymentMethod === "later" ? "border-emerald-400 bg-emerald-400/20" : "border-slate-600"
                     }`}>
-                      {paymentMethod === "later" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
+                      {paymentMethod === "later" && <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full" />}
                     </div>
                     <div>
-                      <p className="text-white font-semibold">Later betalen via WhatsApp</p>
-                      <p className="text-slate-400 text-xs mt-0.5">We sturen je een Tikkie via WhatsApp. Dit kan je naar believen betalen.</p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Ik heb al betaald */}
-                <button
-                  onClick={() => setPaymentMethod("reeds_betaald")}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    paymentMethod === "reeds_betaald"
-                      ? "border-cyan-500/50 bg-cyan-500/10"
-                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                      paymentMethod === "reeds_betaald" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
-                    }`}>
-                      {paymentMethod === "reeds_betaald" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold">Ik heb al betaald</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Je hebt het inschrijfgeld al overgemaakt.</p>
+                      <p className="text-white font-semibold">Ik betaal later via WhatsApp</p>
+                      <p className="text-slate-400 text-xs mt-0.5">We sturen je een Tikkie via WhatsApp. Je kunt dit naar believen betalen.</p>
                     </div>
                   </div>
                 </button>
               </div>
+
+              {paymentMethod && (
+                <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl px-4 py-3">
+                  <p className="text-emerald-400 text-sm font-semibold">
+                    {paymentMethod === "betaald_750" && "✓ Betaalpagina €7,50 geopend"}
+                    {paymentMethod === "betaald_1500" && "✓ Betaalpagina €15,00 geopend"}
+                    {paymentMethod === "later" && "✓ Je betaalt later via WhatsApp"}
+                  </p>
+                  <p className="text-emerald-400 text-xs mt-1">Bevestig hieronder of je hebt betaald of nog gaat betalen.</p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-4 flex-wrap">
               <button onClick={() => { setStep(4); setPaymentMethod(null); }} className={BTN_SECONDARY}>← Vorige</button>
-              <button
-                onClick={() => {
-                  if (paymentMethod === "betaald_750") {
-                    window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank");
-                  } else if (paymentMethod === "betaald_1500") {
-                    window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank");
-                  }
-                  setSubmitted(true);
-                }}
-                disabled={!paymentMethod}
-                className={BTN_PRIMARY + " ml-auto"}
-              >
-                {paymentMethod === "betaald_750" || paymentMethod === "betaald_1500" ? "Ga naar betaalpagina" : "Bevestigen"}
-              </button>
+              <div className="flex gap-2 ml-auto flex-wrap justify-end">
+                <button
+                  onClick={() => setSubmitted(true)}
+                  disabled={!paymentMethod}
+                  className={BTN_PRIMARY}
+                >
+                  {paymentMethod === "later" ? "Ik betaal later" : "Ik heb betaald"}
+                </button>
+              </div>
             </div>
           </>
         )}
