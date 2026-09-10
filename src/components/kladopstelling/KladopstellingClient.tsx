@@ -841,7 +841,7 @@ export default function KladopstellingClient({
                       </svg>
                     </div>
                     <div>
-                      <p className="text-white font-semibold">Betaal €7,50</p>
+                      <p className="text-white font-semibold">Inschrijfgeld €7,50</p>
                       <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar (opent in nieuw tabblad)</p>
                     </div>
                   </div>
@@ -859,8 +859,8 @@ export default function KladopstellingClient({
                       </svg>
                     </div>
                     <div>
-                      <p className="text-white font-semibold">Betaal €15,00</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Standaardtarief voor 18+ (opent in nieuw tabblad)</p>
+                      <p className="text-white font-semibold">Inschrijfgeld €15,00</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Voor deelnemers van 18 jaar en ouder (opent in nieuw tabblad)</p>
                     </div>
                   </div>
                 </button>
