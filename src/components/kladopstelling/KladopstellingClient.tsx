@@ -830,64 +830,68 @@ export default function KladopstellingClient({
 
               <div className="space-y-3">
                 {/* Betaal €7,50 */}
-                <button
-                  onClick={() => setPaymentMethod("betaald_750")}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    paymentMethod === "betaald_750"
-                      ? "border-cyan-500/50 bg-cyan-500/15"
-                      : "border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 mt-0.5">
-                      <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
+                <div>
+                  <button
+                    onClick={() => setPaymentMethod("betaald_750")}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      paymentMethod === "betaald_750"
+                        ? "border-green-500 bg-green-500/20"
+                        : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 mt-0.5">
+                        <svg className={`w-6 h-6 ${paymentMethod === "betaald_750" ? "text-green-400" : "text-slate-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className={`font-semibold ${paymentMethod === "betaald_750" ? "text-green-400" : "text-white"}`}>Inschrijfgeld €7,50</p>
+                        <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white font-semibold">Inschrijfgeld €7,50</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar</p>
-                    </div>
-                  </div>
-                </button>
+                  </button>
+                  {paymentMethod === "betaald_750" && (
+                    <button
+                      onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
+                      className={BTN_PRIMARY + " w-full mt-2"}
+                    >
+                      Betaallink openen
+                    </button>
+                  )}
+                </div>
 
                 {/* Betaal €15,00 */}
-                <button
-                  onClick={() => setPaymentMethod("betaald_1500")}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    paymentMethod === "betaald_1500"
-                      ? "border-cyan-500/50 bg-cyan-500/15"
-                      : "border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 mt-0.5">
-                      <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold">Inschrijfgeld €15,00</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Voor deelnemers van 18 jaar en ouder</p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Betaallink openen button (verschijnt na selectie) */}
-                {(paymentMethod === "betaald_750" || paymentMethod === "betaald_1500") && (
+                <div>
                   <button
-                    onClick={() => {
-                      if (paymentMethod === "betaald_750") {
-                        window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank");
-                      } else if (paymentMethod === "betaald_1500") {
-                        window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank");
-                      }
-                    }}
-                    className={BTN_PRIMARY + " w-full"}
+                    onClick={() => setPaymentMethod("betaald_1500")}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                      paymentMethod === "betaald_1500"
+                        ? "border-green-500 bg-green-500/20"
+                        : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
+                    }`}
                   >
-                    Betaallink openen
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 mt-0.5">
+                        <svg className={`w-6 h-6 ${paymentMethod === "betaald_1500" ? "text-green-400" : "text-slate-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className={`font-semibold ${paymentMethod === "betaald_1500" ? "text-green-400" : "text-white"}`}>Inschrijfgeld €15,00</p>
+                        <p className="text-slate-400 text-xs mt-0.5">Voor deelnemers van 18 jaar en ouder</p>
+                      </div>
+                    </div>
                   </button>
-                )}
+                  {paymentMethod === "betaald_1500" && (
+                    <button
+                      onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
+                      className={BTN_PRIMARY + " w-full mt-2"}
+                    >
+                      Betaallink openen
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
