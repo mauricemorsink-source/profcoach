@@ -831,8 +831,12 @@ export default function KladopstellingClient({
               <div className="space-y-3">
                 {/* Betaal €7,50 */}
                 <button
-                  onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
-                  className="w-full p-4 rounded-xl border-2 border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 transition-all text-left"
+                  onClick={() => setPaymentMethod("betaald_750")}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                    paymentMethod === "betaald_750"
+                      ? "border-cyan-500/50 bg-cyan-500/15"
+                      : "border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20"
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 mt-0.5">
@@ -842,15 +846,19 @@ export default function KladopstellingClient({
                     </div>
                     <div>
                       <p className="text-white font-semibold">Inschrijfgeld €7,50</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar (opent in nieuw tabblad)</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar</p>
                     </div>
                   </div>
                 </button>
 
                 {/* Betaal €15,00 */}
                 <button
-                  onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
-                  className="w-full p-4 rounded-xl border-2 border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 transition-all text-left"
+                  onClick={() => setPaymentMethod("betaald_1500")}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                    paymentMethod === "betaald_1500"
+                      ? "border-cyan-500/50 bg-cyan-500/15"
+                      : "border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20"
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 mt-0.5">
@@ -860,20 +868,36 @@ export default function KladopstellingClient({
                     </div>
                     <div>
                       <p className="text-white font-semibold">Inschrijfgeld €15,00</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Voor deelnemers van 18 jaar en ouder (opent in nieuw tabblad)</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Voor deelnemers van 18 jaar en ouder</p>
                     </div>
                   </div>
                 </button>
+
+                {/* Betaallink openen button (verschijnt na selectie) */}
+                {(paymentMethod === "betaald_750" || paymentMethod === "betaald_1500") && (
+                  <button
+                    onClick={() => {
+                      if (paymentMethod === "betaald_750") {
+                        window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank");
+                      } else if (paymentMethod === "betaald_1500") {
+                        window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank");
+                      }
+                    }}
+                    className={BTN_PRIMARY + " w-full"}
+                  >
+                    Betaallink openen
+                  </button>
+                )}
               </div>
             </div>
 
             <div className="flex gap-3 mt-4 flex-wrap">
               <button onClick={() => { setStep(4); setPaymentMethod(null); }} className={BTN_SECONDARY}>← Vorige</button>
               <button onClick={() => setSubmitted(true)} className={BTN_PRIMARY}>
-                Ik heb betaald — team indienen
+                Ik heb betaald
               </button>
               <button onClick={() => setSubmitted(true)} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors">
-                Ik betaal later — team indienen
+                Ik betaal later
               </button>
             </div>
           </>
