@@ -825,7 +825,7 @@ export default function KladopstellingClient({
             <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
               <div>
                 <p className="text-base font-bold text-white mb-1">Inschrijfgeld betalen</p>
-                <p className="text-slate-400 text-sm">Je team is ingediend! Kies hoe je het inschrijfgeld wilt betalen, of ga door zonder te betalen.</p>
+                <p className="text-slate-400 text-sm">Je team is klaar om in te dienen! Kies eerst hoe je het inschrijfgeld wilt betalen. Nadat je je keuze hebt bevestigd, wordt je team definitief ingediend.</p>
               </div>
 
               <div className="space-y-3">
@@ -870,10 +870,10 @@ export default function KladopstellingClient({
             <div className="flex gap-3 mt-4 flex-wrap">
               <button onClick={() => { setStep(4); setPaymentMethod(null); }} className={BTN_SECONDARY}>← Vorige</button>
               <button onClick={() => setSubmitted(true)} className={BTN_PRIMARY}>
-                Ik heb betaald
+                Ik heb betaald — team indienen
               </button>
               <button onClick={() => setSubmitted(true)} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors">
-                Doorgaan zonder te betalen
+                Ik betaal later — team indienen
               </button>
             </div>
           </>
