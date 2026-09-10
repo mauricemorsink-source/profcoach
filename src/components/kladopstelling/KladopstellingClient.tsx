@@ -15,6 +15,7 @@ const STEP_NAMES: Record<number, string> = {
   2: "aanvoerder_kiezen",
   3: "voorspellingen",
   4: "gegevens_en_indienen",
+  5: "betaling",
 };
 
 const SLOTS_KEY = "profcoach_team_slots";
@@ -115,8 +116,11 @@ export default function KladopstellingClient({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Betaling (stap 5)
+  const [paymentMethod, setPaymentMethod] = useState<"betaald_750" | "betaald_1500" | "later" | "reeds_betaald" | null>(null);
+
   // Stap
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [showTour, setShowTour] = useState(false);
 
   // Scrol pas naar boven nadat React de nieuwe stap daadwerkelijk heeft gerenderd — een
@@ -331,7 +335,7 @@ export default function KladopstellingClient({
         setSubmitError(data.error ?? "Er is een fout opgetreden");
       } else {
         trackEvent("team_ingediend");
-        setSubmitted(true);
+        setStep(5);
         localStorage.removeItem(SLOTS_KEY);
         localStorage.removeItem(FORMATION_KEY);
       }
@@ -342,7 +346,7 @@ export default function KladopstellingClient({
     }
   }
 
-  const visibleSteps = captainEnabled ? [1, 2, 3, 4] : [1, 3, 4];
+  const visibleSteps = captainEnabled ? [1, 2, 3, 4, 5] : [1, 3, 4, 5];
   const totalSteps = canSubmitPublic ? visibleSteps.length : 1;
   const displayStep = visibleSteps.indexOf(step) + 1;
   const inschrijfgeldDisplay = (inschrijfgeld / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -809,7 +813,127 @@ export default function KladopstellingClient({
             <div className="flex gap-3 mt-4 flex-wrap">
               <button onClick={goPrev} disabled={submitting} className={BTN_SECONDARY}>← Vorige</button>
               <button onClick={handleSubmit} disabled={submitting || !betaaldAkkoord} className={BTN_PRIMARY + " ml-auto"}>
-                {submitting ? "Bezig..." : "Definitief indienen"}
+                {submitting ? "Bezig..." : "Team indienen"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── STAP 5: Betaling ── */}
+        {step === 5 && (
+          <>
+            <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
+              <div>
+                <p className="text-base font-bold text-white mb-1">Kies je betalingsmethode</p>
+                <p className="text-slate-400 text-sm">Je team is ingediend! Kies nu hoe je het inschrijfgeld wilt betalen.</p>
+              </div>
+
+              <div className="space-y-3">
+                {/* Betaal nu €7,50 */}
+                <button
+                  onClick={() => setPaymentMethod("betaald_750")}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                    paymentMethod === "betaald_750"
+                      ? "border-cyan-500/50 bg-cyan-500/10"
+                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      paymentMethod === "betaald_750" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
+                    }`}>
+                      {paymentMethod === "betaald_750" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">Betaal nu €7,50</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar. Klik hieronder om direct via Rabobank te betalen.</p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Betaal nu €15,00 */}
+                <button
+                  onClick={() => setPaymentMethod("betaald_1500")}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                    paymentMethod === "betaald_1500"
+                      ? "border-cyan-500/50 bg-cyan-500/10"
+                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      paymentMethod === "betaald_1500" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
+                    }`}>
+                      {paymentMethod === "betaald_1500" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">Betaal nu €15,00</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Standaardtarief voor deelnemers van 18 jaar en ouder. Klik hieronder om direct via Rabobank te betalen.</p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Later betalen via WhatsApp */}
+                <button
+                  onClick={() => setPaymentMethod("later")}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                    paymentMethod === "later"
+                      ? "border-cyan-500/50 bg-cyan-500/10"
+                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      paymentMethod === "later" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
+                    }`}>
+                      {paymentMethod === "later" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">Later betalen via WhatsApp</p>
+                      <p className="text-slate-400 text-xs mt-0.5">We sturen je een Tikkie via WhatsApp. Dit kan je naar believen betalen.</p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Ik heb al betaald */}
+                <button
+                  onClick={() => setPaymentMethod("reeds_betaald")}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                    paymentMethod === "reeds_betaald"
+                      ? "border-cyan-500/50 bg-cyan-500/10"
+                      : "border-slate-700 bg-slate-800/50 hover:border-cyan-500/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                      paymentMethod === "reeds_betaald" ? "border-cyan-400 bg-cyan-400/20" : "border-slate-600"
+                    }`}>
+                      {paymentMethod === "reeds_betaald" && <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />}
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold">Ik heb al betaald</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Je hebt het inschrijfgeld al overgemaakt.</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-4 flex-wrap">
+              <button onClick={() => { setStep(4); setPaymentMethod(null); }} className={BTN_SECONDARY}>← Vorige</button>
+              <button
+                onClick={() => {
+                  if (paymentMethod === "betaald_750") {
+                    window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank");
+                  } else if (paymentMethod === "betaald_1500") {
+                    window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank");
+                  }
+                  setSubmitted(true);
+                }}
+                disabled={!paymentMethod}
+                className={BTN_PRIMARY + " ml-auto"}
+              >
+                {paymentMethod === "betaald_750" || paymentMethod === "betaald_1500" ? "Ga naar betaalpagina" : "Bevestigen"}
               </button>
             </div>
           </>
