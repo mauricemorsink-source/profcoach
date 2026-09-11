@@ -14,7 +14,6 @@ export default function DeelnemersClient() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
-  const [betaaldFilter, setBetaaldFilter] = useState<"alle" | "betaald" | "nietbetaald">("alle");
   const [teamEditTarget, setTeamEditTarget] = useState<Deelnemer | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -96,8 +95,6 @@ export default function DeelnemersClient() {
       <DeelnemersList
         deelnemers={deelnemers}
         loading={loading}
-        betaaldFilter={betaaldFilter}
-        setBetaaldFilter={setBetaaldFilter}
         onRefresh={load}
         onOpenModal={openModal}
       />
