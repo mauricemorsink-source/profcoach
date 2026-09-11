@@ -14,12 +14,18 @@ function calcTimeLeft(deadline: Date) {
 
 export default function CountdownTimer({ deadline }: { deadline: string }) {
   const date = new Date(deadline);
-  const [timeLeft, setTimeLeft] = useState(() => calcTimeLeft(date));
+  // Start als "nog niet gemeten" (undefined) i.p.v. direct Date.now() te lezen: dat zou op de
+  // server en bij client-hydratie een paar seconden uit elkaar liggen en een hydration-mismatch
+  // geven. We berekenen de eerste echte waarde pas na mount, in de useEffect hieronder.
+  const [timeLeft, setTimeLeft] = useState<ReturnType<typeof calcTimeLeft> | undefined>(undefined);
 
   useEffect(() => {
+    setTimeLeft(calcTimeLeft(date));
     const id = setInterval(() => setTimeLeft(calcTimeLeft(date)), 1000);
     return () => clearInterval(id);
   }, [deadline]);
+
+  if (timeLeft === undefined) return null;
 
   if (!timeLeft) return (
     <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 px-4 py-3 text-center">
