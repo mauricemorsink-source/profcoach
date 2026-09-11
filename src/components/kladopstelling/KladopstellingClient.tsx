@@ -15,7 +15,6 @@ const STEP_NAMES: Record<number, string> = {
   2: "aanvoerder_kiezen",
   3: "voorspellingen",
   4: "gegevens_en_indienen",
-  5: "betaling",
 };
 
 const SLOTS_KEY = "profcoach_team_slots";
@@ -120,7 +119,7 @@ export default function KladopstellingClient({
   const [paymentMethod, setPaymentMethod] = useState<"betaald_750" | "betaald_1500" | "later" | "reeds_betaald" | null>(null);
 
   // Stap
-  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [showTour, setShowTour] = useState(false);
 
   // Scrol pas naar boven nadat React de nieuwe stap daadwerkelijk heeft gerenderd — een
@@ -335,7 +334,7 @@ export default function KladopstellingClient({
         setSubmitError(data.error ?? "Er is een fout opgetreden");
       } else {
         trackEvent("team_ingediend");
-        setStep(5);
+        setSubmitted(true);
         localStorage.removeItem(SLOTS_KEY);
         localStorage.removeItem(FORMATION_KEY);
       }
@@ -346,7 +345,7 @@ export default function KladopstellingClient({
     }
   }
 
-  const visibleSteps = captainEnabled ? [1, 2, 3, 4, 5] : [1, 3, 4, 5];
+  const visibleSteps = captainEnabled ? [1, 2, 3, 4] : [1, 3, 4];
   const totalSteps = canSubmitPublic ? visibleSteps.length : 1;
   const displayStep = visibleSteps.indexOf(step) + 1;
   const inschrijfgeldDisplay = (inschrijfgeld / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -453,6 +452,28 @@ export default function KladopstellingClient({
               </a>
             </div>
           )}
+
+          {/* Betaling */}
+          <div className="mb-5 bg-cyan-900/15 border border-cyan-500/25 rounded-2xl px-5 py-4">
+            <p className="text-cyan-400 font-semibold text-sm mb-3">Betaal het inschrijfgeld</p>
+            <div className="space-y-2 mb-3">
+              <button
+                onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
+                className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+              >
+                Inschrijfgeld €7,50
+              </button>
+              <button
+                onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
+                className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+              >
+                Inschrijfgeld €15,00
+              </button>
+            </div>
+            <p className="text-slate-400 text-xs">
+              Het betaalverzoek opent in een nieuw tabblad. Na betaling keer je zelf terug naar deze pagina. Je wordt niet automatisch terugverwezen.
+            </p>
+          </div>
 
           {/* Screenshot tip */}
           <div className="mb-5 bg-amber-900/15 border border-amber-500/25 rounded-2xl px-5 py-4">
@@ -819,93 +840,6 @@ export default function KladopstellingClient({
           </>
         )}
 
-        {/* ── STAP 5: Betaling ── */}
-        {step === 5 && (
-          <>
-            <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
-              <div>
-                <p className="text-base font-bold text-white mb-1">Inschrijfgeld betalen</p>
-                <p className="text-slate-400 text-sm">Je team is klaar om in te dienen! Kies eerst hoe je het inschrijfgeld wilt betalen. Nadat je je keuze hebt bevestigd, wordt je team definitief ingediend.</p>
-              </div>
-
-              <div className="space-y-3">
-                {/* Betaal €7,50 */}
-                <div>
-                  <button
-                    onClick={() => setPaymentMethod("betaald_750")}
-                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                      paymentMethod === "betaald_750"
-                        ? "border-green-500 bg-green-500/20"
-                        : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="shrink-0 mt-0.5">
-                        <svg className={`w-6 h-6 ${paymentMethod === "betaald_750" ? "text-green-400" : "text-slate-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className={`font-semibold ${paymentMethod === "betaald_750" ? "text-green-400" : "text-white"}`}>Inschrijfgeld €7,50</p>
-                        <p className="text-slate-400 text-xs mt-0.5">Voor jongeren onder de 18 jaar</p>
-                      </div>
-                    </div>
-                  </button>
-                  {paymentMethod === "betaald_750" && (
-                    <button
-                      onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
-                      className={BTN_PRIMARY + " w-full mt-2"}
-                    >
-                      Betaallink openen
-                    </button>
-                  )}
-                </div>
-
-                {/* Betaal €15,00 */}
-                <div>
-                  <button
-                    onClick={() => setPaymentMethod("betaald_1500")}
-                    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                      paymentMethod === "betaald_1500"
-                        ? "border-green-500 bg-green-500/20"
-                        : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="shrink-0 mt-0.5">
-                        <svg className={`w-6 h-6 ${paymentMethod === "betaald_1500" ? "text-green-400" : "text-slate-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className={`font-semibold ${paymentMethod === "betaald_1500" ? "text-green-400" : "text-white"}`}>Inschrijfgeld €15,00</p>
-                        <p className="text-slate-400 text-xs mt-0.5">Voor deelnemers van 18 jaar en ouder</p>
-                      </div>
-                    </div>
-                  </button>
-                  {paymentMethod === "betaald_1500" && (
-                    <button
-                      onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
-                      className={BTN_PRIMARY + " w-full mt-2"}
-                    >
-                      Betaallink openen
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-4 flex-wrap">
-              <button onClick={() => { setStep(4); setPaymentMethod(null); }} className={BTN_SECONDARY}>← Vorige</button>
-              <button onClick={() => setSubmitted(true)} className={BTN_PRIMARY}>
-                Ik heb betaald
-              </button>
-              <button onClick={() => setSubmitted(true)} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors">
-                Ik betaal later
-              </button>
-            </div>
-          </>
-        )}
       </div>
 
       {/* Speler picker modal */}
