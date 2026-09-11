@@ -1,8 +1,18 @@
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { AdminMatch, PublishMoment } from "./types";
 import { TEAMS, TEAM_LABEL, STATUS_LABEL, STATUS_STYLE, BTN_PRIMARY, BTN_SECONDARY, BTN_SMALL, BTN_DANGER } from "./constants";
 import { getOpponent } from "./helpers";
 import MatchActionsMenu from "./MatchActionsMenu";
+
+type SortKey = "default" | "datum" | "status";
+type SortDir = "asc" | "desc";
+const MATCH_STATUS_ORDER: Record<string, number> = { APPROVED: 0, PENDING: 1, REJECTED: 2, PROCESSED: 3 };
+
+function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <span className="text-slate-700 ml-1">↕</span>;
+  return <span className="text-cyan-400 ml-1">{dir === "asc" ? "↑" : "↓"}</span>;
+}
 
 type Props = {
   adminMatches: AdminMatch[];
@@ -118,6 +128,28 @@ export default function MatchesList({
   deletingMatchId,
 }: Props) {
   const pendingMoments = publishMoments.filter((p) => !p.publishedAt);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: "datum" | "status") {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "datum" ? "desc" : "asc");
+    }
+  }
+
+  // Presentatie-volgorde alleen: de select-all-checkboxes hierboven blijven op filteredMatches
+  // (de gefilterde SET) werken, want die geven niets om weergavevolgorde.
+  const sortedMatches = sortKey === "default" ? filteredMatches : [...filteredMatches].sort((a, b) => {
+    const mult = sortDir === "asc" ? 1 : -1;
+    if (sortKey === "datum") return mult * (new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+    return mult * ((MATCH_STATUS_ORDER[a.status] ?? 5) - (MATCH_STATUS_ORDER[b.status] ?? 5));
+  });
+
+  const filtersActive = matchFilterTeam !== "" || matchFilterStatus !== "";
 
   return (
     <section className="bg-slate-900 neon-border rounded-2xl p-6 flex-1 min-w-0">
@@ -203,40 +235,58 @@ export default function MatchesList({
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <select
-          value={matchFilterTeam}
-          onChange={(e) => setMatchFilterTeam(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-        >
-          <option value="">Alle elftallen</option>
-          {TEAMS.map((t) => (
-            <option key={t} value={t}>
-              {TEAM_LABEL[t]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={matchFilterStatus}
-          onChange={(e) => setMatchFilterStatus(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-        >
-          <option value="">Alle statussen</option>
-          <option value="PENDING">Ingediend</option>
-          <option value="APPROVED">Goedgekeurd</option>
-          <option value="REJECTED">Afgekeurd</option>
-          <option value="PROCESSED">Verwerkt</option>
-        </select>
-        {(matchFilterTeam || matchFilterStatus) && (
+        <div className="relative">
+          {showFilters && <div className="fixed inset-0 z-40" onClick={() => setShowFilters(false)} />}
           <button
-            onClick={() => {
-              setMatchFilterTeam("");
-              setMatchFilterStatus("");
-            }}
-            className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+            onClick={() => setShowFilters((v) => !v)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative z-40 ${
+              filtersActive ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-400" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600"
+            }`}
           >
-            Wis filters
+            Filters
+            {filtersActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+            <span className="text-slate-500">{showFilters ? "▲" : "▼"}</span>
           </button>
-        )}
+          {showFilters && (
+            <div className="absolute top-full left-0 mt-1.5 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-4 w-60 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Elftal</p>
+                <select
+                  value={matchFilterTeam}
+                  onChange={(e) => setMatchFilterTeam(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                >
+                  <option value="">Alle elftallen</option>
+                  {TEAMS.map((t) => (
+                    <option key={t} value={t}>{TEAM_LABEL[t]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Status</p>
+                <select
+                  value={matchFilterStatus}
+                  onChange={(e) => setMatchFilterStatus(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                >
+                  <option value="">Alle statussen</option>
+                  <option value="PENDING">Ingediend</option>
+                  <option value="APPROVED">Goedgekeurd</option>
+                  <option value="REJECTED">Afgekeurd</option>
+                  <option value="PROCESSED">Verwerkt</option>
+                </select>
+              </div>
+              {filtersActive && (
+                <button
+                  onClick={() => { setMatchFilterTeam(""); setMatchFilterStatus(""); }}
+                  className="text-xs text-slate-500 hover:text-red-400 transition-colors"
+                >
+                  Filters wissen
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* isProcessing vastgelopen banner */}
@@ -373,7 +423,7 @@ export default function MatchesList({
         <>
           {/* Mobiel: kaartjes */}
           <div className="md:hidden space-y-2">
-            {filteredMatches.map((m) => {
+            {sortedMatches.map((m) => {
               const isProcessable = m.status === "APPROVED";
               const isApprovable = m.status === "PENDING";
               return (
@@ -568,16 +618,24 @@ export default function MatchesList({
                       )
                     )}
                   </th>
-                  <th className="pb-2 font-semibold whitespace-nowrap">Datum</th>
+                  <th className="pb-2 font-semibold whitespace-nowrap">
+                    <button onClick={() => handleSort("datum")} className="flex items-center hover:text-white transition-colors">
+                      Datum <SortArrow active={sortKey === "datum"} dir={sortDir} />
+                    </button>
+                  </th>
                   <th className="pb-2 font-semibold whitespace-nowrap">Thuisploeg</th>
                   <th className="pb-2 font-semibold whitespace-nowrap">Uitploeg</th>
                   <th className="pb-2 font-semibold whitespace-nowrap">Uitslag</th>
-                  <th className="pb-2 font-semibold whitespace-nowrap">Status</th>
+                  <th className="pb-2 font-semibold whitespace-nowrap">
+                    <button onClick={() => handleSort("status")} className="flex items-center hover:text-white transition-colors">
+                      Status <SortArrow active={sortKey === "status"} dir={sortDir} />
+                    </button>
+                  </th>
                   <th className="pb-2 font-semibold text-right whitespace-nowrap">Acties</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredMatches.map((m) => {
+                {sortedMatches.map((m) => {
                   const isProcessable = m.status === "APPROVED";
                   const isApprovable = m.status === "PENDING";
                   const isAway = m.homeAway === "AWAY";
