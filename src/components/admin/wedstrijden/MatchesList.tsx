@@ -236,10 +236,10 @@ export default function MatchesList({
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-4">
         <div className="relative">
-          {showFilters && <div className="fixed inset-0 z-40" onClick={() => setShowFilters(false)} />}
+          {showFilters && <div className="fixed inset-0 z-20" onClick={() => setShowFilters(false)} />}
           <button
             onClick={() => setShowFilters((v) => !v)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative z-40 ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative z-20 ${
               showFilters ? "border-cyan-500/60 bg-cyan-500/10 text-white" :
               filtersActive ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-400" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600"
             }`}
@@ -249,7 +249,7 @@ export default function MatchesList({
             <span className="text-slate-500">{showFilters ? "▲" : "▼"}</span>
           </button>
           {showFilters && (
-            <div className="absolute top-full left-0 mt-1.5 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-4 w-60 space-y-4">
+            <div className="absolute top-full left-0 mt-1.5 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-4 w-60 space-y-4">
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Elftal</p>
                 <select

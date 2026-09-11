@@ -144,10 +144,10 @@ export default function DeelnemersList({
 
         {/* Filters dropdown */}
         <div className="relative">
-          {openPanel === "filters" && <div className="fixed inset-0 z-40" onClick={() => setOpenPanel(null)} />}
+          {openPanel === "filters" && <div className="fixed inset-0 z-20" onClick={() => setOpenPanel(null)} />}
           <button
             onClick={() => setOpenPanel((p) => (p === "filters" ? null : "filters"))}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors relative z-40 ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors relative z-20 ${
               openPanel === "filters" ? "border-cyan-500/60 bg-cyan-500/10 text-white" :
               filtersActive ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-400" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600"
             }`}
@@ -157,7 +157,7 @@ export default function DeelnemersList({
             <span className="text-slate-500">{openPanel === "filters" ? "▲" : "▼"}</span>
           </button>
           {openPanel === "filters" && (
-            <div className="absolute top-full left-0 mt-1.5 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-4 w-64 space-y-4">
+            <div className="absolute top-full left-0 mt-1.5 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-4 w-64 space-y-4">
               <div>
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Betaald</p>
                 <div className="flex rounded-lg border border-slate-700 overflow-hidden text-xs">
@@ -194,10 +194,10 @@ export default function DeelnemersList({
 
         {/* Kolommen dropdown */}
         <div className="relative">
-          {openPanel === "columns" && <div className="fixed inset-0 z-40" onClick={() => setOpenPanel(null)} />}
+          {openPanel === "columns" && <div className="fixed inset-0 z-20" onClick={() => setOpenPanel(null)} />}
           <button
             onClick={() => setOpenPanel((p) => (p === "columns" ? null : "columns"))}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors relative z-40 ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors relative z-20 ${
               openPanel === "columns" ? "border-cyan-500/60 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600"
             }`}
           >
@@ -205,7 +205,7 @@ export default function DeelnemersList({
             <span className="text-slate-500">{openPanel === "columns" ? "▲" : "▼"}</span>
           </button>
           {openPanel === "columns" && (
-            <div className="absolute top-full left-0 mt-1.5 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-3 w-56">
+            <div className="absolute top-full left-0 mt-1.5 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-3 w-56">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 px-1">Zichtbare kolommen</p>
               <div className="space-y-0.5">
                 {COLUMN_DEFS.map((col) => (
