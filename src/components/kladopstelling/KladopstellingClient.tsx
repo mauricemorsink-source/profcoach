@@ -454,18 +454,19 @@ export default function KladopstellingClient({
           )}
 
           {/* Betaling */}
-          <div className="mb-5 bg-cyan-900/15 border border-cyan-500/25 rounded-2xl px-5 py-4">
-            <p className="text-cyan-400 font-semibold text-sm mb-3">Inschrijfgeld betalen</p>
-            <div className="flex gap-3 flex-wrap mb-4">
+          <div className="mb-5 bg-cyan-900/15 border border-cyan-500/25 rounded-2xl px-5 py-4 space-y-3">
+            <p className="text-cyan-400 font-semibold text-sm">Inschrijfgeld betalen</p>
+
+            <div className="space-y-2">
               <button
                 onClick={() => setShowPaymentOptions(true)}
-                className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors"
+                className="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors"
               >
                 Ik wil nu betalen
               </button>
               <button
-                onClick={() => {}}
-                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-semibold text-sm transition-colors"
+                onClick={() => setShowPaymentOptions(false)}
+                className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-semibold text-sm transition-colors"
               >
                 Ik betaal later
               </button>
@@ -473,23 +474,30 @@ export default function KladopstellingClient({
 
             {/* Accordeon: betaallinks */}
             {showPaymentOptions && (
-              <div className="bg-slate-900/50 rounded-xl p-4 space-y-2 border border-cyan-500/20">
-                <p className="text-slate-400 text-xs mb-3">Kies het bedrag en betaal via Rabobank:</p>
-                <button
-                  onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
-                  className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
-                >
-                  Inschrijfgeld €7,50 (jongeren &lt;18 jaar)
-                </button>
-                <button
-                  onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
-                  className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
-                >
-                  Inschrijfgeld €15,00 (18+)
-                </button>
-                <p className="text-slate-500 text-xs mt-3 pt-3 border-t border-slate-700">
-                  Het betaalverzoek opent in een nieuw tabblad. Na betaling keer je zelf terug naar deze pagina.
-                </p>
+              <div className="bg-slate-900/50 rounded-xl p-4 space-y-3 border border-cyan-500/20">
+                <p className="text-slate-400 text-xs font-medium">Kies het bedrag en betaal via Rabobank:</p>
+
+                <div className="space-y-2">
+                  <button
+                    onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
+                    className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+                  >
+                    Inschrijfgeld €7,50 (jongeren &lt;18 jaar)
+                  </button>
+                  <button
+                    onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
+                    className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+                  >
+                    Inschrijfgeld €15,00 (18+)
+                  </button>
+                </div>
+
+                <div className="bg-amber-900/30 border border-amber-500/20 rounded-lg p-3">
+                  <p className="text-amber-300 text-xs font-semibold mb-1">⚠️ Belangrijk</p>
+                  <p className="text-amber-200 text-xs">
+                    Het betaalverzoek opent in een nieuw tabblad. <span className="font-semibold">Je keert zelf terug naar deze pagina</span> — je wordt NIET automatisch teruggestuurd naar Profcoach Rietmolen.
+                  </p>
+                </div>
               </div>
             )}
           </div>
