@@ -115,8 +115,8 @@ export default function KladopstellingClient({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Betaling (stap 5)
-  const [paymentMethod, setPaymentMethod] = useState<"betaald_750" | "betaald_1500" | "later" | "reeds_betaald" | null>(null);
+  // Betaling
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
 
   // Stap
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -455,24 +455,43 @@ export default function KladopstellingClient({
 
           {/* Betaling */}
           <div className="mb-5 bg-cyan-900/15 border border-cyan-500/25 rounded-2xl px-5 py-4">
-            <p className="text-cyan-400 font-semibold text-sm mb-3">Betaal het inschrijfgeld</p>
-            <div className="space-y-2 mb-3">
+            <p className="text-cyan-400 font-semibold text-sm mb-3">Inschrijfgeld betalen</p>
+            <div className="flex gap-3 flex-wrap mb-4">
               <button
-                onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
-                className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+                onClick={() => setShowPaymentOptions(true)}
+                className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors"
               >
-                Inschrijfgeld €7,50
+                Ik wil nu betalen
               </button>
               <button
-                onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
-                className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+                onClick={() => {}}
+                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-semibold text-sm transition-colors"
               >
-                Inschrijfgeld €15,00
+                Ik betaal later
               </button>
             </div>
-            <p className="text-slate-400 text-xs">
-              Het betaalverzoek opent in een nieuw tabblad. Na betaling keer je zelf terug naar deze pagina. Je wordt niet automatisch terugverwezen.
-            </p>
+
+            {/* Accordeon: betaallinks */}
+            {showPaymentOptions && (
+              <div className="bg-slate-900/50 rounded-xl p-4 space-y-2 border border-cyan-500/20">
+                <p className="text-slate-400 text-xs mb-3">Kies het bedrag en betaal via Rabobank:</p>
+                <button
+                  onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
+                  className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+                >
+                  Inschrijfgeld €7,50 (jongeren &lt;18 jaar)
+                </button>
+                <button
+                  onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
+                  className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
+                >
+                  Inschrijfgeld €15,00 (18+)
+                </button>
+                <p className="text-slate-500 text-xs mt-3 pt-3 border-t border-slate-700">
+                  Het betaalverzoek opent in een nieuw tabblad. Na betaling keer je zelf terug naar deze pagina.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Screenshot tip */}
