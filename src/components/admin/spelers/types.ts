@@ -7,6 +7,7 @@ export type Player = {
   altTeam?: string | null;
   value: number;
   hasPlayedMatch: boolean;
+  totalPoints: number;
 };
 
 export type PlayerForm = {

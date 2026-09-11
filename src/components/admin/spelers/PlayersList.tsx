@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Player } from "./types";
 import { POSITIONS, TEAMS, POSITION_LABEL, POSITION_SHORT, TEAM_LABEL, BTN_PRIMARY, BTN_DANGER, BTN_SMALL } from "./constants";
 
@@ -22,6 +23,25 @@ type Props = {
   onOpenPlayerStats: (player: Player) => void;
 };
 
+type SortKey = "naam" | "positie" | "elftal" | "waarde" | "punten";
+type SortDir = "asc" | "desc";
+type ColumnKey = "positie" | "elftal" | "waarde" | "punten";
+
+const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey: SortKey; hideOnMobile?: boolean }[] = [
+  { key: "positie", label: "Pos", sortKey: "positie" },
+  { key: "elftal", label: "Elftal", sortKey: "elftal", hideOnMobile: true },
+  { key: "waarde", label: "Waarde", sortKey: "waarde" },
+  { key: "punten", label: "Punten", sortKey: "punten" },
+];
+
+const DEFAULT_COLUMNS: ColumnKey[] = ["positie", "elftal", "waarde", "punten"];
+const COLUMNS_STORAGE_KEY = "profcoach_admin_spelers_columns";
+
+function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <span className="text-slate-700 ml-1">↕</span>;
+  return <span className="text-cyan-400 ml-1">{dir === "asc" ? "↑" : "↓"}</span>;
+}
+
 export default function PlayersList({
   players,
   loadingPlayers,
@@ -42,6 +62,43 @@ export default function PlayersList({
   onOpenAdd,
   onOpenPlayerStats,
 }: Props) {
+  const [sortKey, setSortKey] = useState<SortKey>("naam");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [showFilters, setShowFilters] = useState(false);
+  const [showColumns, setShowColumns] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(new Set(DEFAULT_COLUMNS));
+
+  useEffect(() => {
+    const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setVisibleColumns(new Set(parsed));
+      } catch { /* negeer, val terug op default */ }
+    }
+  }, []);
+
+  function toggleColumn(key: ColumnKey) {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      return next;
+    });
+  }
+
+  function handleSortClick(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "punten" || key === "waarde" ? "desc" : "asc");
+    }
+  }
+
+  const filtersActive = filterTeam !== "" || filterPosition !== "";
+
   const filteredPlayers = players.filter((p) => {
     if (filterName && !p.name.toLowerCase().includes(filterName.toLowerCase())) return false;
     if (filterTeam && p.clubTeam !== filterTeam) return false;
@@ -49,59 +106,124 @@ export default function PlayersList({
     return true;
   });
 
+  const sortedPlayers = [...filteredPlayers].sort((a, b) => {
+    const mult = sortDir === "asc" ? 1 : -1;
+    switch (sortKey) {
+      case "naam":
+        return mult * a.name.localeCompare(b.name, "nl");
+      case "positie":
+        return mult * a.position.localeCompare(b.position, "nl");
+      case "elftal":
+        return mult * TEAM_LABEL[a.clubTeam].localeCompare(TEAM_LABEL[b.clubTeam], "nl");
+      case "waarde":
+        return mult * (a.value - b.value);
+      case "punten":
+        return mult * (a.totalPoints - b.totalPoints);
+      default:
+        return 0;
+    }
+  });
+
   return (
     <section className="bg-slate-900 neon-border rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-bold text-white">Spelersbeheer</h2>
         <button onClick={onOpenAdd} className={BTN_PRIMARY}>
           + Nieuwe speler
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <input
           type="text"
           placeholder="Zoek op naam..."
           value={filterName}
           onChange={(e) => setFilterName(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm w-44 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+          className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm w-56 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
         />
-        <select
-          value={filterTeam}
-          onChange={(e) => setFilterTeam(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-        >
-          <option value="">Alle elftallen</option>
-          {TEAMS.map((t) => (
-            <option key={t} value={t}>
-              {TEAM_LABEL[t]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterPosition}
-          onChange={(e) => setFilterPosition(e.target.value)}
-          className="bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-        >
-          <option value="">Alle posities</option>
-          {POSITIONS.map((p) => (
-            <option key={p} value={p}>
-              {POSITION_LABEL[p]}
-            </option>
-          ))}
-        </select>
-        {(filterName || filterTeam || filterPosition) && (
+
+        {/* Filters dropdown */}
+        <div className="relative">
+          {showFilters && <div className="fixed inset-0 z-40" onClick={() => setShowFilters(false)} />}
           <button
-            onClick={() => {
-              setFilterName("");
-              setFilterTeam("");
-              setFilterPosition("");
-            }}
-            className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+            onClick={() => setShowFilters((v) => !v)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors relative z-40 ${
+              filtersActive ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-400" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600"
+            }`}
           >
-            Wis filters
+            Filters
+            {filtersActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+            <span className="text-slate-500">{showFilters ? "▲" : "▼"}</span>
           </button>
-        )}
+          {showFilters && (
+            <div className="absolute top-full left-0 mt-1.5 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-4 w-60 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Elftal</p>
+                <select
+                  value={filterTeam}
+                  onChange={(e) => setFilterTeam(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                >
+                  <option value="">Alle elftallen</option>
+                  {TEAMS.map((t) => (
+                    <option key={t} value={t}>{TEAM_LABEL[t]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Positie</p>
+                <select
+                  value={filterPosition}
+                  onChange={(e) => setFilterPosition(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
+                >
+                  <option value="">Alle posities</option>
+                  {POSITIONS.map((p) => (
+                    <option key={p} value={p}>{POSITION_LABEL[p]}</option>
+                  ))}
+                </select>
+              </div>
+              {filtersActive && (
+                <button
+                  onClick={() => { setFilterTeam(""); setFilterPosition(""); }}
+                  className="text-xs text-slate-500 hover:text-red-400 transition-colors"
+                >
+                  Filters wissen
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Kolommen dropdown */}
+        <div className="relative">
+          {showColumns && <div className="fixed inset-0 z-40" onClick={() => setShowColumns(false)} />}
+          <button
+            onClick={() => setShowColumns((v) => !v)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600 text-sm font-medium transition-colors relative z-40"
+          >
+            Kolommen
+            <span className="text-slate-500">{showColumns ? "▲" : "▼"}</span>
+          </button>
+          {showColumns && (
+            <div className="absolute top-full left-0 mt-1.5 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-3 w-52">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 px-1">Zichtbare kolommen</p>
+              <div className="space-y-0.5">
+                {COLUMN_DEFS.map((col) => (
+                  <label key={col.key} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-700/50 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.has(col.key)}
+                      onChange={() => toggleColumn(col.key)}
+                      className="accent-cyan-500"
+                    />
+                    <span className="text-sm text-slate-300">{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {selectedIds.size > 0 && (
@@ -135,7 +257,7 @@ export default function PlayersList({
 
       {loadingPlayers ? (
         <p className="text-slate-500 text-sm py-4">Laden...</p>
-      ) : filteredPlayers.length === 0 ? (
+      ) : sortedPlayers.length === 0 ? (
         <div className="py-6 text-center">
           {players.length === 0 ? (
             <>
@@ -165,36 +287,48 @@ export default function PlayersList({
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-800">
-                <th className="pb-2 pr-3 w-8">
+                <th className="pb-3 pr-3 w-8">
                   <input
                     type="checkbox"
-                    checked={filteredPlayers.length > 0 && filteredPlayers.every((p) => selectedIds.has(p.id))}
+                    checked={sortedPlayers.length > 0 && sortedPlayers.every((p) => selectedIds.has(p.id))}
                     ref={(el) => {
                       if (el)
                         el.indeterminate =
-                          filteredPlayers.some((p) => selectedIds.has(p.id)) &&
-                          !filteredPlayers.every((p) => selectedIds.has(p.id));
+                          sortedPlayers.some((p) => selectedIds.has(p.id)) &&
+                          !sortedPlayers.every((p) => selectedIds.has(p.id));
                     }}
                     onChange={toggleSelectAll}
                     className="rounded accent-cyan-500"
                   />
                 </th>
-                <th className="pb-2 font-semibold">Naam</th>
-                <th className="pb-2 font-semibold">Pos</th>
-                <th className="pb-2 font-semibold hidden sm:table-cell">Elftal</th>
-                <th className="pb-2 font-semibold">Waarde</th>
-                <th className="pb-2 font-semibold text-right">Acties</th>
+                <th className="pb-3 pr-3 font-semibold">
+                  <button onClick={() => handleSortClick("naam")} className="flex items-center hover:text-white transition-colors">
+                    Naam <SortArrow active={sortKey === "naam"} dir={sortDir} />
+                  </button>
+                </th>
+                {COLUMN_DEFS.filter((c) => visibleColumns.has(c.key)).map((col) => (
+                  <th
+                    key={col.key}
+                    className={`pb-3 px-3 font-semibold ${col.hideOnMobile ? "hidden sm:table-cell" : ""}`}
+                    title={col.key === "punten" ? "Seizoenspunten uit wedstrijdprestaties, exclusief aanvoerdersbonus" : undefined}
+                  >
+                    <button onClick={() => handleSortClick(col.sortKey)} className="flex items-center hover:text-white transition-colors">
+                      {col.label} <SortArrow active={sortKey === col.sortKey} dir={sortDir} />
+                    </button>
+                  </th>
+                ))}
+                <th className="pb-3 pl-3 font-semibold text-right">Acties</th>
               </tr>
             </thead>
             <tbody>
-              {filteredPlayers.map((player) => (
+              {sortedPlayers.map((player) => (
                 <tr
                   key={player.id}
                   className={`border-b border-slate-800/60 ${
                     selectedIds.has(player.id) ? "bg-red-900/10" : "hover:bg-slate-800/30"
                   }`}
                 >
-                  <td className="py-2 pr-3">
+                  <td className="py-3 pr-3">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(player.id)}
@@ -202,7 +336,7 @@ export default function PlayersList({
                       className="rounded accent-cyan-500"
                     />
                   </td>
-                  <td className="py-2">
+                  <td className="py-3 pr-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-medium text-white">{player.name}</span>
                       {player.altTeam && (
@@ -218,15 +352,24 @@ export default function PlayersList({
                       )}
                     </div>
                   </td>
-                  <td className="py-2 text-slate-400">{POSITION_SHORT[player.position]}</td>
-                  <td className="py-2 text-slate-400 hidden sm:table-cell">
-                    {TEAM_LABEL[player.clubTeam]}
-                    {player.altTeam && (
-                      <span className="text-violet-400 text-xs"> → {TEAM_LABEL[player.altTeam]}</span>
-                    )}
-                  </td>
-                  <td className="py-2 text-slate-400">€{player.value}</td>
-                  <td className="py-2 text-right">
+                  {visibleColumns.has("positie") && (
+                    <td className="py-3 px-3 text-slate-400">{POSITION_SHORT[player.position]}</td>
+                  )}
+                  {visibleColumns.has("elftal") && (
+                    <td className="py-3 px-3 text-slate-400 hidden sm:table-cell">
+                      {TEAM_LABEL[player.clubTeam]}
+                      {player.altTeam && (
+                        <span className="text-violet-400 text-xs"> → {TEAM_LABEL[player.altTeam]}</span>
+                      )}
+                    </td>
+                  )}
+                  {visibleColumns.has("waarde") && (
+                    <td className="py-3 px-3 text-slate-400">€{player.value}</td>
+                  )}
+                  {visibleColumns.has("punten") && (
+                    <td className="py-3 px-3 text-cyan-400 font-semibold">{player.totalPoints}</td>
+                  )}
+                  <td className="py-3 pl-3 text-right">
                     <button onClick={() => onOpenPlayerStats(player)} className={BTN_SMALL}>
                       Details
                     </button>
@@ -235,8 +378,8 @@ export default function PlayersList({
               ))}
             </tbody>
           </table>
-          <p className="text-xs text-slate-600 mt-2">
-            {filteredPlayers.length} van {players.length} spelers
+          <p className="text-xs text-slate-600 mt-3">
+            {sortedPlayers.length} van {players.length} spelers
             {selectedIds.size > 0 && ` · ${selectedIds.size} geselecteerd`}
           </p>
         </div>

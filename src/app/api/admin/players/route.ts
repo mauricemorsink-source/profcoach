@@ -11,14 +11,27 @@ export async function GET() {
     return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
   }
 
-  const players = await prisma.player.findMany({
-    where: { active: true },
-    orderBy: [{ clubTeam: "asc" }, { position: "asc" }, { name: "asc" }],
-    include: { performances: { where: { played: true }, select: { id: true }, take: 1 } },
-  });
+  const season = await prisma.season.findFirst({ where: { isActive: true } });
+
+  const [players, seasonStats] = await Promise.all([
+    prisma.player.findMany({
+      where: { active: true },
+      orderBy: [{ clubTeam: "asc" }, { position: "asc" }, { name: "asc" }],
+      include: { performances: { where: { played: true }, select: { id: true }, take: 1 } },
+    }),
+    season
+      ? prisma.playerSeasonStats.findMany({
+          where: { seasonId: season.id },
+          select: { playerId: true, totalPoints: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const pointsByPlayer = new Map(seasonStats.map((s) => [s.playerId, s.totalPoints]));
   const result = players.map(({ performances, ...player }) => ({
     ...player,
     hasPlayedMatch: performances.length > 0,
+    totalPoints: pointsByPlayer.get(player.id) ?? 0,
   }));
   return NextResponse.json(result);
 }
