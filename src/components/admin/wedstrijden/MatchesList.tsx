@@ -240,6 +240,7 @@ export default function MatchesList({
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative z-40 ${
+              showFilters ? "border-cyan-500/60 bg-cyan-500/10 text-white" :
               filtersActive ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-400" : "border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600"
             }`}
           >
