@@ -27,9 +27,9 @@ type SortKey = "naam" | "positie" | "elftal" | "waarde" | "punten";
 type SortDir = "asc" | "desc";
 type ColumnKey = "positie" | "elftal" | "waarde" | "punten";
 
-const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey: SortKey; hideOnMobile?: boolean }[] = [
+const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey: SortKey }[] = [
   { key: "positie", label: "Pos", sortKey: "positie" },
-  { key: "elftal", label: "Elftal", sortKey: "elftal", hideOnMobile: true },
+  { key: "elftal", label: "Elftal", sortKey: "elftal" },
   { key: "waarde", label: "Waarde", sortKey: "waarde" },
   { key: "punten", label: "Punten", sortKey: "punten" },
 ];
@@ -311,7 +311,7 @@ export default function PlayersList({
                 {COLUMN_DEFS.filter((c) => visibleColumns.has(c.key)).map((col) => (
                   <th
                     key={col.key}
-                    className={`pb-3 px-3 font-semibold ${col.hideOnMobile ? "hidden sm:table-cell" : ""}`}
+                    className="pb-3 px-3 font-semibold"
                     title={col.key === "punten" ? "Seizoenspunten uit wedstrijdprestaties, exclusief aanvoerdersbonus" : undefined}
                   >
                     <button onClick={() => handleSortClick(col.sortKey)} className="flex items-center hover:text-white transition-colors">
@@ -358,7 +358,7 @@ export default function PlayersList({
                     <td className="py-3 px-3 text-slate-400">{POSITION_SHORT[player.position]}</td>
                   )}
                   {visibleColumns.has("elftal") && (
-                    <td className="py-3 px-3 text-slate-400 hidden sm:table-cell">
+                    <td className="py-3 px-3 text-slate-400">
                       {TEAM_LABEL[player.clubTeam]}
                       {player.altTeam && (
                         <span className="text-violet-400 text-xs"> → {TEAM_LABEL[player.altTeam]}</span>

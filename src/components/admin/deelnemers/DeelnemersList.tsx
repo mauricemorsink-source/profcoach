@@ -9,18 +9,18 @@ type Props = {
   onOpenModal: (d: Deelnemer) => void;
 };
 
-type SortKey = "naam" | "team" | "punten" | "betaald" | "datum";
+type SortKey = "naam" | "team" | "punten" | "betaald" | "whatsapp" | "datum";
 type SortDir = "asc" | "desc";
 
 type ColumnKey = "email" | "team" | "punten" | "betaald" | "whatsapp" | "datum";
 
-const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey?: SortKey; hideOnMobile?: boolean }[] = [
-  { key: "email", label: "E-mail", hideOnMobile: true },
+const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey?: SortKey }[] = [
+  { key: "email", label: "E-mail" },
   { key: "team", label: "Team", sortKey: "team" },
   { key: "punten", label: "Punten", sortKey: "punten" },
   { key: "betaald", label: "Betaald", sortKey: "betaald" },
-  { key: "whatsapp", label: "WhatsApp" },
-  { key: "datum", label: "Aangemeld", sortKey: "datum", hideOnMobile: true },
+  { key: "whatsapp", label: "WhatsApp", sortKey: "whatsapp" },
+  { key: "datum", label: "Aangemeld", sortKey: "datum" },
 ];
 
 const DEFAULT_COLUMNS: ColumnKey[] = ["email", "team", "punten", "betaald"];
@@ -108,6 +108,8 @@ export default function DeelnemersList({
         return mult * (totaalPunten(a) - totaalPunten(b));
       case "betaald":
         return mult * (Number(a.betaald) - Number(b.betaald));
+      case "whatsapp":
+        return mult * (Number(a.whatsappGroep) - Number(b.whatsappGroep));
       case "datum":
         return mult * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       default:
@@ -240,7 +242,7 @@ export default function DeelnemersList({
                   </button>
                 </th>
                 {COLUMN_DEFS.filter((c) => visibleColumns.has(c.key)).map((col) => (
-                  <th key={col.key} className={`pb-3 px-3 font-semibold ${col.hideOnMobile ? "hidden sm:table-cell" : ""} ${col.key === "punten" ? "text-right" : ""}`}>
+                  <th key={col.key} className={`pb-3 px-3 font-semibold ${col.key === "punten" ? "text-right" : ""}`}>
                     {col.sortKey ? (
                       <button
                         onClick={() => handleSortClick(col.sortKey!)}
@@ -265,7 +267,7 @@ export default function DeelnemersList({
                       : <span className="text-slate-500 italic">Geen naam</span>}
                   </td>
                   {visibleColumns.has("email") && (
-                    <td className="py-3 px-3 text-slate-400 text-xs hidden sm:table-cell">{d.email ?? "—"}</td>
+                    <td className="py-3 px-3 text-slate-400 text-xs">{d.email ?? "—"}</td>
                   )}
                   {visibleColumns.has("team") && (
                     <td className="py-3 px-3 whitespace-nowrap">
@@ -292,7 +294,7 @@ export default function DeelnemersList({
                     </td>
                   )}
                   {visibleColumns.has("datum") && (
-                    <td className="py-3 px-3 text-slate-400 text-xs hidden sm:table-cell whitespace-nowrap">
+                    <td className="py-3 px-3 text-slate-400 text-xs whitespace-nowrap">
                       {new Date(d.createdAt).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
                     </td>
                   )}
