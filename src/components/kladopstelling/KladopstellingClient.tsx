@@ -117,6 +117,7 @@ export default function KladopstellingClient({
 
   // Betaling
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [paymentChosen, setPaymentChosen] = useState(false);
 
   // Stap
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -396,8 +397,11 @@ export default function KladopstellingClient({
         </button>
         {isOpen && (
           <div className="absolute top-full left-0 right-0 z-[47] mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-2 border-b border-slate-800">
-              <input type="text" placeholder="Zoek op naam of elftal..." value={predSearch} onChange={(e) => setPredSearch(e.target.value)}
+            <div className="p-2 border-b border-slate-800" onClick={(e) => e.stopPropagation()}>
+              <input type="text" placeholder="Zoek op naam of elftal..." value={predSearch} onChange={(e) => {
+                e.stopPropagation();
+                setPredSearch(e.target.value);
+              }}
                 className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40" />
             </div>
             <div className="overflow-y-auto max-h-[352px]">
@@ -459,19 +463,25 @@ export default function KladopstellingClient({
 
             <div className="space-y-2">
               <button
-                onClick={() => setShowPaymentOptions(true)}
+                onClick={() => {
+                  setShowPaymentOptions(true);
+                  setPaymentChosen(true);
+                }}
                 className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                  showPaymentOptions
+                  paymentChosen
                     ? "bg-green-600 hover:bg-green-500 text-white"
-                    : "bg-cyan-600 hover:bg-cyan-500 text-white"
+                    : "bg-slate-700 hover:bg-slate-600 text-slate-200"
                 }`}
               >
                 Ik wil nu betalen
               </button>
               <button
-                onClick={() => setShowPaymentOptions(false)}
+                onClick={() => {
+                  setShowPaymentOptions(false);
+                  setPaymentChosen(true);
+                }}
                 className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                  !showPaymentOptions
+                  paymentChosen
                     ? "bg-green-600 hover:bg-green-500 text-white"
                     : "bg-slate-700 hover:bg-slate-600 text-slate-200"
                 }`}
