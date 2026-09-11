@@ -1,157 +1,20 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import type { Formation, Player, SlotDef } from "@/components/team/types";
+import type { Player, SlotDef } from "@/components/team/types";
 import { buildSlots } from "@/components/team/formationSlots";
 import { validateTeam, CLUB_LABEL } from "@/components/team/validate";
-import Pitch from "@/components/team/Pitch";
 import SpotlightTour, { TOUR_KEY, type TourStep } from "@/components/SpotlightTour";
-import RegistrationClosedNotice from "@/components/RegistrationClosedNotice";
-import GoalConfetti from "@/components/GoalConfetti";
 import { trackEvent } from "@/lib/analytics";
-
-const STEP_NAMES: Record<number, string> = {
-  1: "team_samenstellen",
-  2: "aanvoerder_kiezen",
-  3: "voorspellingen",
-  4: "gegevens_en_indienen",
-};
-
-const SLOTS_KEY = "profcoach_team_slots";
-const FORMATION_KEY = "profcoach_team_formation";
-
-const POSITION_LABEL: Record<string, string> = {
-  GK: "DM", DEF: "VER", MID: "MID", ATT: "AAN",
-};
-const CLUB_ORDER = ["ONE", "TWO", "THREE", "FOUR", "FIVE", "DAMES"];
-const POS_ORDER = ["GK", "DEF", "MID", "ATT"];
-
-function PredPlayerPicker({
-  field, value, onSelect, players, predActiveField, setPredActiveField, predSearch, setPredSearch,
-}: {
-  field: "topscorer" | "assistkoning";
-  value: string | null;
-  onSelect: (id: string) => void;
-  players: Player[];
-  predActiveField: "topscorer" | "assistkoning" | null;
-  setPredActiveField: (field: "topscorer" | "assistkoning" | null) => void;
-  predSearch: string;
-  setPredSearch: (value: string) => void;
-}) {
-  const isOpen = predActiveField === field;
-  const filteredPlayers = players
-    .filter(p => !predSearch.trim() || p.name.toLowerCase().includes(predSearch.toLowerCase()) || CLUB_LABEL[p.clubTeam]?.toLowerCase().includes(predSearch.toLowerCase()))
-    .sort((a, b) => {
-      const clubDiff = CLUB_ORDER.indexOf(a.clubTeam) - CLUB_ORDER.indexOf(b.clubTeam);
-      if (clubDiff !== 0) return clubDiff;
-      const posDiff = POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position);
-      if (posDiff !== 0) return posDiff;
-      return a.name.localeCompare(b.name, "nl");
-    });
-  return (
-    <div className="relative">
-      {isOpen && <div className="fixed inset-0 z-[45] pointer-events-none" onClick={() => { setPredActiveField(null); setPredSearch(""); }} />}
-      <button
-        onClick={() => { setPredActiveField(isOpen ? null : field); setPredSearch(""); }}
-        className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors relative z-[46] ${value ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}
-      >
-        {value ? (players.find(p => p.id === value)?.name ?? "Gekozen") : "Kies een speler..."}
-      </button>
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 z-[47] mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-          <div className="p-2 border-b border-slate-800" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-            <input
-              type="text"
-              placeholder="Zoek op naam of elftal..."
-              value={predSearch}
-              onChange={(e) => {
-                e.stopPropagation();
-                setPredSearch(e.target.value);
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-              }}
-              autoComplete="off"
-              className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
-            />
-          </div>
-          <div className="overflow-y-auto max-h-[352px]">
-            {filteredPlayers.length === 0
-              ? <p className="text-slate-500 text-sm text-center py-4">Geen spelers gevonden</p>
-              : filteredPlayers.map(p => (
-                <button key={p.id} onClick={() => { onSelect(p.id); setPredActiveField(null); setPredSearch(""); }}
-                  className={`w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 transition-colors flex items-center justify-between border-b border-slate-800/40 last:border-0 ${value === p.id ? "text-cyan-400" : "text-white"}`}>
-                  <span>{p.name}</span>
-                  <span className="text-slate-500 text-xs">{CLUB_LABEL[p.clubTeam] ?? p.clubTeam}</span>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
-const BTN_SECONDARY = "px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium text-sm transition-colors border border-slate-700 disabled:opacity-50";
-const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
-
-function remapSlots(
-  oldSlotValues: (string | null)[],
-  newSlots: SlotDef[],
-  playersById: Record<string, Player>
-): (string | null)[] {
-  const result: (string | null)[] = Array(11).fill(null);
-  const byPos: Record<string, string[]> = {};
-  for (const playerId of oldSlotValues) {
-    if (!playerId) continue;
-    const p = playersById[playerId];
-    if (!p) continue;
-    if (!byPos[p.position]) byPos[p.position] = [];
-    byPos[p.position].push(playerId);
-  }
-  for (const slot of newSlots) {
-    const available = byPos[slot.position];
-    if (available?.length) result[slot.slotIndex] = available.shift()!;
-  }
-  const overflow = (Object.values(byPos) as string[][]).flat();
-  for (const slot of newSlots) {
-    if (result[slot.slotIndex] === null && overflow.length)
-      result[slot.slotIndex] = overflow.shift()!;
-  }
-  return result;
-}
-
-interface Props {
-  formations: Formation[];
-  budget: number;
-  requireLogin: boolean;
-  inschrijfgeld: number;
-  registrationOpen: boolean;
-  deadline: string | null;
-  captainEnabled: boolean;
-  captainBonusPerWin: number;
-  registrationClosedTitle?: string;
-  registrationClosedText?: string;
-}
-
-interface PredPointsConfig {
-  showPointsToParticipants: boolean;
-  topScorerPoints: number;
-  assistKoningPoints: number;
-  yellowCardsPoints: number;
-  totalGoalsPoints: number;
-}
-
-interface PersonInfo {
-  voornaam: string;
-  achternaam: string;
-  email: string;
-  telefoonnummer: string;
-  whatsappGroep: boolean;
-}
+import type { Props, PredPointsConfig, PersonInfo } from "./types";
+import { STEP_NAMES, SLOTS_KEY, FORMATION_KEY, CLUB_ORDER, POS_ORDER } from "./constants";
+import { remapSlots } from "./remapSlots";
+import Step1TeamBuilder from "./Step1TeamBuilder";
+import Step2Captain from "./Step2Captain";
+import Step3Predictions from "./Step3Predictions";
+import Step4PersonalInfo from "./Step4PersonalInfo";
+import SuccessPage from "./SuccessPage";
+import PlayerPickerModal from "./PlayerPickerModal";
 
 export default function KladopstellingClient({
   formations, budget, requireLogin, inschrijfgeld, registrationOpen, deadline, captainEnabled, captainBonusPerWin,
@@ -449,159 +312,17 @@ export default function KladopstellingClient({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#060b14]">
-        <GoalConfetti />
-        <div className="max-w-xl mx-auto px-4 py-8 pb-16">
-          {/* Bevestiging */}
-          <div className="mb-5 bg-green-900/20 border border-green-500/30 rounded-2xl px-5 py-4 flex items-center gap-3">
-            <span className="text-green-400 text-xl shrink-0">✓</span>
-            <div>
-              <p className="text-green-400 font-bold text-sm">Team ingediend</p>
-              <p className="text-slate-400 text-xs mt-0.5">Je inschrijving is ontvangen voor {personInfo.voornaam} {personInfo.achternaam}.</p>
-            </div>
-          </div>
-
-          {/* WhatsApp-groep */}
-          {personInfo.whatsappGroep && (
-            <div className="mb-5 bg-emerald-900/15 border border-emerald-500/25 rounded-2xl px-5 py-4">
-              <p className="text-emerald-400 font-semibold text-sm mb-1">Doe mee met de WhatsApp-groep</p>
-              <p className="text-slate-400 text-sm mb-3">
-                Je hebt aangegeven lid te willen worden van de WhatsApp-groep. Klik hieronder om je aan te sluiten.
-              </p>
-              <a
-                href="https://chat.whatsapp.com/Dzqab7sMXu93CriSAqrSEd"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-sm transition-colors"
-              >
-                Word lid van de WhatsApp-groep
-              </a>
-            </div>
-          )}
-
-          {/* Betaling */}
-          <div className="mb-5 bg-cyan-900/15 border border-cyan-500/25 rounded-2xl px-5 py-4 space-y-3">
-            <p className="text-cyan-400 font-semibold text-sm">Inschrijfgeld betalen</p>
-
-            <div className="space-y-2">
-              <button
-                onClick={() => setShowPaymentOptions(true)}
-                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                  showPaymentOptions
-                    ? "bg-green-600 hover:bg-green-500 text-white"
-                    : "bg-slate-700 hover:bg-slate-600 text-slate-200"
-                }`}
-              >
-                Ik wil nu betalen
-              </button>
-              <button
-                onClick={() => setShowPaymentOptions(false)}
-                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                  !showPaymentOptions
-                    ? "bg-green-600 hover:bg-green-500 text-white"
-                    : "bg-slate-700 hover:bg-slate-600 text-slate-200"
-                }`}
-              >
-                Ik betaal later
-              </button>
-            </div>
-
-            {/* Accordeon: betaallinks */}
-            {showPaymentOptions && (
-              <div className="bg-slate-900/50 rounded-xl p-4 space-y-3 border border-cyan-500/20">
-                <p className="text-slate-400 text-xs font-medium">Kies het bedrag en betaal:</p>
-
-                <div className="space-y-2">
-                  <button
-                    onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=t1ajnGTJQROVbXhcYSYyFA", "_blank")}
-                    className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
-                  >
-                    Inschrijfgeld €7,50 (jongeren &lt;18 jaar)
-                  </button>
-                  <button
-                    onClick={() => window.open("https://betaalverzoek.rabobank.nl/betaalverzoek/?id=fJNmXjzjQ0ao6IA4_cLn8Q", "_blank")}
-                    className="block w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors text-center"
-                  >
-                    Inschrijfgeld €15,00 (18+)
-                  </button>
-                </div>
-
-                <div className="bg-amber-900/30 border border-amber-500/20 rounded-lg p-3">
-                  <p className="text-amber-300 text-xs font-semibold mb-1">⚠️ Belangrijk</p>
-                  <p className="text-amber-200 text-xs">
-                    Het betaalverzoek opent in een nieuw tabblad. <span className="font-semibold">Je moet zelf terugkeren naar deze pagina</span>. Je wordt niet automatisch teruggestuurd.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Screenshot tip */}
-          <div className="mb-5 bg-amber-900/15 border border-amber-500/25 rounded-2xl px-5 py-4">
-            <p className="text-amber-400 font-semibold text-sm mb-1">Tip: maak een screenshot</p>
-            <p className="text-slate-400 text-sm">
-              Bewaar een foto of screenshot van je team hieronder, zodat je altijd kunt terugzien welke spelers je hebt gekozen.
-            </p>
-          </div>
-
-          {/* Team overzicht header */}
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs text-slate-500 uppercase tracking-wide">Jouw team — {formation?.code}</p>
-            <span className="text-xs bg-green-900/30 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-semibold">Ingediend</span>
-          </div>
-
-          {/* Pitch */}
-          <Pitch
-            slots={slots}
-            selectedSlot={null}
-            playersById={playersById}
-            slotValues={slotValues}
-            onSlotClick={() => {}}
-            locked={true}
-            captainSlot={captainEnabled ? captainSlot : null}
-          />
-
-          {/* Spelerlijst */}
-          <div className="mt-5 bg-slate-900 neon-border rounded-2xl overflow-hidden mb-6">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500 border-b border-slate-800 bg-slate-800/50">
-                  <th className="px-4 py-2.5 font-semibold">Speler</th>
-                  <th className="px-4 py-2.5 font-semibold">Elftal</th>
-                  <th className="px-4 py-2.5 font-semibold text-right">Waarde</th>
-                </tr>
-              </thead>
-              <tbody>
-                {slots
-                  .filter((s) => slotValues[s.slotIndex])
-                  .sort((a, b) => POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position))
-                  .map((s) => {
-                    const player = playersById[slotValues[s.slotIndex]!];
-                    if (!player) return null;
-                    const isCaptain = captainEnabled && captainSlot === s.slotIndex;
-                    return (
-                      <tr key={s.slotIndex} className="border-b border-slate-800/60 hover:bg-slate-800/30">
-                        <td className="px-4 py-2.5 font-medium text-white">
-                          {player.name}
-                          {isCaptain && <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold">C</span>}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-400 text-xs">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</td>
-                        <td className="px-4 py-2.5 text-right text-cyan-400 font-bold">€{player.value}</td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-
-          <button
-            onClick={() => { window.location.href = "/"; }}
-            className={BTN_SECONDARY + " w-full"}
-          >
-            Terug naar de homepage
-          </button>
-        </div>
-      </div>
+      <SuccessPage
+        personInfo={personInfo}
+        formation={formation}
+        slots={slots}
+        playersById={playersById}
+        slotValues={slotValues}
+        captainEnabled={captainEnabled}
+        captainSlot={captainSlot}
+        showPaymentOptions={showPaymentOptions}
+        setShowPaymentOptions={setShowPaymentOptions}
+      />
     );
   }
 
@@ -677,283 +398,91 @@ export default function KladopstellingClient({
 
         {/* ── STAP 1: Team samenstellen ── */}
         {step === 1 && (
-          <>
-            {/* Validatie checklist */}
-            <div className="mb-5">
-              <div data-tour="tour-validation" className={`rounded-2xl border p-4 transition-colors ${stepOneValidation.allValid ? "bg-green-900/15 border-green-500/30" : "bg-red-900/15 border-red-500/20"}`}>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5">
-                  {stepOneValidation.rules.map((rule) => (
-                    <div key={rule.key} className="flex items-center gap-1.5 text-xs">
-                      <span className={rule.met ? "text-green-400" : "text-red-400"}>{rule.met ? "✓" : "✗"}</span>
-                      <span className="text-slate-400 truncate">{rule.label}:</span>
-                      <span className={`font-bold shrink-0 ${rule.met ? "text-green-400" : "text-red-400"}`}>{rule.display}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {hasMismatch && (
-                <div className="flex items-start gap-2 mt-3 bg-red-900/20 border border-red-500/30 rounded-xl px-4 py-3">
-                  <span className="text-red-400 shrink-0 mt-0.5">⚠</span>
-                  <p className="text-red-300 text-sm">Doordat je de formatie hebt gewijzigd, staan één of meerdere spelers op een onjuiste positie. Klik op de speler op het veld om hem te vervangen.</p>
-                </div>
-              )}
-            </div>
-
-            <div data-tour="tour-pitch">
-              <Pitch
-                slots={slots}
-                selectedSlot={selectedSlot}
-                playersById={playersById}
-                slotValues={slotValues}
-                onSlotClick={handleSlotClick}
-                locked={false}
-                captainSlot={null}
-              />
-            </div>
-
-            <div className="mt-4 flex gap-3 flex-wrap">
-              {canSubmitPublic ? (
-                <button data-tour="tour-next" onClick={goNext} disabled={!teamValid} className={BTN_PRIMARY + " ml-auto"}>
-                  Volgende stap →
-                </button>
-              ) : registrationClosed ? (
-                <div className="mt-4 w-full">
-                  <RegistrationClosedNotice title={registrationClosedTitle} text={registrationClosedText} />
-                </div>
-              ) : (
-                <div className="mt-4 w-full bg-cyan-900/20 border border-cyan-500/30 rounded-2xl px-5 py-5">
-                  <p className="text-white font-bold text-sm mb-1">Tevreden met je opstelling?</p>
-                  <p className="text-slate-400 text-sm">
-                    Dien je echte team in via <span className="text-cyan-400 font-medium">Mijn team</span> — daar kun je je opstelling officieel inschrijven voor het spel.
-                  </p>
-                </div>
-              )}
-            </div>
-          </>
+          <Step1TeamBuilder
+            stepOneValidation={stepOneValidation}
+            hasMismatch={hasMismatch}
+            slots={slots}
+            selectedSlot={selectedSlot}
+            playersById={playersById}
+            slotValues={slotValues}
+            onSlotClick={handleSlotClick}
+            canSubmitPublic={canSubmitPublic}
+            teamValid={teamValid}
+            goNext={goNext}
+            registrationClosed={registrationClosed}
+            registrationClosedTitle={registrationClosedTitle}
+            registrationClosedText={registrationClosedText}
+          />
         )}
 
         {/* ── STAP 2: Aanvoerder ── */}
         {step === 2 && captainEnabled && (
-          <>
-            <div data-tour="tour-captain" className="bg-slate-900 neon-border rounded-2xl p-5">
-              <p className="text-base font-bold text-white mb-1">Kies je aanvoerder</p>
-              <p className="text-slate-400 text-sm mb-5">
-                Kies je aanvoerder en maak kans op extra punten: jouw aanvoerder ontvangt voor iedere overwinning{" "}
-                <span className="text-amber-400 font-bold">{captainBonusPerWin} extra punten</span>!
-              </p>
-              <div className="space-y-2">
-                {selectedPlayers.map(({ slot, playerId }) => {
-                  const player = playersById[playerId];
-                  if (!player) return null;
-                  const isCaptain = captainSlot === slot.slotIndex;
-                  return (
-                    <button
-                      key={playerId}
-                      onClick={() => setCaptainSlot(isCaptain ? null : slot.slotIndex)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-colors ${isCaptain ? "bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold" : "bg-slate-800 border-slate-700 text-slate-300 hover:border-amber-500/40 hover:text-amber-400"}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isCaptain
-                          ? <span className="w-6 h-6 rounded-full bg-amber-500/30 flex items-center justify-center text-xs font-black text-amber-400">C</span>
-                          : <span className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-500">C</span>}
-                        <span>{player.name}</span>
-                      </div>
-                      <span className="text-xs text-slate-500">
-                        {CLUB_LABEL[player.clubTeam] ?? player.clubTeam} · {POSITION_LABEL[player.position] ?? player.position}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {captainSlot === null && (
-                <div className="flex items-center gap-2 mt-3 bg-amber-900/20 border border-amber-500/30 rounded-xl px-3 py-2.5">
-                  <span className="text-amber-400 shrink-0">!</span>
-                  <p className="text-amber-300 text-xs font-medium">Je moet een aanvoerder kiezen om verder te gaan.</p>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={goPrev} className={BTN_SECONDARY}>← Vorige</button>
-              <button onClick={goNext} disabled={captainSlot === null} className={BTN_PRIMARY + " ml-auto"}>Volgende stap →</button>
-            </div>
-          </>
+          <Step2Captain
+            selectedPlayers={selectedPlayers}
+            playersById={playersById}
+            captainSlot={captainSlot}
+            setCaptainSlot={setCaptainSlot}
+            captainBonusPerWin={captainBonusPerWin}
+            goPrev={goPrev}
+            goNext={goNext}
+          />
         )}
 
         {/* ── STAP 3: Voorspellingen ── */}
         {step === 3 && (
-          <>
-            <div data-tour="tour-predictions" className="bg-slate-900 neon-border rounded-2xl p-5 space-y-5">
-              <div>
-                <p className="text-base font-bold text-white mb-1">Bonusvoorspellingen</p>
-                <p className="text-slate-400 text-sm">Vul je voorspellingen in voor bonuspunten aan het einde van het seizoen. Dit kan na het indienen niet meer worden gewijzigd.</p>
-                <p className="text-slate-500 text-sm mt-1">De topscorer en assistkoning hoeven niet in jouw eigen team te zitten — je kiest uit alle spelers in het spel.</p>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                  Topscorer {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.topScorerPoints} pt)</span>}
-                </label>
-                <PredPlayerPicker field="topscorer" value={predTopScorerId} onSelect={setPredTopScorerId} players={players} predActiveField={predActiveField} setPredActiveField={setPredActiveField} predSearch={predSearch} setPredSearch={setPredSearch} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                  Assistkoning {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.assistKoningPoints} pt)</span>}
-                </label>
-                <PredPlayerPicker field="assistkoning" value={predAssistKoningId} onSelect={setPredAssistKoningId} players={players} predActiveField={predActiveField} setPredActiveField={setPredActiveField} predSearch={predSearch} setPredSearch={setPredSearch} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                  Totaal gele kaarten VV Rietmolen (dit seizoen) {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.yellowCardsPoints} pt)</span>}
-                </label>
-                <p className="text-xs text-slate-600 mb-1.5">Enkel gele kaarten voor spelers van VV Rietmolen. Gele kaarten van de tegenstander tellen niet mee.</p>
-                <input type="number" min="0" value={predYellowCards} onChange={(e) => setPredYellowCards(e.target.value)}
-                  className={INPUT} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                  Totaal doelpunten VV Rietmolen (dit seizoen) {predPointsConfig?.showPointsToParticipants && <span className="text-cyan-400 normal-case font-normal ml-1">({predPointsConfig.totalGoalsPoints} pt)</span>}
-                </label>
-                <p className="text-xs text-slate-600 mb-1.5">Incl. eigen goals tegenstanders en spelers buiten het spel (jeugdspelers, nieuwe spelers etc.)</p>
-                <input type="number" min="0" value={predTotalGoals} onChange={(e) => setPredTotalGoals(e.target.value)}
-                  className={INPUT} />
-              </div>
-            </div>
-            {!predValid && (
-              <p className="text-xs text-amber-400 mt-3">Vul alle voorspellingen in om verder te gaan.</p>
-            )}
-            <div className="flex gap-3 mt-4">
-              <button onClick={goPrev} className={BTN_SECONDARY}>← Vorige</button>
-              <button onClick={goNext} disabled={!predValid} className={BTN_PRIMARY + " ml-auto"}>Volgende stap →</button>
-            </div>
-          </>
+          <Step3Predictions
+            predPointsConfig={predPointsConfig}
+            players={players}
+            predTopScorerId={predTopScorerId}
+            setPredTopScorerId={setPredTopScorerId}
+            predAssistKoningId={predAssistKoningId}
+            setPredAssistKoningId={setPredAssistKoningId}
+            predActiveField={predActiveField}
+            setPredActiveField={setPredActiveField}
+            predSearch={predSearch}
+            setPredSearch={setPredSearch}
+            predYellowCards={predYellowCards}
+            setPredYellowCards={setPredYellowCards}
+            predTotalGoals={predTotalGoals}
+            setPredTotalGoals={setPredTotalGoals}
+            predValid={predValid}
+            goPrev={goPrev}
+            goNext={goNext}
+          />
         )}
 
         {/* ── STAP 4: Persoonsgegevens + indienen ── */}
         {step === 4 && (
-          <>
-            <div className="bg-slate-900 neon-border rounded-2xl p-5 space-y-4">
-              <div>
-                <p className="text-base font-bold text-white mb-1">Jouw gegevens</p>
-                <p className="text-slate-400 text-sm">Vul je gegevens in om de inschrijving te voltooien. Er wordt geen account aangemaakt.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Voornaam *</label>
-                  <input type="text" value={personInfo.voornaam} onChange={(e) => setPersonInfo({ ...personInfo, voornaam: e.target.value })} className={INPUT} placeholder="Jan" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Achternaam *</label>
-                  <input type="text" value={personInfo.achternaam} onChange={(e) => setPersonInfo({ ...personInfo, achternaam: e.target.value })} className={INPUT} placeholder="Janssen" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Mailadres *</label>
-                <input type="email" value={personInfo.email} onChange={(e) => setPersonInfo({ ...personInfo, email: e.target.value })} className={INPUT} placeholder="jan@voorbeeld.nl" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Telefoonnummer *</label>
-                <input type="tel" value={personInfo.telefoonnummer} onChange={(e) => setPersonInfo({ ...personInfo, telefoonnummer: e.target.value })} className={INPUT} placeholder="06 12345678" />
-                <p className="text-xs text-slate-500 mt-1.5">
-                  Het inschrijfgeld wordt via een Tikkie betaald. Voer je nummer in zodat we je dat kunnen sturen.
-                </p>
-              </div>
-              <div className="flex items-start gap-3 bg-slate-800/50 rounded-xl border border-slate-700 px-4 py-3">
-                <input type="checkbox" id="whatsapp" checked={personInfo.whatsappGroep} onChange={(e) => setPersonInfo({ ...personInfo, whatsappGroep: e.target.checked })} className="mt-0.5 w-4 h-4 accent-cyan-500 shrink-0" />
-                <label htmlFor="whatsapp" className="text-sm text-slate-300 cursor-pointer">
-                  Voeg me toe aan de ProfCoach WhatsApp-groep voor updates over de tussenstand
-                </label>
-              </div>
-
-              {inschrijfgeld > 0 && (
-                <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl px-4 py-3">
-                  <p className="text-sm font-bold text-amber-300 mb-1">Inschrijfgeld</p>
-                  <p className="text-xs text-slate-400">
-                    Na het indienen ontvang je een Tikkie op je telefoonnummer voor het inschrijfgeld van €{inschrijfgeldDisplay}.
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Ben je onder de 18 jaar? Dan is het inschrijfgeld €7,50.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex items-start gap-3 bg-slate-800/50 rounded-xl border border-slate-700 px-4 py-3">
-                <input type="checkbox" id="akkoord" checked={betaaldAkkoord} onChange={(e) => setBetaaldAkkoord(e.target.checked)} className="mt-0.5 w-4 h-4 accent-cyan-500 shrink-0" />
-                <label htmlFor="akkoord" className="text-sm text-slate-300 cursor-pointer">
-                  {inschrijfgeld > 0
-                    ? "Ik ga akkoord met het inschrijfgeld dat via een Tikkie wordt betaald"
-                    : "Ik ga akkoord met de spelregels en dien mijn team definitief in"}
-                </label>
-              </div>
-
-              {submitError && (
-                <p className="text-sm text-red-400 bg-red-900/20 border border-red-500/30 px-3 py-2 rounded-lg">
-                  {submitError}
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-3 mt-4 flex-wrap">
-              <button onClick={goPrev} disabled={submitting} className={BTN_SECONDARY}>← Vorige</button>
-              <button onClick={handleSubmit} disabled={submitting || !betaaldAkkoord} className={BTN_PRIMARY + " ml-auto"}>
-                {submitting ? "Bezig..." : "Team indienen"}
-              </button>
-            </div>
-          </>
+          <Step4PersonalInfo
+            personInfo={personInfo}
+            setPersonInfo={setPersonInfo}
+            inschrijfgeld={inschrijfgeld}
+            inschrijfgeldDisplay={inschrijfgeldDisplay}
+            betaaldAkkoord={betaaldAkkoord}
+            setBetaaldAkkoord={setBetaaldAkkoord}
+            submitError={submitError}
+            submitting={submitting}
+            goPrev={goPrev}
+            handleSubmit={handleSubmit}
+          />
         )}
 
       </div>
 
       {/* Speler picker modal */}
       {showPickerModal && activeSlot && (
-        <div className={`fixed inset-0 bg-black/70 flex items-start justify-center pt-16 sm:pt-20 px-4 ${showTour ? "z-[94]" : "z-50"}`}>
-          <div data-tour="tour-picker" className="bg-slate-900 neon-border w-full sm:max-w-md rounded-2xl max-h-[calc(85dvh-4rem)] sm:max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wide">{activeSlot.label}</p>
-                <h3 className="font-bold text-white">Kies {POSITION_LABEL[activeSlot.position] ?? activeSlot.position}</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                {currentInSlot && (
-                  <button onClick={handleClearSlot} className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg bg-red-900/20 border border-red-500/30 transition-colors">
-                    Leegmaken
-                  </button>
-                )}
-                <button onClick={() => { setShowPickerModal(false); setSelectedSlot(null); }} className="text-slate-500 hover:text-white text-xl leading-none w-8 h-8 flex items-center justify-center transition-colors">×</button>
-              </div>
-            </div>
-            <div className="px-5 pt-3 pb-2">
-              <input type="text" placeholder="Zoek op naam of elftal..." value={playerSearch} onChange={(e) => setPlayerSearch(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40" />
-            </div>
-            <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-1.5">
-              {playerSearch.trim() !== "" && (
-                <p className="text-xs text-slate-500 pb-1">
-                  {modalPlayers.length === 0 ? "Geen spelers gevonden" : `${modalPlayers.length} speler${modalPlayers.length !== 1 ? "s" : ""} gevonden`}
-                </p>
-              )}
-              {modalPlayers.length === 0
-                ? <p className="text-slate-500 text-sm text-center py-8">Geen spelers gevonden.</p>
-                : modalPlayers.map((player) => {
-                  const isInThisSlot = currentInSlot === player.id;
-                  const isElsewhere = chosenIds.has(player.id) && !isInThisSlot;
-                  return (
-                    <div key={player.id} onClick={() => handleSelectPlayer(player.id)}
-                      className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all ${isInThisSlot ? "border-cyan-500/50 bg-cyan-500/10" : isElsewhere ? "border-slate-800 bg-slate-800/30 opacity-50" : "border-slate-800 bg-slate-800/30 hover:border-cyan-500/40 hover:bg-slate-800"}`}>
-                      <div>
-                        <div className="font-semibold text-white text-sm">{player.name}</div>
-                        <div className="text-xs text-slate-500">{CLUB_LABEL[player.clubTeam] ?? player.clubTeam}</div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="font-bold text-cyan-400 text-sm">€{player.value}</span>
-                        {isInThisSlot && <span className="text-xs bg-cyan-900/40 text-cyan-400 px-2 py-0.5 rounded-full border border-cyan-500/30">Gekozen</span>}
-                        {isElsewhere && <span className="text-xs bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full border border-slate-700">Elders</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        </div>
+        <PlayerPickerModal
+          activeSlot={activeSlot}
+          playerSearch={playerSearch}
+          setPlayerSearch={setPlayerSearch}
+          modalPlayers={modalPlayers}
+          currentInSlot={currentInSlot}
+          chosenIds={chosenIds}
+          handleSelectPlayer={handleSelectPlayer}
+          handleClearSlot={handleClearSlot}
+          onClose={() => { setShowPickerModal(false); setSelectedSlot(null); }}
+          showTour={showTour}
+        />
       )}
     </div>
   );
