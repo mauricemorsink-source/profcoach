@@ -460,13 +460,21 @@ export default function KladopstellingClient({
             <div className="space-y-2">
               <button
                 onClick={() => setShowPaymentOptions(true)}
-                className="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-sm transition-colors"
+                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                  showPaymentOptions
+                    ? "bg-green-600 hover:bg-green-500 text-white"
+                    : "bg-cyan-600 hover:bg-cyan-500 text-white"
+                }`}
               >
                 Ik wil nu betalen
               </button>
               <button
                 onClick={() => setShowPaymentOptions(false)}
-                className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-semibold text-sm transition-colors"
+                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                  !showPaymentOptions
+                    ? "bg-green-600 hover:bg-green-500 text-white"
+                    : "bg-slate-700 hover:bg-slate-600 text-slate-200"
+                }`}
               >
                 Ik betaal later
               </button>
@@ -475,7 +483,7 @@ export default function KladopstellingClient({
             {/* Accordeon: betaallinks */}
             {showPaymentOptions && (
               <div className="bg-slate-900/50 rounded-xl p-4 space-y-3 border border-cyan-500/20">
-                <p className="text-slate-400 text-xs font-medium">Kies het bedrag en betaal via Rabobank:</p>
+                <p className="text-slate-400 text-xs font-medium">Kies het bedrag en betaal:</p>
 
                 <div className="space-y-2">
                   <button
@@ -495,7 +503,7 @@ export default function KladopstellingClient({
                 <div className="bg-amber-900/30 border border-amber-500/20 rounded-lg p-3">
                   <p className="text-amber-300 text-xs font-semibold mb-1">⚠️ Belangrijk</p>
                   <p className="text-amber-200 text-xs">
-                    Het betaalverzoek opent in een nieuw tabblad. <span className="font-semibold">Je keert zelf terug naar deze pagina</span> — je wordt NIET automatisch teruggestuurd naar Profcoach Rietmolen.
+                    Het betaalverzoek opent in een nieuw tabblad. <span className="font-semibold">Je moet zelf terugkeren naar deze pagina</span>. Je wordt niet automatisch teruggestuurd.
                   </p>
                 </div>
               </div>
