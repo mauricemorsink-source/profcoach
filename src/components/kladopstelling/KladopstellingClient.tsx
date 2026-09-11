@@ -395,8 +395,8 @@ export default function KladopstellingClient({
           {value ? (players.find(p => p.id === value)?.name ?? "Gekozen") : "Kies een speler..."}
         </button>
         {isOpen && (
-          <div className="absolute top-full left-0 right-0 z-[47] mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-2 border-b border-slate-800" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute top-full left-0 right-0 z-[47] mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+            <div className="p-2 border-b border-slate-800" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
               <input
                 type="text"
                 placeholder="Zoek op naam of elftal..."
@@ -407,10 +407,12 @@ export default function KladopstellingClient({
                 }}
                 onMouseDown={(e) => {
                   e.stopPropagation();
-                  e.preventDefault();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
                 }}
                 autoComplete="off"
-                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 pointer-events-auto"
+                className="w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
               />
             </div>
             <div className="overflow-y-auto max-h-[352px]">
