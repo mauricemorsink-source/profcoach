@@ -117,7 +117,6 @@ export default function KladopstellingClient({
 
   // Betaling
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
-  const [paymentChosen, setPaymentChosen] = useState(false);
 
   // Stap
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -463,12 +462,9 @@ export default function KladopstellingClient({
 
             <div className="space-y-2">
               <button
-                onClick={() => {
-                  setShowPaymentOptions(true);
-                  setPaymentChosen(true);
-                }}
+                onClick={() => setShowPaymentOptions(true)}
                 className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                  paymentChosen
+                  showPaymentOptions
                     ? "bg-green-600 hover:bg-green-500 text-white"
                     : "bg-slate-700 hover:bg-slate-600 text-slate-200"
                 }`}
@@ -476,12 +472,9 @@ export default function KladopstellingClient({
                 Ik wil nu betalen
               </button>
               <button
-                onClick={() => {
-                  setShowPaymentOptions(false);
-                  setPaymentChosen(true);
-                }}
+                onClick={() => setShowPaymentOptions(false)}
                 className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                  paymentChosen
+                  !showPaymentOptions
                     ? "bg-green-600 hover:bg-green-500 text-white"
                     : "bg-slate-700 hover:bg-slate-600 text-slate-200"
                 }`}
