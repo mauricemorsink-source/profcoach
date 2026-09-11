@@ -387,7 +387,7 @@ export default function KladopstellingClient({
       });
     return (
       <div className="relative">
-        {isOpen && <div className="fixed inset-0 z-[45]" onClick={() => { setPredActiveField(null); setPredSearch(""); }} />}
+        {isOpen && <div className="fixed inset-0 z-[45] pointer-events-none" onClick={() => { setPredActiveField(null); setPredSearch(""); }} />}
         <button
           onClick={() => { setPredActiveField(isOpen ? null : field); setPredSearch(""); }}
           className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors relative z-[46] ${value ? "border-cyan-500/40 bg-cyan-500/10 text-white" : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"}`}
