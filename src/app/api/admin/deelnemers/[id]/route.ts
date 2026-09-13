@@ -10,7 +10,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
   const body = await req.json();
-  const { voornaam, achternaam, email, telefoonnummer, whatsappGroep, betaald, bonusPoints } = body;
+  const { voornaam, achternaam, email, telefoonnummer, whatsappGroep, whatsappToegevoegd, betaald, bonusPoints } = body;
 
   const entry = await prisma.teamEntry.update({
     where: { id },
@@ -20,6 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ...(email !== undefined && { email: email || null }),
       ...(telefoonnummer !== undefined && { telefoonnummer: telefoonnummer || null }),
       ...(whatsappGroep !== undefined && { whatsappGroep: Boolean(whatsappGroep) }),
+      ...(whatsappToegevoegd !== undefined && { whatsappToegevoegd: Boolean(whatsappToegevoegd) }),
       ...(betaald !== undefined && { betaald: Boolean(betaald) }),
       ...(bonusPoints !== undefined && { bonusPoints: Number(bonusPoints) || 0 }),
     },

@@ -37,6 +37,18 @@ export default function DeelnemersClient() {
     }
   }
 
+  async function toggleWhatsappToegevoegd(d: Deelnemer) {
+    const res = await fetch(`/api/admin/deelnemers/${d.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ whatsappToegevoegd: !d.whatsappToegevoegd }),
+    });
+    if (res.ok) {
+      setDeelnemers((prev) => prev.map((x) => x.id === d.id ? { ...x, whatsappToegevoegd: !d.whatsappToegevoegd } : x));
+      setModal((prev) => prev?.id === d.id ? { ...prev, whatsappToegevoegd: !d.whatsappToegevoegd } : prev);
+    }
+  }
+
   async function save() {
     if (!modal) return;
     setSaving(true);
@@ -97,6 +109,7 @@ export default function DeelnemersClient() {
         loading={loading}
         onRefresh={load}
         onOpenModal={openModal}
+        onToggleWhatsappToegevoegd={toggleWhatsappToegevoegd}
       />
 
       {/* Modal */}
@@ -141,6 +154,7 @@ export default function DeelnemersClient() {
           onSave={save}
           onDelete={deleteDeelnemer}
           onToggleBetaald={toggleBetaald}
+          onToggleWhatsappToegevoegd={toggleWhatsappToegevoegd}
           onOpenTeamEdit={() => setTeamEditTarget(modal)}
         />
       )}

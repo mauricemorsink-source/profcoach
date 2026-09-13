@@ -25,6 +25,7 @@ export type Deelnemer = {
   email: string | null;
   telefoonnummer: string | null;
   whatsappGroep: boolean;
+  whatsappToegevoegd: boolean;
   betaaldAkkoord: boolean;
   betaald: boolean;
   bonusPoints: number;

@@ -7,19 +7,22 @@ type Props = {
   loading: boolean;
   onRefresh: () => void;
   onOpenModal: (d: Deelnemer) => void;
+  onToggleWhatsappToegevoegd: (d: Deelnemer) => void;
 };
 
-type SortKey = "naam" | "team" | "punten" | "betaald" | "whatsapp" | "datum";
+type SortKey = "naam" | "team" | "punten" | "betaald" | "whatsapp" | "toegevoegd" | "datum";
 type SortDir = "asc" | "desc";
 
-type ColumnKey = "email" | "team" | "punten" | "betaald" | "whatsapp" | "datum";
+type ColumnKey = "email" | "telefoon" | "team" | "punten" | "betaald" | "whatsapp" | "toegevoegd" | "datum";
 
 const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey?: SortKey }[] = [
   { key: "email", label: "E-mail" },
+  { key: "telefoon", label: "Telefoon" },
   { key: "team", label: "Team", sortKey: "team" },
   { key: "punten", label: "Punten", sortKey: "punten" },
   { key: "betaald", label: "Betaald", sortKey: "betaald" },
   { key: "whatsapp", label: "WhatsApp", sortKey: "whatsapp" },
+  { key: "toegevoegd", label: "Toegevoegd", sortKey: "toegevoegd" },
   { key: "datum", label: "Aangemeld", sortKey: "datum" },
 ];
 
@@ -40,10 +43,12 @@ export default function DeelnemersList({
   loading,
   onRefresh,
   onOpenModal,
+  onToggleWhatsappToegevoegd,
 }: Props) {
   const [search, setSearch] = useState("");
   const [betaaldFilter, setBetaaldFilter] = useState<"alle" | "betaald" | "nietbetaald">("alle");
   const [whatsappFilter, setWhatsappFilter] = useState<"alle" | "ja" | "nee">("alle");
+  const [toegevoegdFilter, setToegevoegdFilter] = useState<"alle" | "ja" | "nee">("alle");
   const [sortKey, setSortKey] = useState<SortKey>("naam");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [openPanel, setOpenPanel] = useState<"filters" | "columns" | null>(null);
@@ -78,7 +83,7 @@ export default function DeelnemersList({
     }
   }
 
-  const filtersActive = betaaldFilter !== "alle" || whatsappFilter !== "alle";
+  const filtersActive = betaaldFilter !== "alle" || whatsappFilter !== "alle" || toegevoegdFilter !== "alle";
 
   const filtered = deelnemers
     .filter((d) =>
@@ -88,6 +93,10 @@ export default function DeelnemersList({
     .filter((d) =>
       whatsappFilter === "ja" ? d.whatsappGroep :
       whatsappFilter === "nee" ? !d.whatsappGroep : true
+    )
+    .filter((d) =>
+      toegevoegdFilter === "ja" ? d.whatsappToegevoegd :
+      toegevoegdFilter === "nee" ? !d.whatsappToegevoegd : true
     )
     .filter((d) => {
       if (!search.trim()) return true;
@@ -110,6 +119,8 @@ export default function DeelnemersList({
         return mult * (Number(a.betaald) - Number(b.betaald));
       case "whatsapp":
         return mult * (Number(a.whatsappGroep) - Number(b.whatsappGroep));
+      case "toegevoegd":
+        return mult * (Number(a.whatsappToegevoegd) - Number(b.whatsappToegevoegd));
       case "datum":
         return mult * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       default:
@@ -172,7 +183,7 @@ export default function DeelnemersList({
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">WhatsApp-groep</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Wil in WhatsApp-groep</p>
                 <div className="flex rounded-lg border border-slate-700 overflow-hidden text-xs">
                   {(["alle", "ja", "nee"] as const).map((v) => (
                     <button key={v} onClick={() => setWhatsappFilter(v)}
@@ -182,9 +193,20 @@ export default function DeelnemersList({
                   ))}
                 </div>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Toegevoegd aan groep</p>
+                <div className="flex rounded-lg border border-slate-700 overflow-hidden text-xs">
+                  {(["alle", "ja", "nee"] as const).map((v) => (
+                    <button key={v} onClick={() => setToegevoegdFilter(v)}
+                      className={`flex-1 px-2 py-1.5 font-medium transition-colors ${toegevoegdFilter === v ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}>
+                      {v === "alle" ? "Alle" : v === "ja" ? "Ja" : "Nee"}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {filtersActive && (
                 <button
-                  onClick={() => { setBetaaldFilter("alle"); setWhatsappFilter("alle"); }}
+                  onClick={() => { setBetaaldFilter("alle"); setWhatsappFilter("alle"); setToegevoegdFilter("alle"); }}
                   className="text-xs text-slate-500 hover:text-red-400 transition-colors"
                 >
                   Filters wissen
@@ -269,6 +291,9 @@ export default function DeelnemersList({
                   {visibleColumns.has("email") && (
                     <td className="py-3 px-3 text-slate-400 text-xs">{d.email ?? "—"}</td>
                   )}
+                  {visibleColumns.has("telefoon") && (
+                    <td className="py-3 px-3 text-slate-400 text-xs whitespace-nowrap">{d.telefoonnummer ?? "—"}</td>
+                  )}
                   {visibleColumns.has("team") && (
                     <td className="py-3 px-3 whitespace-nowrap">
                       {d.formation
@@ -291,6 +316,24 @@ export default function DeelnemersList({
                       {d.whatsappGroep
                         ? <span className="text-xs px-2 py-0.5 rounded-full font-medium border bg-green-900/40 text-green-400 border-green-500/30">Ja</span>
                         : <span className="text-slate-600 text-xs">—</span>}
+                    </td>
+                  )}
+                  {visibleColumns.has("toegevoegd") && (
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      {d.whatsappGroep ? (
+                        <button
+                          onClick={() => onToggleWhatsappToegevoegd(d)}
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium border whitespace-nowrap transition-colors ${
+                            d.whatsappToegevoegd
+                              ? "bg-green-900/40 text-green-400 border-green-500/30 hover:border-green-500/60"
+                              : "bg-slate-800 text-slate-500 border-slate-700 hover:border-slate-500"
+                          }`}
+                        >
+                          {d.whatsappToegevoegd ? "Toegevoegd" : "Nog niet"}
+                        </button>
+                      ) : (
+                        <span className="text-slate-600 text-xs">—</span>
+                      )}
                     </td>
                   )}
                   {visibleColumns.has("datum") && (

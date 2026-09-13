@@ -24,6 +24,7 @@ type Props = {
   onSave: () => void;
   onDelete: () => void;
   onToggleBetaald: (d: Deelnemer) => void;
+  onToggleWhatsappToegevoegd: (d: Deelnemer) => void;
   onOpenTeamEdit: () => void;
 };
 
@@ -41,6 +42,7 @@ export default function DeelnemerDetailModal({
   onSave,
   onDelete,
   onToggleBetaald,
+  onToggleWhatsappToegevoegd,
   onOpenTeamEdit,
 }: Props) {
   return (
@@ -203,6 +205,21 @@ export default function DeelnemerDetailModal({
               </p>
             </div>
           </div>
+
+          {form.whatsappGroep && (
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => onToggleWhatsappToegevoegd(modal)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${modal.whatsappToegevoegd ? "bg-green-500" : "bg-slate-600"}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${modal.whatsappToegevoegd ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+              <div>
+                <span className="text-sm font-medium text-slate-300">Toegevoegd aan groep</span>
+                <p className="text-xs text-slate-500">
+                  {modal.whatsappToegevoegd ? "Al toegevoegd aan de WhatsApp-groep" : "Nog niet toegevoegd aan de WhatsApp-groep"}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className={LABEL}>Bonuspunten</label>

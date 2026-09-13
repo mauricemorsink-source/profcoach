@@ -169,6 +169,7 @@ model TeamEntry {
   email          String?
   telefoonnummer String?
   whatsappGroep  Boolean           @default(false)
+  whatsappToegevoegd Boolean       @default(false)
   betaaldAkkoord Boolean           @default(false)
   betaald        Boolean           @default(false)
   season         Season            @relation(fields: [seasonId], references: [id])
