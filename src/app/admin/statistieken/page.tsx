@@ -272,16 +272,16 @@ export default async function AdminStatistiekenPage() {
     value: `${s.matchesPlayed}x`,
   }));
 
-  // Beste prijs-kwaliteit: punten per euro waarde. Alleen spelers met een waarde > 0.
+  // Beste prijs-kwaliteit: punten per €100 waarde. Alleen spelers met een waarde > 0.
   const bestValueItems: ListItem[] = topPointsStats
     .filter((s) => s.player.value > 0)
-    .map((s) => ({ ...s, ratio: s.totalPoints / s.player.value }))
+    .map((s) => ({ ...s, ratio: (s.totalPoints / s.player.value) * 100 }))
     .sort((a, b) => b.ratio - a.ratio)
     .slice(0, 5)
     .map((s, i) => ({
       key: s.playerId, rank: i + 1, primary: s.player.name,
       secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam} · €${s.player.value} · ${s.totalPoints} pt`,
-      value: `${s.ratio.toFixed(2)} pt/€`,
+      value: `${s.ratio.toFixed(1)} pt/€100`,
     }));
 
   return (
@@ -416,7 +416,7 @@ export default async function AdminStatistiekenPage() {
                 <RankedList items={mostPlayedItems} emptyText="Nog geen wedstrijden verwerkt." />
               </StatCard>
 
-              <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per euro waarde">
+              <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per €100 waarde">
                 <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
               </StatCard>
             </div>
