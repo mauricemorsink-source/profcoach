@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
+import PredictionStatsChart from "@/components/admin/statistieken/PredictionStatsChart";
 
 const TEAM_LABEL: Record<string, string> = {
   ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
@@ -66,7 +67,7 @@ export default async function AdminStatistiekenPage() {
     return <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>;
   }
 
-  const [entries, activePlayers, goalsAgg, yellowCardsAgg, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats, mostPlayedStats] = await Promise.all([
+  const [entries, activePlayers, goalsAgg, yellowCardsAgg, predictionConfig, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats, mostPlayedStats] = await Promise.all([
     prisma.teamEntry.findMany({
       where: { seasonId: season.id },
       include: {
@@ -92,6 +93,7 @@ export default async function AdminStatistiekenPage() {
       where: { match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
       _sum: { yellowCards: true },
     }),
+    prisma.predictionConfig.findUnique({ where: { id: "singleton" } }),
     prisma.playerSeasonStats.findMany({
       where: { seasonId: season.id, goals: { gt: 0 } },
       orderBy: { goals: "desc" },
@@ -125,6 +127,13 @@ export default async function AdminStatistiekenPage() {
 
   const totalGoalsScored = goalsAgg._sum.goalsScored ?? 0;
   const totalYellowCards = yellowCardsAgg._sum.yellowCards ?? 0;
+
+  const yellowCardGuesses = entries
+    .map((e) => e.prediction?.totalYellowCards)
+    .filter((v): v is number => v !== null && v !== undefined);
+  const totalGoalsGuesses = entries
+    .map((e) => e.prediction?.totalGoals)
+    .filter((v): v is number => v !== null && v !== undefined);
 
   const topScorerItems: ListItem[] = topScorerStats.map((s, i) => ({
     key: s.playerId, rank: i + 1, primary: s.player.name,
@@ -359,7 +368,7 @@ export default async function AdminStatistiekenPage() {
 
           <div>
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Bonusvragen — stand van zaken</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div className="bg-slate-900 neon-border rounded-2xl p-4">
                 <p className="text-2xl font-black text-white">{totalGoalsScored}</p>
                 <p className="text-xs text-slate-500 mt-0.5">Doelpunten voor Rietmolen (incl. eigen goals tegenstanders en spelers buiten het spel)</p>
@@ -368,6 +377,24 @@ export default async function AdminStatistiekenPage() {
                 <p className="text-2xl font-black text-white">{totalYellowCards}</p>
                 <p className="text-xs text-slate-500 mt-0.5">Gele kaarten Rietmolen</p>
               </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <PredictionStatsChart
+                title="Voorspellingen: totaal doelpunten"
+                unit="doelpunten"
+                guesses={totalGoalsGuesses}
+                actual={totalGoalsScored}
+                correctMin={predictionConfig?.totalGoalsMin ?? null}
+                correctMax={predictionConfig?.totalGoalsMax ?? null}
+              />
+              <PredictionStatsChart
+                title="Voorspellingen: gele kaarten"
+                unit="kaarten"
+                guesses={yellowCardGuesses}
+                actual={totalYellowCards}
+                correctMin={predictionConfig?.yellowCardsMin ?? null}
+                correctMax={predictionConfig?.yellowCardsMax ?? null}
+              />
             </div>
           </div>
 
