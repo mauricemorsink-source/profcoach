@@ -33,6 +33,47 @@ function totaalPunten(d: Deelnemer): number {
   return d.players.reduce((s, tp) => s + tp.totalPoints, 0) + d.captainPoints + d.bonusPoints;
 }
 
+function csvCell(value: string | number): string {
+  const s = String(value);
+  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function playersByPosition(d: Deelnemer, position: string): string {
+  return d.players
+    .filter((tp) => tp.player.position === position)
+    .sort((a, b) => a.slotIndex - b.slotIndex)
+    .map((tp) => tp.player.name)
+    .join("; ");
+}
+
+function exportDeelnemersCsv(rows: Deelnemer[]) {
+  const headers = [
+    "Naam", "E-mail", "Telefoon", "Formatie", "Aanvoerder",
+    "Doelman", "Verdedigers", "Middenvelders", "Aanvallers",
+    "Punten", "Betaald", "Wil in WhatsApp-groep", "Toegevoegd aan groep", "Aangemeld",
+  ];
+  const lines = [headers.join(";")];
+  for (const d of rows) {
+    const naam = d.voornaam || d.achternaam ? `${d.voornaam ?? ""} ${d.achternaam ?? ""}`.trim() : "";
+    const captain = d.players.find((tp) => tp.slotIndex === d.captainSlot);
+    const cells = [
+      naam, d.email ?? "", d.telefoonnummer ?? "", d.formation?.code ?? "", captain?.player.name ?? "",
+      playersByPosition(d, "GK"), playersByPosition(d, "DEF"), playersByPosition(d, "MID"), playersByPosition(d, "ATT"),
+      totaalPunten(d), d.betaald ? "Ja" : "Nee", d.whatsappGroep ? "Ja" : "Nee", d.whatsappToegevoegd ? "Ja" : "Nee",
+      new Date(d.createdAt).toLocaleDateString("nl-NL"),
+    ];
+    lines.push(cells.map(csvCell).join(";"));
+  }
+  // BOM vooraan zodat Excel het als UTF-8 herkent (anders lopen namen met é/ë etc. fout).
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `deelnemers-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <span className="text-slate-700 ml-1">↕</span>;
   return <span className="text-cyan-400 ml-1">{dir === "asc" ? "↑" : "↓"}</span>;
@@ -143,7 +184,16 @@ export default function DeelnemersList({
             </p>
           )}
         </div>
-        <button onClick={onRefresh} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Vernieuwen</button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportDeelnemersCsv(sorted)}
+            disabled={sorted.length === 0}
+            className="text-sm text-slate-500 hover:text-slate-300 disabled:opacity-40 disabled:hover:text-slate-500 transition-colors"
+          >
+            Exporteren (CSV)
+          </button>
+          <button onClick={onRefresh} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">Vernieuwen</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-5">
