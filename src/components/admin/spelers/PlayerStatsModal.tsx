@@ -1,5 +1,8 @@
+import { useState } from "react";
 import type { Player, PlayerStats } from "./types";
 import { POSITION_LABEL, TEAM_LABEL, BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER } from "./constants";
+
+const PICKED_BY_PREVIEW_COUNT = 10;
 
 type Props = {
   playerStatsModal: Player;
@@ -24,6 +27,8 @@ export default function PlayerStatsModal({
   deletingId,
   onDelete,
 }: Props) {
+  const [showAllPicks, setShowAllPicks] = useState(false);
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-slate-900 rounded-2xl w-full max-w-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
@@ -95,23 +100,33 @@ export default function PlayerStatsModal({
                 {playerStats.pickedBy.length === 0 ? (
                   <p className="text-slate-500 text-sm">Nog door niemand gekozen.</p>
                 ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {playerStats.pickedBy.map((p) => (
-                      <span
-                        key={p.teamEntryId}
-                        title={p.locked ? "Team ingediend" : "Team nog niet ingediend (concept)"}
-                        className={`text-xs px-2 py-1 rounded-full border font-medium flex items-center gap-1 ${
-                          p.locked
-                            ? "bg-slate-800 border-slate-700 text-slate-300"
-                            : "bg-amber-900/20 border-amber-500/30 text-amber-400"
-                        }`}
+                  <>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(showAllPicks ? playerStats.pickedBy : playerStats.pickedBy.slice(0, PICKED_BY_PREVIEW_COUNT)).map((p) => (
+                        <span
+                          key={p.teamEntryId}
+                          title={p.locked ? "Team ingediend" : "Team nog niet ingediend (concept)"}
+                          className={`text-xs px-2 py-1 rounded-full border font-medium flex items-center gap-1 ${
+                            p.locked
+                              ? "bg-slate-800 border-slate-700 text-slate-300"
+                              : "bg-amber-900/20 border-amber-500/30 text-amber-400"
+                          }`}
+                        >
+                          {p.isCaptain && <span className="text-yellow-400 font-bold">C</span>}
+                          {p.naam ?? <span className="italic text-slate-500">Geen naam</span>}
+                          {!p.locked && <span className="text-[10px] opacity-70">(concept)</span>}
+                        </span>
+                      ))}
+                    </div>
+                    {playerStats.pickedBy.length > PICKED_BY_PREVIEW_COUNT && (
+                      <button
+                        onClick={() => setShowAllPicks((v) => !v)}
+                        className="text-xs text-cyan-400 hover:text-cyan-300 font-medium transition-colors mt-2"
                       >
-                        {p.isCaptain && <span className="text-yellow-400 font-bold">C</span>}
-                        {p.naam ?? <span className="italic text-slate-500">Geen naam</span>}
-                        {!p.locked && <span className="text-[10px] opacity-70">(concept)</span>}
-                      </span>
-                    ))}
-                  </div>
+                        {showAllPicks ? "Toon minder" : `Toon meer (${playerStats.pickedBy.length - PICKED_BY_PREVIEW_COUNT})`}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 
