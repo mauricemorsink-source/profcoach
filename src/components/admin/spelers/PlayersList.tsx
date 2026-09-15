@@ -23,18 +23,19 @@ type Props = {
   onOpenPlayerStats: (player: Player) => void;
 };
 
-type SortKey = "naam" | "positie" | "elftal" | "waarde" | "punten";
+type SortKey = "naam" | "positie" | "elftal" | "waarde" | "punten" | "gekozen";
 type SortDir = "asc" | "desc";
-type ColumnKey = "positie" | "elftal" | "waarde" | "punten";
+type ColumnKey = "positie" | "elftal" | "waarde" | "punten" | "gekozen";
 
 const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey: SortKey }[] = [
   { key: "positie", label: "Pos", sortKey: "positie" },
   { key: "elftal", label: "Elftal", sortKey: "elftal" },
   { key: "waarde", label: "Waarde", sortKey: "waarde" },
   { key: "punten", label: "Punten", sortKey: "punten" },
+  { key: "gekozen", label: "Gekozen", sortKey: "gekozen" },
 ];
 
-const DEFAULT_COLUMNS: ColumnKey[] = ["positie", "elftal", "waarde", "punten"];
+const DEFAULT_COLUMNS: ColumnKey[] = ["positie", "elftal", "waarde", "punten", "gekozen"];
 const COLUMNS_STORAGE_KEY = "profcoach_admin_spelers_columns";
 
 function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
@@ -92,7 +93,7 @@ export default function PlayersList({
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir(key === "punten" || key === "waarde" ? "desc" : "asc");
+      setSortDir(key === "punten" || key === "waarde" || key === "gekozen" ? "desc" : "asc");
     }
   }
 
@@ -118,6 +119,8 @@ export default function PlayersList({
         return mult * (a.value - b.value);
       case "punten":
         return mult * (a.totalPoints - b.totalPoints);
+      case "gekozen":
+        return mult * (a.pickCount - b.pickCount);
       default:
         return 0;
     }
@@ -370,6 +373,9 @@ export default function PlayersList({
                   )}
                   {visibleColumns.has("punten") && (
                     <td className="py-3 px-3 text-cyan-400 font-semibold">{player.totalPoints}</td>
+                  )}
+                  {visibleColumns.has("gekozen") && (
+                    <td className="py-3 px-3 text-slate-400">{player.pickCount}x</td>
                   )}
                   <td className="py-3 pl-3 text-right">
                     <button onClick={() => onOpenPlayerStats(player)} className={BTN_SMALL}>

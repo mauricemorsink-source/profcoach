@@ -13,7 +13,7 @@ export async function GET() {
 
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
-  const [players, seasonStats] = await Promise.all([
+  const [players, seasonStats, pickCounts] = await Promise.all([
     prisma.player.findMany({
       where: { active: true },
       orderBy: [{ clubTeam: "asc" }, { position: "asc" }, { name: "asc" }],
@@ -25,13 +25,22 @@ export async function GET() {
           select: { playerId: true, totalPoints: true },
         })
       : Promise.resolve([]),
+    season
+      ? prisma.teamEntryPlayer.groupBy({
+          by: ["playerId"],
+          where: { teamEntry: { seasonId: season.id } },
+          _count: { playerId: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   const pointsByPlayer = new Map(seasonStats.map((s) => [s.playerId, s.totalPoints]));
+  const pickCountByPlayer = new Map(pickCounts.map((p) => [p.playerId, p._count.playerId]));
   const result = players.map(({ performances, ...player }) => ({
     ...player,
     hasPlayedMatch: performances.length > 0,
     totalPoints: pointsByPlayer.get(player.id) ?? 0,
+    pickCount: pickCountByPlayer.get(player.id) ?? 0,
   }));
   return NextResponse.json(result);
 }

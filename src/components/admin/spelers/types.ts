@@ -8,6 +8,7 @@ export type Player = {
   value: number;
   hasPlayedMatch: boolean;
   totalPoints: number;
+  pickCount: number;
 };
 
 export type PlayerForm = {
@@ -63,4 +64,5 @@ export type PlayerStats = {
     matchesPlayed: number;
   } | null;
   performances: PlayerStatPerf[];
+  pickedBy: { teamEntryId: string; naam: string | null; locked: boolean; isCaptain: boolean }[];
 };

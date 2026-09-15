@@ -87,6 +87,34 @@ export default function PlayerStatsModal({
                 </div>
               )}
 
+              {/* Gekozen door */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                  Gekozen door ({playerStats.pickedBy.length})
+                </p>
+                {playerStats.pickedBy.length === 0 ? (
+                  <p className="text-slate-500 text-sm">Nog door niemand gekozen.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {playerStats.pickedBy.map((p) => (
+                      <span
+                        key={p.teamEntryId}
+                        title={p.locked ? "Team ingediend" : "Team nog niet ingediend (concept)"}
+                        className={`text-xs px-2 py-1 rounded-full border font-medium flex items-center gap-1 ${
+                          p.locked
+                            ? "bg-slate-800 border-slate-700 text-slate-300"
+                            : "bg-amber-900/20 border-amber-500/30 text-amber-400"
+                        }`}
+                      >
+                        {p.isCaptain && <span className="text-yellow-400 font-bold">C</span>}
+                        {p.naam ?? <span className="italic text-slate-500">Geen naam</span>}
+                        {!p.locked && <span className="text-[10px] opacity-70">(concept)</span>}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Per wedstrijd */}
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">

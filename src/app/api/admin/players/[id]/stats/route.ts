@@ -19,7 +19,7 @@ export async function GET(
 
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
-  const [seasonStats, performances, configs] = await Promise.all([
+  const [seasonStats, performances, configs, picks] = await Promise.all([
     season
       ? prisma.playerSeasonStats.findUnique({ where: { playerId_seasonId: { playerId, seasonId: season.id } } })
       : null,
@@ -29,7 +29,27 @@ export async function GET(
       orderBy: { match: { matchDate: "desc" } },
     }),
     prisma.pointsConfig.findMany(),
+    season
+      ? prisma.teamEntryPlayer.findMany({
+          where: { playerId, teamEntry: { seasonId: season.id } },
+          select: {
+            slotIndex: true,
+            teamEntry: { select: { id: true, voornaam: true, achternaam: true, locked: true, captainSlot: true } },
+          },
+        })
+      : [],
   ]);
+
+  const pickedBy = picks
+    .map((p) => ({
+      teamEntryId: p.teamEntry.id,
+      naam: (p.teamEntry.voornaam || p.teamEntry.achternaam)
+        ? `${p.teamEntry.voornaam ?? ""} ${p.teamEntry.achternaam ?? ""}`.trim()
+        : null,
+      locked: p.teamEntry.locked,
+      isCaptain: p.teamEntry.captainSlot === p.slotIndex,
+    }))
+    .sort((a, b) => (a.naam ?? "").localeCompare(b.naam ?? "", "nl"));
 
   const configMap = buildConfigMap(configs);
   const pos = player.position;
@@ -95,5 +115,5 @@ export async function GET(
       };
     });
 
-  return NextResponse.json({ player, seasonStats, performances: perfs });
+  return NextResponse.json({ player, seasonStats, performances: perfs, pickedBy });
 }
