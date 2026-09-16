@@ -397,9 +397,16 @@ export async function applyMatchPointsToSeason(
       if (!captainPlayer) continue;
       const captainDelta = totalDeltas.get(captainPlayer.playerId);
       if (!captainDelta || captainDelta.wins === 0) continue;
+      // Dit kijkt naar de HUIDIGE aanvoerder, niet naar wie aanvoerder was toen de bonus
+      // oorspronkelijk werd toegekend (dat wordt nergens per-wedstrijd bijgehouden). Als een
+      // deelnemer zijn aanvoerder later wijzigt naar iemand die in een inmiddels te verwijderen
+      // wedstrijd had gewonnen, trekt de revert (factor -1) hier een bonus af die deze
+      // deelnemer voor déze wedstrijd nooit heeft gekregen. Floor op 0 voorkomt in elk geval
+      // dat dat tot een zichtbare negatieve aanvoerdersbonus leidt.
+      const newCaptainPoints = Math.max(0, te.captainPoints + captainBonus.pointsPerWin * captainDelta.wins);
       await prisma.teamEntry.update({
         where: { id: te.id },
-        data: { captainPoints: { increment: captainBonus.pointsPerWin * captainDelta.wins } },
+        data: { captainPoints: newCaptainPoints },
       });
     }
   }

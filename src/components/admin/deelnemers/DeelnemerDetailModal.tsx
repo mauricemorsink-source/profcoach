@@ -98,7 +98,7 @@ export default function DeelnemerDetailModal({
                         <td className="py-1 text-right text-cyan-400 font-semibold">{tp.totalPoints}</td>
                         <td className="py-1 text-right">
                           {isCaptain
-                            ? <span className="text-yellow-400 font-semibold">+{modal.captainPoints}</span>
+                            ? <span className="text-yellow-400 font-semibold">{modal.captainPoints > 0 ? `+${modal.captainPoints}` : modal.captainPoints}</span>
                             : <span className="text-slate-700">—</span>}
                         </td>
                       </tr>
