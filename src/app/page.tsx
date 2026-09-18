@@ -18,6 +18,12 @@ export default async function HomePage() {
   const deadlinePassed = !!deadline && deadline <= new Date();
   const registrationClosed = !registrationOpen || deadlinePassed;
   const showCountdown = !registrationClosed && !!deadline;
+  const showClosedNotice = registrationClosed && (settings?.showClosedNoticeOnHome ?? true);
+  // Staff (admin/manager) loggen wel in, maar hebben geen aparte homepage-ervaring nodig --
+  // die werken volledig via de primaire/secundaire navigatie. Alleen een echte
+  // deelnemer-sessie (zeldzaam nu requireLogin uitstaat) krijgt hier het "Mijn team"-pad.
+  const isStaff = session?.role === "ADMIN" || session?.role === "MANAGER";
+  const showParticipantHome = !!session && !isStaff;
 
   return (
     <div className="relative min-h-[calc(100vh-56px)] flex flex-col items-center justify-center p-8 overflow-hidden bg-[#060b14]">
@@ -98,37 +104,54 @@ export default async function HomePage() {
           animation: "borderGlow 4s ease-in-out infinite",
         }}
       >
-        {session ? (
+        {showParticipantHome ? (
           <>
             <p className="text-center text-slate-400 text-sm pb-1">
               Welkom terug,{" "}
-              <span className="font-semibold text-white">{session.name ?? session.email}</span>
+              <span className="font-semibold text-white">{session!.name ?? session!.email}</span>
             </p>
             <Link href="/mijn-team" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
               Mijn team
             </Link>
-            {registrationClosed ? (
+            {showCountdown && <CountdownTimer deadline={deadline!.toISOString()} />}
+            <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
+              Tussenstand
+            </Link>
+            <Link href="/tussenstand/statistieken" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
+              Topscorers &amp; statistieken
+            </Link>
+            {showClosedNotice && (
               <RegistrationClosedNotice
                 compact
                 title={content["meldingen.registratie_gesloten_titel"]}
                 text={content["meldingen.registratie_gesloten_tekst"]}
               />
-            ) : (
-              showCountdown && <CountdownTimer deadline={deadline!.toISOString()} />
             )}
-            <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
-              Tussenstand
+          </>
+        ) : registrationClosed ? (
+          <>
+            {/* Gesloten transfermarkt: de twee tussenstand-tabbladen zijn nu het hoofddoel
+                van de homepage, niet langer het inschrijfformulier. */}
+            <Link href="/tussenstand" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
+              Tussenstand bekijken
+            </Link>
+            <Link href="/tussenstand/statistieken" className="block w-full text-center py-3 px-6 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-semibold rounded-xl text-lg border border-cyan-500/20 transition-colors">
+              Topscorers &amp; statistieken
+            </Link>
+            {showClosedNotice && (
+              <RegistrationClosedNotice
+                compact
+                title={content["meldingen.registratie_gesloten_titel"]}
+                text={content["meldingen.registratie_gesloten_tekst"]}
+              />
+            )}
+            <Link href="/spelregels" className="block w-full text-center py-2.5 px-6 text-slate-400 hover:text-white text-sm font-medium transition-colors">
+              Spelregels
             </Link>
           </>
         ) : (
           <>
-            {registrationClosed ? (
-              <RegistrationClosedNotice
-                compact
-                title={content["meldingen.registratie_gesloten_titel"]}
-                text={content["meldingen.registratie_gesloten_tekst"]}
-              />
-            ) : !requireLogin ? (
+            {!requireLogin ? (
               <Link href="/team-indienen" className="block w-full text-center py-3 px-6 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-lg transition-colors neon-glow-sm">
                 Team samenstellen
               </Link>

@@ -11,6 +11,7 @@ type GameSettings = {
   inschrijfgeld: number;
   captainEnabled: boolean;
   wijzigingsvensterOpen: boolean;
+  showClosedNoticeOnHome: boolean;
 };
 
 const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
@@ -27,6 +28,7 @@ export default function InstellingenClient() {
     inschrijfgeld: 0,
     captainEnabled: false,
     wijzigingsvensterOpen: false,
+    showClosedNoticeOnHome: true,
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -44,6 +46,7 @@ export default function InstellingenClient() {
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
+        showClosedNoticeOnHome: data.showClosedNoticeOnHome ?? true,
       });
     }
   }
@@ -62,6 +65,7 @@ export default function InstellingenClient() {
         inschrijfgeld: Number(settingsForm.inschrijfgeld),
         captainEnabled: settingsForm.captainEnabled,
         wijzigingsvensterOpen: settingsForm.wijzigingsvensterOpen,
+        showClosedNoticeOnHome: settingsForm.showClosedNoticeOnHome,
       }),
     });
     const data = await res.json();
@@ -78,6 +82,7 @@ export default function InstellingenClient() {
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
         captainEnabled: data.captainEnabled ?? false,
         wijzigingsvensterOpen: data.wijzigingsvensterOpen ?? false,
+        showClosedNoticeOnHome: data.showClosedNoticeOnHome ?? true,
       });
       setSettingsMsg({ type: "ok", text: "Instellingen opgeslagen" });
     }
@@ -211,6 +216,27 @@ export default function InstellingenClient() {
                   Deelnemers kunnen nu via <strong>/team-aanpassen</strong> hun opstelling en aanvoerder wijzigen via een e-maillink.
                 </p>
               )}
+            </div>
+            <div className="space-y-3 border-t border-slate-800 pt-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Homepagina</p>
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settingsForm.showClosedNoticeOnHome}
+                    onChange={(e) => setSettingsForm({ ...settingsForm, showClosedNoticeOnHome: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+                </label>
+                <span className="text-sm font-medium text-slate-300">Melding &quot;transfermarkt gesloten&quot; tonen</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${settingsForm.showClosedNoticeOnHome ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
+                  {settingsForm.showClosedNoticeOnHome ? "Aan" : "Uit"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 ml-14">
+                Alleen zichtbaar als de inschrijving gesloten is. Zet uit om de homepagina schoner te houden zodra iedereen weet dat het seizoen loopt.
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <label className="relative inline-flex items-center cursor-pointer">

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import type { SessionPayload } from "@/lib/auth";
 
-export default function MobileMenu({ session, requireLogin }: { session: SessionPayload | null; requireLogin: boolean }) {
+export default function MobileMenu({ session, requireLogin, registrationClosed }: { session: SessionPayload | null; requireLogin: boolean; registrationClosed: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const isStaff = session?.role === "ADMIN" || session?.role === "MANAGER";
@@ -78,9 +78,15 @@ export default function MobileMenu({ session, requireLogin }: { session: Session
                   </button>
                 </form>
               ) : !requireLogin ? (
-                <Link href="/team-indienen" onClick={() => setOpen(false)} className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
-                  Team indienen
-                </Link>
+                registrationClosed ? (
+                  <Link href="/tussenstand" onClick={() => setOpen(false)} className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
+                    Tussenstand bekijken
+                  </Link>
+                ) : (
+                  <Link href="/team-indienen" onClick={() => setOpen(false)} className="flex items-center justify-center mx-3 py-3 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
+                    Team indienen
+                  </Link>
+                )
               ) : null}
             </div>
 

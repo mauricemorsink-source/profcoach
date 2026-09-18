@@ -7,10 +7,12 @@ import MobileMenu from "./MobileMenu";
 export default async function NavBar() {
   const [session, settings] = await Promise.all([
     getSession(),
-    prisma.gameSettings.findUnique({ where: { id: "singleton" }, select: { requireLogin: true } }),
+    prisma.gameSettings.findUnique({ where: { id: "singleton" }, select: { requireLogin: true, registrationOpen: true, deadline: true } }),
   ]);
   const requireLogin = settings?.requireLogin ?? true;
   const isStaff = session?.role === "ADMIN" || session?.role === "MANAGER";
+  const deadlinePassed = !!settings?.deadline && settings.deadline <= new Date();
+  const registrationClosed = !(settings?.registrationOpen ?? false) || deadlinePassed;
 
   return (
     <nav className="relative bg-slate-900/95 border-b border-cyan-500/15 sticky top-0 z-40 backdrop-blur-sm" style={{ boxShadow: "0 1px 20px rgba(34,211,238,0.08)" }}>
@@ -45,9 +47,15 @@ export default async function NavBar() {
 
         {/* Mobile: directe knop */}
         {!requireLogin && !session && (
-          <Link href="/team-indienen" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-cyan-600 whitespace-nowrap transition-colors">
-            Team indienen
-          </Link>
+          registrationClosed ? (
+            <Link href="/tussenstand" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-cyan-600 whitespace-nowrap transition-colors">
+              Tussenstand bekijken
+            </Link>
+          ) : (
+            <Link href="/team-indienen" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-cyan-600 whitespace-nowrap transition-colors">
+              Team indienen
+            </Link>
+          )
         )}
         {session && !isStaff && (session.isParticipant ?? true) && (
           <Link href="/mijn-team" className="sm:hidden px-3 py-1.5 rounded-lg text-sm font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 whitespace-nowrap transition-colors">
@@ -74,14 +82,20 @@ export default async function NavBar() {
               </button>
             </form>
           ) : !requireLogin ? (
-            <Link href="/team-indienen" className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
-              Team indienen
-            </Link>
+            registrationClosed ? (
+              <Link href="/tussenstand" className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
+                Tussenstand bekijken
+              </Link>
+            ) : (
+              <Link href="/team-indienen" className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white whitespace-nowrap transition-colors" style={{ boxShadow: "0 0 8px rgba(34,211,238,0.3)" }}>
+                Team indienen
+              </Link>
+            )
           ) : null}
         </div>
 
         {/* Mobile: hamburger menu */}
-        <MobileMenu session={session} requireLogin={requireLogin} />
+        <MobileMenu session={session} requireLogin={requireLogin} registrationClosed={registrationClosed} />
 
       </div>
     </nav>

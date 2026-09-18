@@ -78,6 +78,7 @@ model GameSettings {
   isProcessing       Boolean   @default(false)
   showTussenstand       Boolean   @default(true)
   showStatistieken      Boolean   @default(true)
+  showClosedNoticeOnHome Boolean  @default(true)
   wijzigingsvensterOpen Boolean   @default(false)
   updatedAt             DateTime  @updatedAt
 }
