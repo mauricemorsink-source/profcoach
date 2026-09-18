@@ -12,6 +12,29 @@ type GameSettings = {
   wijzigingsvensterOpen: boolean;
 };
 
+// De deadline staat als UTC in de database, maar wordt ingevuld en gelezen als Nederlandse
+// tijd. Een <input type="datetime-local"> heeft geen tijdzone-besef, dus we converteren hier
+// expliciet heen en weer. Bewust een vaste zone i.p.v. de browserzone: de deadline moet
+// hetzelfde moment betekenen, ook als de beheerder vanuit het buitenland inlogt.
+const TZ = "Europe/Amsterdam";
+
+function utcIsoToLocalInput(iso: string): string {
+  // sv-SE levert "2026-09-18 23:59" -- ISO-achtig, dus direct bruikbaar na de spatie-swap.
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: TZ,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(new Date(iso)).replace(" ", "T");
+}
+
+function localInputToUtcIso(local: string): string {
+  // Neem de ingevoerde wandkloktijd eerst als UTC, kijk welke NL-tijd dat oplevert, en
+  // corrigeer met dat verschil. Zo wordt de zomer-/wintertijdoffset automatisch goed toegepast.
+  const asUtc = new Date(`${local}:00Z`);
+  const drift = asUtc.getTime() - new Date(`${utcIsoToLocalInput(asUtc.toISOString())}:00Z`).getTime();
+  return new Date(asUtc.getTime() + drift).toISOString();
+}
+
 const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
 const LABEL = "block text-sm font-medium text-slate-400 mb-1";
 const BTN_PRIMARY = "px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-50 font-semibold text-sm transition-colors neon-glow-sm";
@@ -37,7 +60,7 @@ export default function InstellingenClient() {
       setSettings(data);
       setSettingsForm({
         budget: data.budget,
-        deadline: data.deadline ? data.deadline.slice(0, 16) : "",
+        deadline: data.deadline ? utcIsoToLocalInput(data.deadline) : "",
         registrationOpen: data.registrationOpen,
         requireLogin: data.requireLogin ?? true,
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,
@@ -55,7 +78,7 @@ export default function InstellingenClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         budget: Number(settingsForm.budget),
-        deadline: settingsForm.deadline || null,
+        deadline: settingsForm.deadline ? localInputToUtcIso(settingsForm.deadline) : null,
         registrationOpen: settingsForm.registrationOpen,
         requireLogin: settingsForm.requireLogin,
         inschrijfgeld: Number(settingsForm.inschrijfgeld),
@@ -71,7 +94,7 @@ export default function InstellingenClient() {
       setSettings(data);
       setSettingsForm({
         budget: data.budget,
-        deadline: data.deadline ? data.deadline.slice(0, 16) : "",
+        deadline: data.deadline ? utcIsoToLocalInput(data.deadline) : "",
         registrationOpen: data.registrationOpen,
         requireLogin: data.requireLogin ?? true,
         inschrijfgeld: (data.inschrijfgeld ?? 0) / 100,

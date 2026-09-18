@@ -36,7 +36,9 @@ export default function CountdownTimer({ deadline }: { deadline: string }) {
 
   const { days, hours, minutes, seconds } = timeLeft;
 
-  const urgent = days === 0 && hours < 3;
+  // Rode urgentieweergave vanaf 9 uur voor de deadline. days is hier altijd 0 zodra we binnen
+  // een etmaal zitten, dus hours is dan het werkelijke aantal resterende uren.
+  const urgent = days === 0 && hours < 9;
 
   return (
     <div className={`rounded-xl border px-4 py-3 text-center ${urgent ? "bg-red-950/30 border-red-500/30" : "bg-slate-800/60 border-slate-700/50"}`}>
