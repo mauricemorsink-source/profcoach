@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { utcIsoToLocalInput, localInputToUtcIso } from "@/lib/datetime";
 import type { FlexConflict, GuestAppearance, PublishMoment, AdminMatch, EditPerfEntry } from "./wedstrijden/types";
 import MatchesList from "./wedstrijden/MatchesList";
 import PublishMomentsPanel from "./wedstrijden/PublishMomentsPanel";
@@ -340,7 +341,7 @@ export default function WedstrijdenClient() {
     const uitGoals = m.homeAway === "HOME" ? m.goalsConceded : m.goalsScored;
     setEditMatchForm({
       name: m.name,
-      matchDate: m.matchDate.slice(0, 16),
+      matchDate: utcIsoToLocalInput(m.matchDate),
       thuisGoals,
       uitGoals,
       homeAway: m.homeAway,
@@ -382,7 +383,7 @@ export default function WedstrijdenClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: editMatchForm.name,
-        matchDate: editMatchForm.matchDate,
+        matchDate: localInputToUtcIso(editMatchForm.matchDate),
         goalsScored,
         goalsConceded,
         homeAway,
@@ -460,7 +461,10 @@ export default function WedstrijdenClient() {
     const res = await fetch("/api/admin/publish-moments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newMomentForm),
+      body: JSON.stringify({
+        label: newMomentForm.label,
+        scheduledAt: localInputToUtcIso(newMomentForm.scheduledAt),
+      }),
     });
     setNewMomentSaving(false);
     if (res.ok) {
