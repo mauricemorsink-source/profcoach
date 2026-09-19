@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { calculateMatchPoints, buildConfigMap } from "@/lib/points";
+import { adviseFormation, type ByPosition, type PlayerEntry } from "@/lib/totw";
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -10,13 +11,13 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { matchIds, formationCode } = body;
+  const { matchIds, formationCode, adviseOnly } = body;
 
   if (!Array.isArray(matchIds) || matchIds.length === 0) {
     return NextResponse.json({ error: "Geen wedstrijden geselecteerd" }, { status: 400 });
   }
 
-  const [matches, formation, configs] = await Promise.all([
+  const [matches, formations, configs] = await Promise.all([
     prisma.match.findMany({
       where: { id: { in: matchIds }, status: "PROCESSED" },
       include: {
@@ -28,25 +29,11 @@ export async function POST(req: Request) {
         },
       },
     }),
-    prisma.formation.findUnique({ where: { code: formationCode } }),
+    prisma.formation.findMany({ orderBy: { code: "asc" } }),
     prisma.pointsConfig.findMany(),
   ]);
 
-  if (!formation) {
-    return NextResponse.json({ error: "Formatie niet gevonden" }, { status: 400 });
-  }
-
   const configMap = buildConfigMap(configs);
-
-  type PlayerEntry = {
-    playerId: string;
-    name: string;
-    shortName: string | null;
-    position: string;
-    clubTeam: string;
-    points: number;
-  };
-
   const playerMap = new Map<string, PlayerEntry>();
 
   for (const match of matches) {
@@ -69,40 +56,42 @@ export async function POST(req: Request) {
     }
   }
 
-  function pickTopN(list: PlayerEntry[], n: number): PlayerEntry[] {
-    if (list.length <= n) return list;
-    const sorted = [...list].sort((a, b) => b.points - a.points);
-    const cutoff = sorted[n - 1].points;
-    const above = sorted.filter((p) => p.points > cutoff);
-    const tied = sorted.filter((p) => p.points === cutoff);
-    // Fisher-Yates shuffle zodat gelijkspelers random worden geselecteerd
-    for (let i = tied.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [tied[i], tied[j]] = [tied[j], tied[i]];
-    }
-    return [...above, ...tied.slice(0, n - above.length)];
-  }
-
-  const byPosition: Record<string, PlayerEntry[]> = { GK: [], DEF: [], MID: [], ATT: [] };
+  const byPosition: ByPosition = { GK: [], DEF: [], MID: [], ATT: [] };
   for (const entry of playerMap.values()) {
-    const pos = entry.position as keyof typeof byPosition;
-    byPosition[pos]?.push(entry);
+    byPosition[entry.position as keyof ByPosition]?.push(entry);
   }
 
-  const players = [
-    ...pickTopN(byPosition.GK, 1),
-    ...pickTopN(byPosition.DEF, formation.defenders),
-    ...pickTopN(byPosition.MID, formation.midfielders),
-    ...pickTopN(byPosition.ATT, formation.attackers),
-  ];
+  const { evaluations, recommendedCode } = adviseFormation(byPosition, formations);
+  const advice = evaluations.map((e) => ({
+    code: e.code,
+    defenders: e.defenders,
+    midfielders: e.midfielders,
+    attackers: e.attackers,
+    total: e.total,
+    complete: e.complete,
+    tiedOut: e.tiedOut.length,
+  }));
+
+  if (adviseOnly) {
+    return NextResponse.json({ advice, recommendedCode });
+  }
+
+  const chosen = evaluations.find((e) => e.code === (formationCode ?? recommendedCode));
+  if (!chosen) {
+    return NextResponse.json({ error: "Formatie niet gevonden" }, { status: 400 });
+  }
 
   return NextResponse.json({
     formation: {
-      code: formation.code,
-      defenders: formation.defenders,
-      midfielders: formation.midfielders,
-      attackers: formation.attackers,
+      code: chosen.code,
+      defenders: chosen.defenders,
+      midfielders: chosen.midfielders,
+      attackers: chosen.attackers,
     },
-    players,
+    players: chosen.picked,
+    tiedOut: chosen.tiedOut,
+    total: chosen.total,
+    recommendedCode,
+    advice,
   });
 }

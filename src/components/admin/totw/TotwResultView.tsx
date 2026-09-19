@@ -46,6 +46,12 @@ export function TotwResultView({
             </div>
           ))}
         </div>
+        {totw.tiedOut && totw.tiedOut.length > 0 && (
+          <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-800">
+            Evenveel punten als de laatst gekozen speler, maar niet meer in dit elftal:{" "}
+            {totw.tiedOut.map((p) => `${p.name} (${p.position}, ${p.points} pt)`).join(", ")}.
+          </p>
+        )}
       </div>
     </section>
   );

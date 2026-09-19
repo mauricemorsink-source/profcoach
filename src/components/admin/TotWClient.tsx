@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Match, Formation, TotWResult } from "./totw/types";
+import type { Match, Formation, FormationAdvice, TotWResult } from "./totw/types";
 import { drawPitchCanvas } from "./totw/canvasDrawing";
 import { ConfigModal } from "./totw/ConfigModal";
 import { MatchSelector } from "./totw/MatchSelector";
@@ -14,7 +14,7 @@ export default function TotWClient({
   matches: Match[];
   formations: Formation[];
 }) {
-  const defaultFormation = formations.find((f) => f.code === "433") ?? formations[0] ?? null;
+  const defaultFormation = formations.find((f) => f.code === "1-4-3-3") ?? formations[0] ?? null;
 
   const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -24,6 +24,9 @@ export default function TotWClient({
   const [totw, setTotw] = useState<TotWResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [advice, setAdvice] = useState<FormationAdvice[] | null>(null);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [recommendedCode, setRecommendedCode] = useState<string | null>(null);
 
   // Group by match date (day)
   const groups = new Map<string, { label: string; sortKey: string; matches: Match[] }>();
@@ -55,6 +58,34 @@ export default function TotWClient({
       return next;
     });
     setTotw(null);
+  }
+
+  async function openConfig() {
+    setModalOpen(true);
+    setError(null);
+    setAdvice(null);
+    setRecommendedCode(null);
+    setAdviceLoading(true);
+    try {
+      const res = await fetch("/api/admin/totw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchIds: Array.from(selectedMatchIds), adviseOnly: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Advies ophalen mislukt");
+      } else {
+        setAdvice(data.advice);
+        setRecommendedCode(data.recommendedCode);
+        const recommended = formations.find((f) => f.code === data.recommendedCode);
+        if (recommended) setSelectedFormation(recommended);
+      }
+    } catch {
+      setError("Verbindingsfout bij het ophalen van het advies");
+    } finally {
+      setAdviceLoading(false);
+    }
   }
 
   async function generate() {
@@ -123,7 +154,7 @@ export default function TotWClient({
 
           {/* Generate button */}
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={openConfig}
             disabled={selectedMatchIds.size === 0}
             className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg disabled:opacity-40 font-semibold text-sm transition-colors"
           >
@@ -141,6 +172,9 @@ export default function TotWClient({
       {modalOpen && (
         <ConfigModal
           formations={formations}
+          advice={advice}
+          adviceLoading={adviceLoading}
+          recommendedCode={recommendedCode}
           title={title}
           subtitle={subtitle}
           selectedFormation={selectedFormation}

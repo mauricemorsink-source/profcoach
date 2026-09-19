@@ -25,4 +25,16 @@ export type TotWPlayer = {
 export type TotWResult = {
   formation: Formation;
   players: TotWPlayer[];
+  /** Spelers met evenveel punten als de laatst gekozen speler van hun positie, maar die er niet meer bij pasten. */
+  tiedOut?: TotWPlayer[];
+  total?: number;
+  recommendedCode?: string | null;
+};
+
+export type FormationAdvice = Formation & {
+  total: number;
+  /** Alle 11 plekken kunnen met een speler gevuld worden. */
+  complete: boolean;
+  /** Aantal gelijkgeplaatste spelers dat in deze formatie buiten de boot valt. */
+  tiedOut: number;
 };
