@@ -51,12 +51,6 @@ function CompactRankedList({ items, emptyText }: { items: ListItem[]; emptyText:
   );
 }
 
-function GuestBadge() {
-  return (
-    <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded shrink-0">GAST</span>
-  );
-}
-
 function SectionTitle({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="pt-4 border-b border-slate-800 pb-2">
@@ -304,7 +298,13 @@ export default async function AdminStatistiekenPage() {
   const guestRows = [...guestMap.values()].sort(
     (a, b) => b.appearances.length - a.appearances.length || a.player.name.localeCompare(b.player.name, "nl")
   );
-  const shortDate = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", timeZone: "Europe/Amsterdam" });
+  const guestItems: ListItem[] = guestRows.slice(0, 10).map((g, i) => ({
+    key: g.player.id,
+    rank: i + 1,
+    primary: g.player.name,
+    secondary: `${TEAM_LABEL[g.player.clubTeam] ?? g.player.clubTeam} · gast bij ${[...new Set(g.appearances.map((a) => TEAM_LABEL[a.team] ?? a.team))].join(", ")}`,
+    value: `${g.appearances.length}x`,
+  }));
 
   const mostPlayedItems: ListItem[] = mostPlayedStats.map((s, i) => ({
     key: s.playerId, rank: i + 1, primary: s.player.name,
@@ -317,7 +317,7 @@ export default async function AdminStatistiekenPage() {
     .filter((s) => s.player.value > 0)
     .map((s) => ({ ...s, ratio: (s.totalPoints / s.player.value) * 100 }))
     .sort((a, b) => b.ratio - a.ratio)
-    .slice(0, 5)
+    .slice(0, 10)
     .map((s, i) => ({
       key: s.playerId, rank: i + 1, primary: s.player.name,
       secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam} · €${s.player.value} · ${s.totalPoints} pt`,
@@ -377,33 +377,11 @@ export default async function AdminStatistiekenPage() {
         <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per €100 waarde">
           <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
         </StatCard>
-      </div>
 
-      <StatCard title="Gastspelers" hint="Spelers die voor een ander elftal dan hun eigen elftal hebben gespeeld (goedgekeurde en verwerkte wedstrijden)">
-        {guestRows.length === 0 ? (
-          <p className="text-slate-500 text-sm">Nog geen gastspelers.</p>
-        ) : (
-          <ul className="grid gap-x-8 gap-y-3 md:grid-cols-2">
-            {guestRows.map((g) => (
-              <li key={g.player.id} className="flex items-start gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-white">{g.player.name}</span>
-                    <GuestBadge />
-                  </div>
-                  <div className="text-slate-500 text-xs">
-                    {TEAM_LABEL[g.player.clubTeam] ?? g.player.clubTeam} · gast bij{" "}
-                    {g.appearances
-                      .map((a) => `${TEAM_LABEL[a.team] ?? a.team} (${shortDate(a.date)}${a.excluded ? ", punten tellen niet mee" : ""})`)
-                      .join(", ")}
-                  </div>
-                </div>
-                <span className="font-bold text-cyan-400 shrink-0 whitespace-nowrap">{g.appearances.length}x</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </StatCard>
+        <StatCard title="Vaakst als gast gespeeld" hint="Alleen gastspelers bij een ander elftal, geen flexspelers. Telt ook goedgekeurde wedstrijden.">
+          <RankedList items={guestItems} emptyText="Nog geen gastspelers." />
+        </StatCard>
+      </div>
 
       <div>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Beste speler per positie (op punten)</h2>
