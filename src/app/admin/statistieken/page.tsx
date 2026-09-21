@@ -96,11 +96,11 @@ export default async function AdminStatistiekenPage() {
       select: { id: true, name: true, clubTeam: true, position: true, value: true },
     }),
     prisma.match.aggregate({
-      where: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } },
+      where: { seasonId: season.id, status: "PROCESSED" },
       _sum: { goalsScored: true },
     }),
     prisma.matchPerformance.aggregate({
-      where: { match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
+      where: { match: { seasonId: season.id, status: "PROCESSED" } },
       _sum: { yellowCards: true },
     }),
     prisma.predictionConfig.findUnique({ where: { id: "singleton" } }),
