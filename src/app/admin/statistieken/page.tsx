@@ -134,10 +134,10 @@ export default async function AdminStatistiekenPage() {
       include: { player: { select: { name: true, clubTeam: true } } },
     }),
     prisma.matchPerformance.findMany({
-      where: { played: true, match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
+      where: { played: true, match: { seasonId: season.id, status: "PROCESSED" } },
       select: {
         isExcluded: true,
-        match: { select: { id: true, clubTeam: true, matchDate: true, status: true } },
+        match: { select: { id: true, clubTeam: true, matchDate: true } },
         player: { select: { id: true, name: true, clubTeam: true, altTeam: true } },
       },
     }),
@@ -287,13 +287,11 @@ export default async function AdminStatistiekenPage() {
   // Gastspelers: spelers die voor een ander elftal dan hun eigen (of flex-)elftal hebben gespeeld.
   type GuestRow = { player: { id: string; name: string; clubTeam: string }; appearances: { team: string; date: Date; excluded: boolean }[] };
   const guestMap = new Map<string, GuestRow>();
-  const processedGuestCounts = new Map<string, number>();
   for (const perf of playedPerformances) {
     if (!isGuestAppearance(perf.match.clubTeam, perf.player)) continue;
     const row = guestMap.get(perf.player.id) ?? { player: perf.player, appearances: [] };
     row.appearances.push({ team: perf.match.clubTeam, date: perf.match.matchDate, excluded: perf.isExcluded });
     guestMap.set(perf.player.id, row);
-    if (perf.match.status === "PROCESSED") processedGuestCounts.set(perf.player.id, (processedGuestCounts.get(perf.player.id) ?? 0) + 1);
   }
   const guestRows = [...guestMap.values()].sort(
     (a, b) => b.appearances.length - a.appearances.length || a.player.name.localeCompare(b.player.name, "nl")
@@ -308,7 +306,7 @@ export default async function AdminStatistiekenPage() {
 
   const mostPlayedItems: ListItem[] = mostPlayedStats.map((s, i) => ({
     key: s.playerId, rank: i + 1, primary: s.player.name,
-    secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam}${processedGuestCounts.get(s.playerId) ? ` · waarvan ${processedGuestCounts.get(s.playerId)}x als gast` : ""}`,
+    secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam}${guestMap.get(s.playerId) ? ` · waarvan ${guestMap.get(s.playerId)!.appearances.length}x als gast` : ""}`,
     value: `${s.matchesPlayed}x`,
   }));
 
@@ -378,7 +376,7 @@ export default async function AdminStatistiekenPage() {
           <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
         </StatCard>
 
-        <StatCard title="Vaakst als gast gespeeld" hint="Alleen gastspelers bij een ander elftal, geen flexspelers. Telt ook goedgekeurde wedstrijden.">
+        <StatCard title="Vaakst als gast gespeeld" hint="Alleen gastspelers bij een ander elftal, geen flexspelers. Alleen verwerkte wedstrijden.">
           <RankedList items={guestItems} emptyText="Nog geen gastspelers." />
         </StatCard>
       </div>
