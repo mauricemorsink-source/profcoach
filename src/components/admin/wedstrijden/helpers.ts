@@ -16,6 +16,18 @@ export function fromCardValue(v: string): { yellowCards: number; redCard: boolea
   return { yellowCards: 0, redCard: false };
 }
 
+const LINE_ORDER: Record<string, number> = { GK: 0, DEF: 1, MID: 2, ATT: 3 };
+
+// Zelfde volgorde als het invulformulier van de manager: keeper, verdedigers, middenvelders,
+// aanvallers, en binnen een linie op naam.
+export function sortByLine<T extends { player: { name: string; position: string } }>(items: T[]): T[] {
+  return [...items].sort(
+    (a, b) =>
+      (LINE_ORDER[a.player.position] ?? 9) - (LINE_ORDER[b.player.position] ?? 9) ||
+      a.player.name.localeCompare(b.player.name, "nl")
+  );
+}
+
 export function getOpponent(name: string, clubTeam: string): string {
   const label = TEAM_LABEL[clubTeam] ?? clubTeam;
   const parts = name.split(" - ");

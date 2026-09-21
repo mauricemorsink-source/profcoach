@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { utcIsoToLocalInput, localInputToUtcIso } from "@/lib/datetime";
 import type { FlexConflict, GuestAppearance, PublishMoment, AdminMatch, EditPerfEntry } from "./wedstrijden/types";
-import MatchesList from "./wedstrijden/MatchesList";
+import MatchesList, { type MenuPos } from "./wedstrijden/MatchesList";
 import PublishMomentsPanel from "./wedstrijden/PublishMomentsPanel";
 import EditMatchModal from "./wedstrijden/EditMatchModal";
 import GuestPreviewModal from "./wedstrijden/GuestPreviewModal";
@@ -30,7 +30,7 @@ export default function WedstrijdenClient() {
   const [matchMenuId, setMatchMenuId] = useState<string | null>(null);
   // Positie van het desktop "Acties"-dropdownpaneel, dat via een portal buiten de
   // horizontaal scrollende tabel wordt gerenderd zodat overflow-x-auto het niet afkapt.
-  const [desktopMenuPos, setDesktopMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const [desktopMenuPos, setDesktopMenuPos] = useState<MenuPos | null>(null);
 
   useEffect(() => {
     if (!matchMenuId) return;

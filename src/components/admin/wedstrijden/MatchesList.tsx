@@ -1,9 +1,38 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AdminMatch, PublishMoment } from "./types";
 import { TEAMS, TEAM_LABEL, STATUS_LABEL, STATUS_STYLE, BTN_PRIMARY, BTN_SECONDARY, BTN_SMALL, BTN_DANGER } from "./constants";
 import { getOpponent } from "./helpers";
 import MatchActionsMenu from "./MatchActionsMenu";
+
+export type MenuPos = { top: number; right: number; anchorTop: number };
+
+// Vaste (portal-)positie onder de knop. Past het menu daar niet meer in beeld, dan klapt het
+// omhoog; past het ook daar niet, dan wordt het tegen de onderrand van het scherm geplaatst.
+function FloatingMenu({ pos, children }: { pos: MenuPos; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const h = el.offsetHeight;
+    const limit = window.innerHeight - 8;
+    let top = pos.top;
+    if (top + h > limit) {
+      const above = pos.anchorTop - 4 - h;
+      top = above >= 8 ? above : Math.max(8, limit - h);
+    }
+    el.style.top = `${top}px`;
+  }, [pos]);
+  return (
+    <div
+      ref={ref}
+      style={{ position: "fixed", top: pos.top, right: pos.right }}
+      className="z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden"
+    >
+      {children}
+    </div>
+  );
+}
 
 type SortKey = "default" | "datum" | "status";
 type SortDir = "asc" | "desc";
@@ -58,8 +87,8 @@ type Props = {
   toggleAllApproveSelect: () => void;
   matchMenuId: string | null;
   setMatchMenuId: (id: string | null) => void;
-  desktopMenuPos: { top: number; right: number } | null;
-  setDesktopMenuPos: (v: { top: number; right: number } | null) => void;
+  desktopMenuPos: MenuPos | null;
+  setDesktopMenuPos: (v: MenuPos | null) => void;
   openEditMatch: (m: AdminMatch) => void;
   approveMatch: (id: string, status: "APPROVED" | "REJECTED") => void;
   approvingId: string | null;
@@ -740,7 +769,7 @@ export default function MatchesList({
                                 return;
                               }
                               const rect = e.currentTarget.getBoundingClientRect();
-                              setDesktopMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                              setDesktopMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right, anchorTop: rect.top });
                               setMatchMenuId(m.id);
                             }}
                             className={BTN_SMALL}
@@ -748,10 +777,7 @@ export default function MatchesList({
                             Acties ▾
                           </button>
                           {matchMenuId === m.id && desktopMenuPos && createPortal(
-                            <div
-                              style={{ position: "fixed", top: desktopMenuPos.top, right: desktopMenuPos.right }}
-                              className="z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden"
-                            >
+                            <FloatingMenu pos={desktopMenuPos}>
                               <MatchActionsMenu
                                 match={m}
                                 approvingId={approvingId}
@@ -773,7 +799,7 @@ export default function MatchesList({
                                 onRevert={() => revertMatch(m.id)}
                                 onDelete={() => deleteMatch(m.id)}
                               />
-                            </div>,
+                            </FloatingMenu>,
                             document.body
                           )}
                         </div>

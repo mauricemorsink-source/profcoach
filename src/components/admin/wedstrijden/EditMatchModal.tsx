@@ -1,6 +1,6 @@
 import type { AdminMatch, EditPerfEntry } from "./types";
 import { POSITION_LABEL, POSITION_COLOR, STATUS_LABEL, STATUS_STYLE, TEAM_LABEL, INPUT, LABEL, SELECT, BTN_PRIMARY, BTN_SECONDARY } from "./constants";
-import { toCardValue, fromCardValue } from "./helpers";
+import { toCardValue, fromCardValue, sortByLine } from "./helpers";
 
 type EditMatchForm = {
   name: string;
@@ -259,7 +259,7 @@ export default function EditMatchModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {editingMatch.performances.map((p) => {
+                  {sortByLine(editingMatch.performances).map((p) => {
                     const ed = editPerfsData[p.playerId] ?? {
                       played: p.played,
                       goals: p.goals,
