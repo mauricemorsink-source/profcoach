@@ -68,7 +68,8 @@ export default function SpelersClient() {
       position: player.position,
       clubTeam: player.clubTeam,
       altTeam: player.altTeam ?? "",
-      value: player.value.toString(),
+      value: player.selectable === false ? "" : player.value.toString(),
+      selectable: player.selectable !== false,
     });
     setFormError("");
     setFormTouched(false);
@@ -84,7 +85,7 @@ export default function SpelersClient() {
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, value: Number(form.value) }),
+      body: JSON.stringify({ ...form, value: form.selectable ? Number(form.value) : 0 }),
     });
     const data = await res.json();
     if (!res.ok) {

@@ -16,7 +16,7 @@ export const TEAM_LABEL: Record<string, string> = {
   FOUR: "Rietmolen 4", FIVE: "Rietmolen 5", DAMES: "Rietmolen VR1",
 };
 
-export const emptyForm: PlayerForm = { name: "", shortName: "", position: "GK", clubTeam: "ONE", altTeam: "", value: "" };
+export const emptyForm: PlayerForm = { name: "", shortName: "", position: "GK", clubTeam: "ONE", altTeam: "", value: "", selectable: true };
 
 export const INPUT = "w-full bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/50 transition-colors";
 export const LABEL = "block text-sm font-medium text-slate-400 mb-1";

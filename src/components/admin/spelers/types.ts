@@ -6,6 +6,7 @@ export type Player = {
   clubTeam: "ONE" | "TWO" | "THREE" | "FOUR" | "FIVE" | "DAMES";
   altTeam?: string | null;
   value: number;
+  selectable: boolean;
   hasPlayedMatch: boolean;
   totalPoints: number;
   pickCount: number;
@@ -18,6 +19,7 @@ export type PlayerForm = {
   clubTeam: string;
   altTeam: string;
   value: string;
+  selectable: boolean;
 };
 
 export type ImportResult = {

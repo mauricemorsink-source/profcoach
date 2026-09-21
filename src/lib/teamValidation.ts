@@ -45,6 +45,10 @@ export async function validateTeamServerSide(params: {
     if (!playersById[id]) return { ok: false, errors: ["Eén of meer geselecteerde spelers bestaan niet (meer)"] };
   }
 
+  if (players.some((p) => !p.selectable)) {
+    return { ok: false, errors: ["Eén of meer geselecteerde spelers zijn niet beschikbaar om te kiezen"] };
+  }
+
   const slotDefs = buildSlots(formation);
   const result = validateTeam(slots, playersById, formation, budget, captainEnabled, captainSlot, slotDefs);
   if (!result.allValid) return { ok: false, errors: result.errors };

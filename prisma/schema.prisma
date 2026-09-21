@@ -144,6 +144,7 @@ model Player {
   value            Int
   active           Boolean             @default(true)
   altTeam          ClubTeamCode?
+  selectable       Boolean             @default(true)
   teamEntryPlayers TeamEntryPlayer[]
   performances     MatchPerformance[]
   seasonStats      PlayerSeasonStats[]

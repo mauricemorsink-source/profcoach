@@ -17,6 +17,7 @@ export async function PUT(
   const { id } = await params;
   const body = await req.json();
   const { name, shortName, position, clubTeam, value, altTeam } = body;
+  const selectable = body.selectable !== false;
 
   if (!name?.trim() || !position || !clubTeam || value === undefined) {
     return NextResponse.json({ error: "Alle velden zijn verplicht" }, { status: 400 });
@@ -27,8 +28,8 @@ export async function PUT(
   if (!validTeams.includes(clubTeam)) {
     return NextResponse.json({ error: "Ongeldig team" }, { status: 400 });
   }
-  const numValue = Number(value);
-  if (isNaN(numValue) || numValue <= 0) {
+  const numValue = selectable ? Number(value) : 0;
+  if (isNaN(numValue) || (selectable && numValue <= 0)) {
     return NextResponse.json({ error: "Ongeldige waarde" }, { status: 400 });
   }
 
@@ -59,6 +60,7 @@ export async function PUT(
         position: position,
         clubTeam: clubTeam,
         value: numValue,
+        selectable,
         altTeam: altTeam && validTeams.includes(altTeam) && altTeam !== clubTeam ? altTeam : null,
       },
     });

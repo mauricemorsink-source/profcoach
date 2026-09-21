@@ -349,6 +349,11 @@ export default function PlayersList({
                           FLEX
                         </span>
                       )}
+                      {player.selectable === false && (
+                        <span className="text-[9px] font-bold text-slate-300 bg-slate-700/60 border border-slate-600 px-1 py-0.5 rounded shrink-0">
+                          NIET KIESBAAR
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-500 sm:hidden">
                       {TEAM_LABEL[player.clubTeam]}
@@ -369,7 +374,7 @@ export default function PlayersList({
                     </td>
                   )}
                   {visibleColumns.has("waarde") && (
-                    <td className="py-3 px-3 text-slate-400">€{player.value}</td>
+                    <td className="py-3 px-3 text-slate-400">{player.selectable === false ? "-" : `€${player.value}`}</td>
                   )}
                   {visibleColumns.has("punten") && (
                     <td className="py-3 px-3 text-cyan-400 font-semibold">{player.totalPoints}</td>

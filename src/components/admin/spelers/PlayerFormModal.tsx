@@ -126,6 +126,29 @@ export default function PlayerFormModal({
               </p>
             )}
           </div>
+          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3 space-y-1.5">
+            <div className="flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.selectable}
+                  onChange={(e) => setForm({ ...form, selectable: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-cyan-600 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" />
+              </label>
+              <span className="text-sm font-medium text-slate-300">Kiesbaar voor deelnemers</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${form.selectable ? "bg-green-900/40 text-green-400 border border-green-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"}`}>
+                {form.selectable ? "Aan" : "Uit"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 ml-14">
+              {form.selectable
+                ? "De speler staat in de spelerslijst en heeft een waarde."
+                : "De speler staat niet in de spelerslijst en kan niet worden gekozen. Hij of zij is wel beschikbaar bij het invoeren van wedstrijden. Een waarde is niet nodig."}
+            </p>
+          </div>
+          {form.selectable && (
           <div>
             <label className={LABEL}>Waarde</label>
             <input
@@ -146,6 +169,7 @@ export default function PlayerFormModal({
               <p className="text-xs text-red-400 mt-1">Vul een geldige waarde in (groter dan 0).</p>
             )}
           </div>
+          )}
           {formError && (
             <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg border border-red-500/30">
               {formError}
@@ -158,7 +182,7 @@ export default function PlayerFormModal({
           </button>
           <button
             onClick={onSave}
-            disabled={saving || !form.name.trim() || !form.value || Number(form.value) <= 0}
+            disabled={saving || !form.name.trim() || (form.selectable && (!form.value || Number(form.value) <= 0))}
             className={BTN_PRIMARY}
           >
             {saving ? "Opslaan..." : "Opslaan"}
