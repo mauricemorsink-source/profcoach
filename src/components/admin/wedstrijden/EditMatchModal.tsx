@@ -1,6 +1,7 @@
 import type { AdminMatch, EditPerfEntry } from "./types";
 import { POSITION_LABEL, POSITION_COLOR, STATUS_LABEL, STATUS_STYLE, TEAM_LABEL, INPUT, LABEL, SELECT, BTN_PRIMARY, BTN_SECONDARY } from "./constants";
 import { toCardValue, fromCardValue, sortByLine } from "./helpers";
+import { isGuestAppearance } from "@/lib/guest";
 
 type EditMatchForm = {
   name: string;
@@ -277,6 +278,9 @@ export default function EditMatchModal({
                         <td className="py-1.5 font-medium text-white max-w-[160px]">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className="truncate">{p.player.name}</span>
+                            {isGuestAppearance(editingMatch.clubTeam, p.player) && (
+                              <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded shrink-0">GAST</span>
+                            )}
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${POSITION_COLOR[p.player.position] ?? "text-slate-400"}`}>
                               {POSITION_LABEL[p.player.position] ?? p.player.position}
                             </span>

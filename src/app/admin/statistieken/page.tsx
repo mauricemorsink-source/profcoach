@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import PredictionStatsChart from "@/components/admin/statistieken/PredictionStatsChart";
+import { isGuestAppearance } from "@/lib/guest";
 
 const TEAM_LABEL: Record<string, string> = {
   ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
@@ -50,6 +51,21 @@ function CompactRankedList({ items, emptyText }: { items: ListItem[]; emptyText:
   );
 }
 
+function GuestBadge() {
+  return (
+    <span className="text-[9px] font-bold text-amber-400 bg-amber-900/30 border border-amber-500/30 px-1 py-0.5 rounded shrink-0">GAST</span>
+  );
+}
+
+function SectionTitle({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="pt-4 border-b border-slate-800 pb-2">
+      <h2 className="text-base font-black text-white">{title}</h2>
+      <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+    </div>
+  );
+}
+
 function StatCard({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="bg-slate-900 neon-border rounded-2xl p-5">
@@ -67,7 +83,7 @@ export default async function AdminStatistiekenPage() {
     return <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>;
   }
 
-  const [entries, activePlayers, goalsAgg, yellowCardsAgg, predictionConfig, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats, mostPlayedStats] = await Promise.all([
+  const [entries, activePlayers, goalsAgg, yellowCardsAgg, predictionConfig, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats, mostPlayedStats, playedPerformances] = await Promise.all([
     prisma.teamEntry.findMany({
       where: { seasonId: season.id },
       include: {
@@ -122,6 +138,14 @@ export default async function AdminStatistiekenPage() {
       orderBy: { matchesPlayed: "desc" },
       take: 10,
       include: { player: { select: { name: true, clubTeam: true } } },
+    }),
+    prisma.matchPerformance.findMany({
+      where: { played: true, match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
+      select: {
+        isExcluded: true,
+        match: { select: { id: true, clubTeam: true, matchDate: true, status: true } },
+        player: { select: { id: true, name: true, clubTeam: true, altTeam: true } },
+      },
     }),
   ]);
 
@@ -266,9 +290,25 @@ export default async function AdminStatistiekenPage() {
 
   // Vaakst gespeeld (matchesPlayed telt wedstrijden van elk elftal mee waarin de speler
   // een MatchPerformance-record heeft, dus ook invalbeurten voor een ander elftal).
+  // Gastspelers: spelers die voor een ander elftal dan hun eigen (of flex-)elftal hebben gespeeld.
+  type GuestRow = { player: { id: string; name: string; clubTeam: string }; appearances: { team: string; date: Date; excluded: boolean }[] };
+  const guestMap = new Map<string, GuestRow>();
+  const processedGuestCounts = new Map<string, number>();
+  for (const perf of playedPerformances) {
+    if (!isGuestAppearance(perf.match.clubTeam, perf.player)) continue;
+    const row = guestMap.get(perf.player.id) ?? { player: perf.player, appearances: [] };
+    row.appearances.push({ team: perf.match.clubTeam, date: perf.match.matchDate, excluded: perf.isExcluded });
+    guestMap.set(perf.player.id, row);
+    if (perf.match.status === "PROCESSED") processedGuestCounts.set(perf.player.id, (processedGuestCounts.get(perf.player.id) ?? 0) + 1);
+  }
+  const guestRows = [...guestMap.values()].sort(
+    (a, b) => b.appearances.length - a.appearances.length || a.player.name.localeCompare(b.player.name, "nl")
+  );
+  const shortDate = (d: Date) => d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", timeZone: "Europe/Amsterdam" });
+
   const mostPlayedItems: ListItem[] = mostPlayedStats.map((s, i) => ({
     key: s.playerId, rank: i + 1, primary: s.player.name,
-    secondary: TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam,
+    secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam}${processedGuestCounts.get(s.playerId) ? ` · waarvan ${processedGuestCounts.get(s.playerId)}x als gast` : ""}`,
     value: `${s.matchesPlayed}x`,
   }));
 
@@ -288,8 +328,8 @@ export default async function AdminStatistiekenPage() {
     <div className="space-y-4">
       <div className="bg-slate-900 neon-border rounded-2xl p-5 flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-lg font-bold text-white">Team-statistieken</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Live berekend over alle ingediende teams van {season.name}.</p>
+          <h1 className="text-lg font-bold text-white">Statistieken</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Live berekend over {season.name}: eerst de prestaties, daarna de inschrijvingen.</p>
         </div>
         <span className="text-sm text-slate-400 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5">
           {totalEntries} team{totalEntries !== 1 ? "s" : ""} ingediend
@@ -323,6 +363,70 @@ export default async function AdminStatistiekenPage() {
           </div>
         </div>
       </div>
+
+      <SectionTitle
+        title="Prestaties"
+        hint="Wat spelers in de wedstrijden hebben gedaan. Punten en gespeelde wedstrijden komen uit verwerkte wedstrijden."
+      />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatCard title="Vaakst gespeeld" hint="Alle gespeelde wedstrijden. Een gastoptreden telt ook mee, de punten alleen voor het eigen elftal">
+          <RankedList items={mostPlayedItems} emptyText="Nog geen wedstrijden verwerkt." />
+        </StatCard>
+
+        <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per €100 waarde">
+          <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
+        </StatCard>
+      </div>
+
+      <StatCard title="Gastspelers" hint="Spelers die voor een ander elftal dan hun eigen elftal hebben gespeeld (goedgekeurde en verwerkte wedstrijden)">
+        {guestRows.length === 0 ? (
+          <p className="text-slate-500 text-sm">Nog geen gastspelers.</p>
+        ) : (
+          <ul className="grid gap-x-8 gap-y-3 md:grid-cols-2">
+            {guestRows.map((g) => (
+              <li key={g.player.id} className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium text-white">{g.player.name}</span>
+                    <GuestBadge />
+                  </div>
+                  <div className="text-slate-500 text-xs">
+                    {TEAM_LABEL[g.player.clubTeam] ?? g.player.clubTeam} · gast bij{" "}
+                    {g.appearances
+                      .map((a) => `${TEAM_LABEL[a.team] ?? a.team} (${shortDate(a.date)}${a.excluded ? ", punten tellen niet mee" : ""})`)
+                      .join(", ")}
+                  </div>
+                </div>
+                <span className="font-bold text-cyan-400 shrink-0 whitespace-nowrap">{g.appearances.length}x</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </StatCard>
+
+      <div>
+        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Beste speler per positie (op punten)</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {POSITION_ORDER.map((pos) => (
+            <StatCard key={pos} title={POSITION_LABEL[pos]}>
+              <RankedList items={bestByPosition[pos]} emptyText="Nog geen punten verwerkt." />
+            </StatCard>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Speler van het jaar</h2>
+        <StatCard title="Meeste punten (alle posities)">
+          <RankedList items={playerOfTheYear} emptyText="Nog geen punten verwerkt." />
+        </StatCard>
+      </div>
+
+      <SectionTitle
+        title="Inschrijvingen"
+        hint="Wat deelnemers hebben gekozen en voorspeld bij het indienen van hun team."
+      />
 
       {totalEntries === 0 ? (
         <p className="text-slate-500 text-sm">Nog geen teams ingediend.</p>
@@ -367,6 +471,17 @@ export default async function AdminStatistiekenPage() {
           </div>
 
           <div>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Populairste speler per positie</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {POSITION_ORDER.map((pos) => (
+                <StatCard key={pos} title={POSITION_LABEL[pos]}>
+                  <RankedList items={toItems(byPosition[pos])} emptyText="Nog geen selecties." />
+                </StatCard>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Bonusvragen — stand van zaken</h2>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div className="bg-slate-900 neon-border rounded-2xl p-4">
@@ -396,48 +511,6 @@ export default async function AdminStatistiekenPage() {
                 correctMax={predictionConfig?.yellowCardsMax ?? null}
               />
             </div>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Populairste speler per positie</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {POSITION_ORDER.map((pos) => (
-                <StatCard key={pos} title={POSITION_LABEL[pos]}>
-                  <RankedList items={toItems(byPosition[pos])} emptyText="Nog geen selecties." />
-                </StatCard>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Daadwerkelijke prestaties</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <StatCard title="Vaakst gespeeld" hint="Aantal wedstrijden gespeeld dit seizoen, inclusief invalbeurten voor een ander elftal">
-                <RankedList items={mostPlayedItems} emptyText="Nog geen wedstrijden verwerkt." />
-              </StatCard>
-
-              <StatCard title="Beste prijs-kwaliteit" hint="Meeste punten per €100 waarde">
-                <RankedList items={bestValueItems} emptyText="Nog geen punten verwerkt." />
-              </StatCard>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Beste speler per positie (op punten)</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {POSITION_ORDER.map((pos) => (
-                <StatCard key={pos} title={POSITION_LABEL[pos]}>
-                  <RankedList items={bestByPosition[pos]} emptyText="Nog geen punten verwerkt." />
-                </StatCard>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Speler van het jaar</h2>
-            <StatCard title="Meeste punten (alle posities)">
-              <RankedList items={playerOfTheYear} emptyText="Nog geen punten verwerkt." />
-            </StatCard>
           </div>
         </>
       )}

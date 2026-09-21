@@ -65,7 +65,7 @@ export type AdminMatch = {
     ownGoals: number;
     yellowCards: number;
     redCard: boolean;
-    player: { name: string; position: string; clubTeam: string };
+    player: { name: string; position: string; clubTeam: string; altTeam: string | null };
   }[];
 };
 

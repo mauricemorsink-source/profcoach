@@ -16,7 +16,7 @@ export async function GET() {
       createdBy: { select: { name: true, email: true } },
       publishMoment: { select: { id: true, label: true, scheduledAt: true, publishedAt: true } },
       performances: {
-        include: { player: { select: { name: true, position: true, clubTeam: true } } },
+        include: { player: { select: { name: true, position: true, clubTeam: true, altTeam: true } } },
         orderBy: { player: { name: "asc" } },
       },
     },
