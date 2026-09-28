@@ -170,6 +170,52 @@ export function isApplicable(configMap: ConfigMap, actionId: string, position: s
   }
 }
 
+/**
+ * Berekent de punten van één speler in één wedstrijd, mét leesbare opbouw per onderdeel.
+ * Gebruikt overal waar het puntenverloop van een individueel optreden getoond wordt (bv.
+ * spelersdetail, top-prestaties-lijst) — negeert bewust `isExcluded`, want die vlag zegt iets
+ * over of de wedstrijd meetelde voor de seizoensstand, niet over wat de speler zelf presteerde.
+ */
+export function describePerformance(
+  match: Pick<Match, "goalsScored" | "goalsConceded">,
+  perf: Pick<MatchPerformance, "goals" | "penaltyGoals" | "assists" | "ownGoals" | "yellowCards" | "redCard">,
+  position: string,
+  configMap: ConfigMap
+): { points: number; breakdown: Record<string, number> } {
+  const won = match.goalsScored > match.goalsConceded;
+  const drew = match.goalsScored === match.goalsConceded;
+  const cleanSheet = match.goalsConceded === 0;
+
+  let points = 0;
+  const breakdown: Record<string, number> = {};
+  const add = (label: string, val: number) => {
+    if (val !== 0) {
+      breakdown[label] = val;
+      points += val;
+    }
+  };
+
+  if (perf.goals > 0) add("Doelpunten", perf.goals * getPoints(configMap, "goal", position));
+  if (perf.penaltyGoals > 0) add("Strafschoppen", perf.penaltyGoals * getPoints(configMap, "penaltyGoal", position));
+  if (perf.assists > 0) add("Assists", perf.assists * getPoints(configMap, "assist", position));
+  if (perf.ownGoals > 0) add("Eigen doelpunten", perf.ownGoals * getPoints(configMap, "ownGoal", position));
+  if (won) add("Gewonnen", getPoints(configMap, "win", position));
+  if (drew) add("Gelijkspel", getPoints(configMap, "draw", position));
+  if (perf.yellowCards > 0) add("Gele kaarten", perf.yellowCards * getPoints(configMap, "yellowCard", position));
+  if (perf.redCard && perf.yellowCards < 2) add("Rode kaart", getPoints(configMap, "redCard", position));
+  if (cleanSheet && isApplicable(configMap, "cleanSheet", position)) {
+    add("Nul gehouden", getPoints(configMap, "cleanSheet", position));
+  }
+  if (isApplicable(configMap, "goalsConceded", position) && match.goalsConceded > 0) {
+    let concededPts = match.goalsConceded * getPoints(configMap, "goalsConceded", position);
+    const cap = configMap["goalsConceded"]?.capPerMatch;
+    if (cap != null) concededPts = Math.max(concededPts, cap);
+    add("Tegendoelpunten", concededPts);
+  }
+
+  return { points, breakdown };
+}
+
 export type PlayerDelta = {
   points: number;
   goals: number;

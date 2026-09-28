@@ -2,6 +2,8 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import PredictionStatsChart from "@/components/admin/statistieken/PredictionStatsChart";
 import { isGuestAppearance } from "@/lib/guest";
+import { buildConfigMap, describePerformance } from "@/lib/points";
+import { getOpponent } from "@/components/admin/wedstrijden/helpers";
 
 const TEAM_LABEL: Record<string, string> = {
   ONE: "Rietmolen 1", TWO: "Rietmolen 2", THREE: "Rietmolen 3",
@@ -77,7 +79,7 @@ export default async function AdminStatistiekenPage() {
     return <p className="text-slate-500 text-sm">Geen actief seizoen gevonden.</p>;
   }
 
-  const [entries, activePlayers, goalsAgg, yellowCardsAgg, predictionConfig, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats, mostPlayedStats, playedPerformances] = await Promise.all([
+  const [entries, activePlayers, goalsAgg, yellowCardsAgg, predictionConfig, topScorerStats, topAssistStats, topCleanSheetStats, topPointsStats, mostPlayedStats, playedPerformances, pointsConfigs] = await Promise.all([
     prisma.teamEntry.findMany({
       where: { seasonId: season.id },
       include: {
@@ -137,10 +139,12 @@ export default async function AdminStatistiekenPage() {
       where: { played: true, match: { seasonId: season.id, status: "PROCESSED" } },
       select: {
         isExcluded: true,
-        match: { select: { id: true, clubTeam: true, matchDate: true } },
-        player: { select: { id: true, name: true, clubTeam: true, altTeam: true } },
+        goals: true, penaltyGoals: true, assists: true, ownGoals: true, yellowCards: true, redCard: true,
+        match: { select: { id: true, name: true, clubTeam: true, matchDate: true, goalsScored: true, goalsConceded: true } },
+        player: { select: { id: true, name: true, clubTeam: true, altTeam: true, position: true } },
       },
     }),
+    prisma.pointsConfig.findMany(),
   ]);
 
   const totalGoalsScored = goalsAgg._sum.goalsScored ?? 0;
@@ -304,6 +308,33 @@ export default async function AdminStatistiekenPage() {
     value: `${g.appearances.length}x`,
   }));
 
+  // Beste individuele prestaties: het hoogste puntentotaal in één wedstrijd, los van de
+  // seizoensstand. Telt ook mee als de wedstrijd niet meetelde (isExcluded), bijvoorbeeld omdat
+  // de speler die dag ook voor zijn eigen elftal speelde — dat zegt iets over de stand, niet
+  // over wat hij die wedstrijd zelf presteerde.
+  const configMap = buildConfigMap(pointsConfigs);
+  type BestPerformance = {
+    key: string; playerName: string; position: string; clubTeam: string;
+    matchDate: Date; opponent: string; points: number; breakdown: Record<string, number>; excluded: boolean;
+  };
+  const bestPerformances: BestPerformance[] = playedPerformances
+    .map((perf) => {
+      const { points, breakdown } = describePerformance(perf.match, perf, perf.player.position, configMap);
+      return {
+        key: `${perf.match.id}-${perf.player.id}`,
+        playerName: perf.player.name,
+        position: perf.player.position,
+        clubTeam: perf.match.clubTeam,
+        matchDate: perf.match.matchDate,
+        opponent: getOpponent(perf.match.name, perf.match.clubTeam),
+        points,
+        breakdown,
+        excluded: perf.isExcluded,
+      };
+    })
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 5);
+
   const mostPlayedItems: ListItem[] = mostPlayedStats.map((s, i) => ({
     key: s.playerId, rank: i + 1, primary: s.player.name,
     secondary: `${TEAM_LABEL[s.player.clubTeam] ?? s.player.clubTeam}${guestMap.get(s.playerId) ? ` · waarvan ${guestMap.get(s.playerId)!.appearances.length}x als gast` : ""}`,
@@ -379,6 +410,55 @@ export default async function AdminStatistiekenPage() {
         <StatCard title="Vaakst als gast gespeeld" hint="Alleen gastspelers bij een ander elftal, geen flexspelers. Alleen verwerkte wedstrijden.">
           <RankedList items={guestItems} emptyText="Nog geen gastspelers." />
         </StatCard>
+      </div>
+
+      <div className="bg-slate-900 neon-border rounded-2xl p-5">
+        <h2 className="font-bold text-sm uppercase tracking-wide text-slate-400 mb-0.5">Beste individuele prestaties</h2>
+        <p className="text-xs text-slate-600 mb-3">
+          Hoogste puntentotaal in één wedstrijd. Telt ook mee als de wedstrijd niet meetelde voor de seizoensstand.
+        </p>
+        {bestPerformances.length === 0 ? (
+          <p className="text-slate-500 text-sm">Nog geen wedstrijden verwerkt.</p>
+        ) : (
+          <ol className="space-y-3">
+            {bestPerformances.map((p, i) => (
+              <li key={p.key} className="flex gap-3">
+                <span className="text-slate-600 w-5 text-right text-sm shrink-0 pt-0.5">{i + 1}</span>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                    <span className="font-medium text-white">
+                      {p.playerName}
+                      <span className="text-slate-500 text-xs font-normal"> · {POSITION_LABEL[p.position] ?? p.position} · {TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                    </span>
+                    <span className="font-bold text-cyan-400 shrink-0">{p.points} pt</span>
+                  </div>
+                  <p className="text-slate-500 text-xs">
+                    {p.matchDate.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" })} · vs {p.opponent}
+                    {p.excluded && (
+                      <span className="text-amber-400"> · telde niet mee voor de seizoensstand (dubbele wedstrijd die dag)</span>
+                    )}
+                  </p>
+                  {Object.keys(p.breakdown).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(p.breakdown).map(([label, pts]) => (
+                        <span
+                          key={label}
+                          className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
+                            pts > 0
+                              ? "bg-green-900/20 border-green-500/20 text-green-400"
+                              : "bg-red-900/20 border-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {label}: {pts > 0 ? "+" : ""}{pts}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
 
       <div>
