@@ -81,6 +81,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Formatie niet gevonden" }, { status: 400 });
   }
 
+  // Alle overwogen spelers (niet alleen de gekozen 11), zodat de admin handmatig kan wisselen
+  // bij een gelijke stand of een andere persoonlijke voorkeur.
+  const pool = [...playerMap.values()].sort(
+    (a, b) => b.points - a.points || a.name.localeCompare(b.name, "nl")
+  );
+
   return NextResponse.json({
     formation: {
       code: chosen.code,
@@ -93,5 +99,6 @@ export async function POST(req: Request) {
     total: chosen.total,
     recommendedCode,
     advice,
+    pool,
   });
 }

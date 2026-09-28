@@ -70,13 +70,22 @@ export async function computeDeelnemersStandings(
 }
 
 export type StatItem = { key: string; name: string; value: number; delta: number };
-export type TopStats = { topScorers: StatItem[]; topAssists: StatItem[]; topCleanSheets: StatItem[] };
+export type PlayerStatSnapshot = { goals: number; assists: number; cleanSheets: number };
+export type TopStats = {
+  topScorers: StatItem[];
+  topAssists: StatItem[];
+  topCleanSheets: StatItem[];
+  /** Doelpunten/assists/clean sheets van ELKE speler met stats bij deze publicatie, niet
+   * alleen de toenmalige top 10 — zodat een speler die nu voor het eerst in een top 10 komt
+   * (bijv. eerste doelpunt ooit) ook een kloppende delta krijgt in plaats van altijd 0. */
+  snapshot: Record<string, PlayerStatSnapshot>;
+};
 
 /**
- * `prevStats` is de statistieken-snapshot van de vorige publicatie. Die bevat alleen de
- * toenmalige top-10 per categorie — een speler die nu voor het eerst in de top 10 staat maar
- * er vorige keer niet in stond, krijgt daarom delta 0 (zijn werkelijke vorige aantal is niet
- * bewaard) in plaats van een geraden of onjuist groot verschil.
+ * `prevStats` is de statistieken-snapshot van de vorige publicatie, met de waarden van ALLE
+ * spelers op dat moment (niet alleen wie toen in de top 10 stond). Een speler zonder snapshot
+ * (bijv. pas na die publicatie toegevoegd) krijgt delta 0, want zijn werkelijke vorige aantal
+ * is niet bekend.
  */
 export async function computeTopStats(seasonId: string, prevStats?: TopStats): Promise<TopStats> {
   const allStats = await prisma.playerSeasonStats.findMany({
@@ -84,35 +93,34 @@ export async function computeTopStats(seasonId: string, prevStats?: TopStats): P
     include: { player: { select: { name: true, position: true } } },
   });
 
-  function prevValueMap(items?: StatItem[]) {
-    return new Map((items ?? []).map((it) => [it.key, it.value]));
-  }
-  function delta(prevMap: Map<string, number>, playerId: string, value: number) {
-    const prev = prevMap.get(playerId);
+  const prevSnapshot = prevStats?.snapshot ?? {};
+  function delta(key: keyof PlayerStatSnapshot, playerId: string, value: number) {
+    const prev = prevSnapshot[playerId]?.[key];
     return prev === undefined ? 0 : value - prev;
   }
-
-  const prevScorers = prevValueMap(prevStats?.topScorers);
-  const prevAssists = prevValueMap(prevStats?.topAssists);
-  const prevCleanSheets = prevValueMap(prevStats?.topCleanSheets);
 
   const topScorers = allStats
     .filter((s) => s.goals > 0)
     .sort((a, b) => b.goals - a.goals)
     .slice(0, 10)
-    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.goals, delta: delta(prevScorers, s.playerId, s.goals) }));
+    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.goals, delta: delta("goals", s.playerId, s.goals) }));
 
   const topAssists = allStats
     .filter((s) => s.assists > 0)
     .sort((a, b) => b.assists - a.assists)
     .slice(0, 10)
-    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.assists, delta: delta(prevAssists, s.playerId, s.assists) }));
+    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.assists, delta: delta("assists", s.playerId, s.assists) }));
 
   const topCleanSheets = allStats
     .filter((s) => s.player.position === "GK" && s.cleanSheets > 0)
     .sort((a, b) => b.cleanSheets - a.cleanSheets)
     .slice(0, 10)
-    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.cleanSheets, delta: delta(prevCleanSheets, s.playerId, s.cleanSheets) }));
+    .map((s) => ({ key: s.playerId, name: s.player.name, value: s.cleanSheets, delta: delta("cleanSheets", s.playerId, s.cleanSheets) }));
 
-  return { topScorers, topAssists, topCleanSheets };
+  const snapshot: Record<string, PlayerStatSnapshot> = {};
+  for (const s of allStats) {
+    snapshot[s.playerId] = { goals: s.goals, assists: s.assists, cleanSheets: s.cleanSheets };
+  }
+
+  return { topScorers, topAssists, topCleanSheets, snapshot };
 }

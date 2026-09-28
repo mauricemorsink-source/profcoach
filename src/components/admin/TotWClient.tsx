@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Match, Formation, FormationAdvice, TotWResult } from "./totw/types";
+import type { Match, Formation, FormationAdvice, TotWResult, TotWPlayer } from "./totw/types";
 import { drawPitchCanvas } from "./totw/canvasDrawing";
 import { ConfigModal } from "./totw/ConfigModal";
 import { MatchSelector } from "./totw/MatchSelector";
@@ -115,6 +115,19 @@ export default function TotWClient({
     }
   }
 
+  function swapPlayer(oldPlayerId: string, newPlayer: TotWPlayer) {
+    setTotw((prev) => {
+      if (!prev) return prev;
+      const idx = prev.players.findIndex((p) => p.playerId === oldPlayerId);
+      if (idx === -1) return prev;
+      const oldPlayer = prev.players[idx];
+      const players = [...prev.players];
+      players[idx] = newPlayer;
+      const total = (prev.total ?? prev.players.reduce((s, p) => s + p.points, 0)) - oldPlayer.points + newPlayer.points;
+      return { ...prev, players, total };
+    });
+  }
+
   function downloadImage() {
     if (!totw) return;
     const canvas = document.createElement("canvas");
@@ -163,7 +176,7 @@ export default function TotWClient({
 
           {/* TOTW result */}
           {totw && (
-            <TotwResultView totw={totw} title={title} subtitle={subtitle} onDownload={downloadImage} />
+            <TotwResultView totw={totw} title={title} subtitle={subtitle} onDownload={downloadImage} onSwap={swapPlayer} />
           )}
         </>
       )}

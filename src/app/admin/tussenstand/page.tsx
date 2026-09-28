@@ -6,7 +6,7 @@ export default async function AdminTussenstandPage() {
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
   let liveStandings: Awaited<ReturnType<typeof computeDeelnemersStandings>> = [];
-  let liveStats: Awaited<ReturnType<typeof computeTopStats>> = { topScorers: [], topAssists: [], topCleanSheets: [] };
+  let liveStats: Awaited<ReturnType<typeof computeTopStats>> = { topScorers: [], topAssists: [], topCleanSheets: [], snapshot: {} };
   if (season) {
     // Zelfde als bij publiceren: de +/- hier laat zien wat er zou veranderen t.o.v. de vorige
     // publicatie (niet t.o.v. de laatste verwerkronde) — dus exact wat je zou publiceren.

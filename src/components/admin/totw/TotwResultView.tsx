@@ -1,4 +1,5 @@
-import type { TotWResult } from "./types";
+import { useState } from "react";
+import type { TotWPlayer, TotWResult } from "./types";
 import { TEAM_LABEL } from "./constants";
 import { Pitch } from "./Pitch";
 
@@ -7,12 +8,17 @@ export function TotwResultView({
   title,
   subtitle,
   onDownload,
+  onSwap,
 }: {
   totw: TotWResult;
   title: string;
   subtitle: string;
   onDownload: () => void;
+  onSwap: (oldPlayerId: string, newPlayer: TotWPlayer) => void;
 }) {
+  const [swapOpenFor, setSwapOpenFor] = useState<string | null>(null);
+  const usedIds = new Set(totw.players.map((p) => p.playerId));
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -35,16 +41,56 @@ export function TotwResultView({
 
       {/* Player overview */}
       <div className="bg-slate-900 neon-border rounded-xl p-4">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Selectie</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Selectie</p>
+          {totw.pool && (
+            <p className="text-xs text-slate-600">Niet akkoord met een keuze? Klik op &quot;Wissel&quot; om zelf iemand anders te kiezen.</p>
+          )}
+        </div>
         <div className="space-y-1.5">
-          {totw.players.map((p) => (
-            <div key={p.playerId} className="flex items-center gap-3 text-sm">
-              <span className="text-slate-500 w-8 text-xs shrink-0">{p.position}</span>
-              <span className="text-white font-medium flex-1">{p.name}</span>
-              <span className="text-slate-400 text-xs">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
-              <span className="text-cyan-400 font-bold w-14 text-right shrink-0">{p.points} pt</span>
-            </div>
-          ))}
+          {totw.players.map((p) => {
+            const candidates = (totw.pool ?? [])
+              .filter((c) => c.position === p.position && (c.playerId === p.playerId || !usedIds.has(c.playerId)));
+            return (
+              <div key={p.playerId} className="text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-500 w-8 text-xs shrink-0">{p.position}</span>
+                  <span className="text-white font-medium flex-1">{p.name}</span>
+                  <span className="text-slate-400 text-xs">{TEAM_LABEL[p.clubTeam] ?? p.clubTeam}</span>
+                  <span className="text-cyan-400 font-bold w-14 text-right shrink-0">{p.points} pt</span>
+                  {totw.pool && candidates.length > 1 && (
+                    <button
+                      onClick={() => setSwapOpenFor(swapOpenFor === p.playerId ? null : p.playerId)}
+                      className="text-xs text-slate-500 hover:text-cyan-400 border border-slate-700 hover:border-cyan-500/40 rounded-lg px-2 py-1 shrink-0 transition-colors"
+                    >
+                      {swapOpenFor === p.playerId ? "Sluiten" : "Wissel"}
+                    </button>
+                  )}
+                </div>
+                {swapOpenFor === p.playerId && (
+                  <div className="ml-11 mt-1.5 mb-1 bg-slate-800 border border-slate-700 rounded-lg p-2 max-h-48 overflow-y-auto space-y-0.5">
+                    {candidates.map((c) => (
+                      <button
+                        key={c.playerId}
+                        onClick={() => {
+                          if (c.playerId !== p.playerId) onSwap(p.playerId, c);
+                          setSwapOpenFor(null);
+                        }}
+                        className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded text-xs transition-colors ${
+                          c.playerId === p.playerId ? "bg-cyan-500/10 text-cyan-400" : "text-slate-300 hover:bg-slate-700"
+                        }`}
+                      >
+                        <span className="flex-1 truncate">{c.name}</span>
+                        <span className="text-slate-500">{TEAM_LABEL[c.clubTeam] ?? c.clubTeam}</span>
+                        <span className="font-bold w-10 text-right shrink-0">{c.points} pt</span>
+                        {c.playerId === p.playerId && <span className="shrink-0">huidig</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         {totw.tiedOut && totw.tiedOut.length > 0 && (
           <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-800">

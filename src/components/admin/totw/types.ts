@@ -29,6 +29,8 @@ export type TotWResult = {
   tiedOut?: TotWPlayer[];
   total?: number;
   recommendedCode?: string | null;
+  /** Alle overwogen spelers van de geselecteerde wedstrijden, voor handmatig wisselen. */
+  pool?: TotWPlayer[];
 };
 
 export type FormationAdvice = Formation & {
