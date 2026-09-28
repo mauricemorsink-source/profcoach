@@ -5,28 +5,34 @@ import { TEAMS, TEAM_LABEL, STATUS_LABEL, STATUS_STYLE, BTN_PRIMARY, BTN_SECONDA
 import { getOpponent } from "./helpers";
 import MatchActionsMenu from "./MatchActionsMenu";
 
-export type MenuPos = { top: number; right: number; anchorTop: number };
+export type MenuPos = { top: number; left: number; anchorTop: number };
 
-// Vaste (portal-)positie onder de knop. Past het menu daar niet meer in beeld, dan klapt het
-// omhoog; past het ook daar niet, dan wordt het tegen de onderrand van het scherm geplaatst.
+// Vaste (portal-)positie onder de knop, links uitgelijnd met de knop. Past het menu daar niet
+// meer in beeld, dan klapt het omhoog en/of schuift het naar links op, op basis van de
+// werkelijk gemeten afmetingen — zo blijft het altijd binnen het scherm, ongeacht of de knop
+// links (mobiel) of rechts (desktoptabel) in de rij staat.
 function FloatingMenu({ pos, children }: { pos: MenuPos; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const h = el.offsetHeight;
-    const limit = window.innerHeight - 8;
+    const w = el.offsetWidth;
+    const bottomLimit = window.innerHeight - 8;
+    const rightLimit = window.innerWidth - 8;
     let top = pos.top;
-    if (top + h > limit) {
+    if (top + h > bottomLimit) {
       const above = pos.anchorTop - 4 - h;
-      top = above >= 8 ? above : Math.max(8, limit - h);
+      top = above >= 8 ? above : Math.max(8, bottomLimit - h);
     }
+    const left = Math.max(8, Math.min(pos.left, rightLimit - w));
     el.style.top = `${top}px`;
+    el.style.left = `${left}px`;
   }, [pos]);
   return (
     <div
       ref={ref}
-      style={{ position: "fixed", top: pos.top, right: pos.right }}
+      style={{ position: "fixed", top: pos.top, left: pos.left }}
       className="z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden"
     >
       {children}
@@ -540,13 +546,21 @@ export default function MatchesList({
                   <div className="pl-6">
                     <div className="relative inline-block">
                       <button
-                        onClick={() => setMatchMenuId(matchMenuId === m.id ? null : m.id)}
+                        onClick={(e) => {
+                          if (matchMenuId === m.id) {
+                            setMatchMenuId(null);
+                            return;
+                          }
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setDesktopMenuPos({ top: rect.bottom + 4, left: rect.left, anchorTop: rect.top });
+                          setMatchMenuId(m.id);
+                        }}
                         className={BTN_SMALL}
                       >
                         Acties ▾
                       </button>
-                      {matchMenuId === m.id && (
-                        <div className="absolute left-0 top-8 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl min-w-[220px] overflow-hidden">
+                      {matchMenuId === m.id && desktopMenuPos && createPortal(
+                        <FloatingMenu pos={desktopMenuPos}>
                           <MatchActionsMenu
                             match={m}
                             approvingId={approvingId}
@@ -568,7 +582,8 @@ export default function MatchesList({
                             onRevert={() => revertMatch(m.id)}
                             onDelete={() => deleteMatch(m.id)}
                           />
-                        </div>
+                        </FloatingMenu>,
+                        document.body
                       )}
                     </div>
                   </div>
@@ -769,7 +784,7 @@ export default function MatchesList({
                                 return;
                               }
                               const rect = e.currentTarget.getBoundingClientRect();
-                              setDesktopMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right, anchorTop: rect.top });
+                              setDesktopMenuPos({ top: rect.bottom + 4, left: rect.left, anchorTop: rect.top });
                               setMatchMenuId(m.id);
                             }}
                             className={BTN_SMALL}
