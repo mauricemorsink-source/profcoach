@@ -19,6 +19,22 @@ export function TotwResultView({
   const [swapOpenFor, setSwapOpenFor] = useState<string | null>(null);
   const usedIds = new Set(totw.players.map((p) => p.playerId));
 
+  // Live herberekend op basis van de huidige selectie (na eventuele handmatige wissels), niet
+  // de vaste lijst van het moment van genereren — anders klopt de tekst niet meer zodra iemand
+  // een speler handmatig wisselt.
+  const tiedOut = totw.pool
+    ? (() => {
+        const minByPosition = new Map<string, number>();
+        for (const p of totw.players) {
+          const cur = minByPosition.get(p.position);
+          if (cur === undefined || p.points < cur) minByPosition.set(p.position, p.points);
+        }
+        return totw.pool.filter(
+          (c) => !usedIds.has(c.playerId) && minByPosition.get(c.position) === c.points
+        );
+      })()
+    : totw.tiedOut ?? [];
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -92,10 +108,10 @@ export function TotwResultView({
             );
           })}
         </div>
-        {totw.tiedOut && totw.tiedOut.length > 0 && (
+        {tiedOut.length > 0 && (
           <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-800">
             Evenveel punten als de laatst gekozen speler, maar niet meer in dit elftal:{" "}
-            {totw.tiedOut.map((p) => `${p.name} (${p.position}, ${p.points} pt)`).join(", ")}.
+            {tiedOut.map((p) => `${p.name} (${p.position}, ${p.points} pt)`).join(", ")}.
           </p>
         )}
       </div>
