@@ -11,6 +11,8 @@ export interface Props {
   captainBonusPerWin: number;
   registrationClosedTitle?: string;
   registrationClosedText?: string;
+  /** Uitnodigingslink WhatsApp-groep uit de instellingen; leeg = geen knop. */
+  whatsappGroepUrl?: string;
 }
 
 export interface PredPointsConfig {

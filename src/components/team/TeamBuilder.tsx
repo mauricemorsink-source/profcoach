@@ -21,9 +21,11 @@ interface TeamBuilderProps {
   captainBonusPerWin?: number;
   readOnly?: boolean;
   deadline?: Date | null;
+  /** Uitnodigingslink WhatsApp-groep uit de instellingen; leeg = geen knop. */
+  whatsappGroepUrl?: string;
 }
 
-export default function TeamBuilder({ formations, season, budget, captainBonusPerWin = 5, readOnly = false, deadline }: TeamBuilderProps) {
+export default function TeamBuilder({ formations, season, budget, captainBonusPerWin = 5, readOnly = false, deadline, whatsappGroepUrl = "" }: TeamBuilderProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [teamEntryId, setTeamEntryId] = useState<string | null>(null);
   const [formationId, setFormationId] = useState<string>(formations[0]?.id ?? "");
@@ -477,6 +479,7 @@ export default function TeamBuilder({ formations, season, budget, captainBonusPe
           onUnlock={handleUnlock}
           unlocking={unlocking}
           onOpenPredictionModal={() => setShowPredictionModal(true)}
+          whatsappGroepUrl={whatsappGroepUrl}
         />
       )}
 

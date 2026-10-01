@@ -6,7 +6,11 @@ export default async function TeamIndienen() {
   const [formations, settings, content] = await Promise.all([
     prisma.formation.findMany({ orderBy: { code: "asc" } }),
     prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
-    getContentMap(["meldingen.registratie_gesloten_titel", "meldingen.registratie_gesloten_tekst"]),
+    getContentMap([
+      "meldingen.registratie_gesloten_titel",
+      "meldingen.registratie_gesloten_tekst",
+      "links.whatsapp_groep",
+    ]),
   ]);
 
   return (
@@ -21,6 +25,7 @@ export default async function TeamIndienen() {
       captainBonusPerWin={settings?.captainBonusPerWin ?? 5}
       registrationClosedTitle={content["meldingen.registratie_gesloten_titel"]}
       registrationClosedText={content["meldingen.registratie_gesloten_tekst"]}
+      whatsappGroepUrl={content["links.whatsapp_groep"]}
     />
   );
 }

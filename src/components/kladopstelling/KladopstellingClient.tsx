@@ -18,7 +18,7 @@ import PlayerPickerModal from "./PlayerPickerModal";
 
 export default function KladopstellingClient({
   formations, budget, requireLogin, inschrijfgeld, registrationOpen, deadline, captainEnabled, captainBonusPerWin,
-  registrationClosedTitle, registrationClosedText,
+  registrationClosedTitle, registrationClosedText, whatsappGroepUrl = "",
 }: Props) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -322,6 +322,7 @@ export default function KladopstellingClient({
         captainSlot={captainSlot}
         showPaymentOptions={showPaymentOptions}
         setShowPaymentOptions={setShowPaymentOptions}
+        whatsappGroepUrl={whatsappGroepUrl}
       />
     );
   }

@@ -43,6 +43,15 @@ export const CONTENT_DEFS: ContentDef[] = [
     multiline: true,
   },
   {
+    // Leeg laten haalt de knop overal weg zonder de code aan te passen. Handig
+    // als een uitnodigingslink is uitgelekt en spam aantrekt: nieuwe link
+    // aanmaken, hier plakken, klaar.
+    key: "links.whatsapp_groep",
+    label: "Uitnodigingslink WhatsApp-groep (leeg = geen knop tonen)",
+    group: "Links",
+    default: "",
+  },
+  {
     key: "meldingen.registratie_gesloten_titel",
     label: "Titel — inschrijving gesloten",
     group: "Meldingen",

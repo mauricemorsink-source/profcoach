@@ -2,8 +2,11 @@ import { BTN_PRIMARY, BTN_SECONDARY } from "./constants";
 
 export default function LockedTeamPanel({
   hasPrediction, activeTab, setActiveTab, downloading, onDownloadImage, readOnly, onUnlock, unlocking, onOpenPredictionModal,
+  whatsappGroepUrl = "",
 }: {
   hasPrediction: boolean;
+  /** Leeg wanneer er in de instellingen geen uitnodigingslink staat. */
+  whatsappGroepUrl?: string;
   activeTab: "volgende" | "voorspellingen";
   setActiveTab: (tab: "volgende" | "voorspellingen") => void;
   downloading: boolean;
@@ -66,13 +69,23 @@ export default function LockedTeamPanel({
               </div>
             </div>
 
-            {/* WhatsApp groep */}
+            {/* WhatsApp groep. Zonder link in de instellingen blijft het blok
+                staan, maar zonder knop. */}
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">📱 Volg updates</p>
-              <p className="text-xs text-slate-500 mb-2.5">Volg de WhatsApp-groep voor updates over het seizoen.</p>
-              <a href="https://chat.whatsapp.com/Dzqab7sMXu93CriSAqrSEd" target="_blank" rel="noopener noreferrer" className="block w-full px-4 py-2.5 bg-green-900/40 hover:bg-green-900/60 text-green-400 rounded-lg font-medium text-sm transition-colors border border-green-500/30 text-center">
-                Join WhatsApp groep
-              </a>
+              {whatsappGroepUrl ? (
+                <>
+                  <p className="text-xs text-slate-500 mb-2.5">Volg de WhatsApp-groep voor updates over het seizoen.</p>
+                  <a href={whatsappGroepUrl} target="_blank" rel="noopener noreferrer" className="block w-full px-4 py-2.5 bg-green-900/40 hover:bg-green-900/60 text-green-400 rounded-lg font-medium text-sm transition-colors border border-green-500/30 text-center">
+                    Join WhatsApp groep
+                  </a>
+                </>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Wie bij het inschrijven heeft aangegeven in de WhatsApp-groep te willen, wordt
+                  toegevoegd op het opgegeven telefoonnummer.
+                </p>
+              )}
             </div>
 
             {/* Terugtrekken */}

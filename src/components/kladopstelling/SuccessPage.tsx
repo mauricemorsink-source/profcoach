@@ -7,9 +7,11 @@ import { BTN_SECONDARY, POS_ORDER } from "./constants";
 
 export default function SuccessPage({
   personInfo, formation, slots, playersById, slotValues, captainEnabled, captainSlot,
-  showPaymentOptions, setShowPaymentOptions,
+  showPaymentOptions, setShowPaymentOptions, whatsappGroepUrl,
 }: {
   personInfo: PersonInfo;
+  /** Leeg wanneer er in de instellingen geen uitnodigingslink staat. */
+  whatsappGroepUrl: string;
   formation: Formation | undefined;
   slots: SlotDef[];
   playersById: Record<string, Player>;
@@ -32,21 +34,33 @@ export default function SuccessPage({
           </div>
         </div>
 
-        {/* WhatsApp-groep */}
+        {/* WhatsApp-groep. Zonder link in de instellingen wordt niemand
+            doorgestuurd, maar blijft de melding wel staan. */}
         {personInfo.whatsappGroep && (
           <div className="mb-5 bg-green-900/15 border border-green-500/25 rounded-2xl px-5 py-4">
-            <p className="text-green-400 font-semibold text-sm mb-1">Doe mee met de WhatsApp-groep</p>
-            <p className="text-slate-400 text-sm mb-3">
-              Je hebt aangegeven lid te willen worden van de WhatsApp-groep. Klik hieronder om je aan te sluiten.
+            <p className="text-green-400 font-semibold text-sm mb-1">
+              {whatsappGroepUrl ? "Doe mee met de WhatsApp-groep" : "WhatsApp-groep"}
             </p>
-            <a
-              href="https://chat.whatsapp.com/Dzqab7sMXu93CriSAqrSEd"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg text-sm transition-colors"
-            >
-              Word lid van de WhatsApp-groep
-            </a>
+            {whatsappGroepUrl ? (
+              <>
+                <p className="text-slate-400 text-sm mb-3">
+                  Je hebt aangegeven lid te willen worden van de WhatsApp-groep. Klik hieronder om je aan te sluiten.
+                </p>
+                <a
+                  href={whatsappGroepUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg text-sm transition-colors"
+                >
+                  Word lid van de WhatsApp-groep
+                </a>
+              </>
+            ) : (
+              <p className="text-slate-400 text-sm">
+                Je hebt aangegeven in de WhatsApp-groep te willen. We voegen je toe op het
+                telefoonnummer dat je hebt opgegeven, dus je hoeft zelf niets te doen.
+              </p>
+            )}
           </div>
         )}
 

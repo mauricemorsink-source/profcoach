@@ -12,7 +12,11 @@ export default async function MijnTeamPage() {
     prisma.season.findFirst({ where: { isActive: true } }),
     prisma.formation.findMany({ orderBy: { code: "asc" } }),
     prisma.gameSettings.findUnique({ where: { id: "singleton" } }),
-    getContentMap(["meldingen.registratie_gesloten_titel", "meldingen.registratie_gesloten_tekst"]),
+    getContentMap([
+      "meldingen.registratie_gesloten_titel",
+      "meldingen.registratie_gesloten_tekst",
+      "links.whatsapp_groep",
+    ]),
   ]);
 
   if (!season) {
@@ -55,7 +59,7 @@ export default async function MijnTeamPage() {
   return (
     <main className="min-h-[calc(100vh-56px)] py-8"
       style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(14,40,80,0.5) 0%, #060b14 60%)" }}>
-      <TeamBuilder formations={formations} season={season} budget={budget} captainBonusPerWin={captainBonusPerWin} readOnly={isPastDeadline} deadline={deadline} />
+      <TeamBuilder formations={formations} season={season} budget={budget} captainBonusPerWin={captainBonusPerWin} readOnly={isPastDeadline} deadline={deadline} whatsappGroepUrl={content["links.whatsapp_groep"]} />
     </main>
   );
 }
