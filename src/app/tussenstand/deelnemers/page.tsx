@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getContentMap } from "@/lib/content";
@@ -43,7 +44,13 @@ export default async function DeelnemersPage() {
               day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam",
             })}`}
           </p>
-          <DeelnemersTable deelnemers={data?.deelnemers ?? []} />
+          <Link
+            href="/tussenstand/vergelijken"
+            className="block w-full text-center px-4 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold text-sm transition-colors neon-glow-sm"
+          >
+            Vergelijk deelnemers →
+          </Link>
+          <DeelnemersTable deelnemers={data?.deelnemers ?? []} linkNames />
         </>
       )}
     </div>
