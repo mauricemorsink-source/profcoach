@@ -21,6 +21,8 @@ export async function POST(
     data: {
       seasonId: target.seasonId,
       label: `Hersteld: ${target.label ?? new Date(target.revealAt).toLocaleDateString("nl-NL")}`,
+      // Zelfde onderdeel als het origineel: een stand-versie herstelt alleen de stand, niet de statistieken.
+      scope: target.scope,
       data: target.data as object,
       matchesAsOf: target.matchesAsOf,
       revealAt: new Date(),

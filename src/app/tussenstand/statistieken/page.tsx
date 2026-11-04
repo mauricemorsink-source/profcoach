@@ -54,8 +54,8 @@ export default async function StatistiekenPage() {
 
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
-  // Zelfde publicatie als de deelnemerstussenstand — één publiceeractie werkt beide bij.
-  const publication = season ? await getVisibleStandingsPublication(season.id) : null;
+  // Eigen zichtbare publicatie voor de statistieken; los van de stand te publiceren.
+  const publication = season ? await getVisibleStandingsPublication(season.id, "STATISTIEKEN") : null;
   const data = publication?.data as PublishedStandingsData | undefined;
   const stats = data?.stats;
 

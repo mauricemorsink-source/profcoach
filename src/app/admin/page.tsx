@@ -10,7 +10,7 @@ export default async function AdminDashboardPage() {
 
   const [
     teamEntryCount, paidTeamEntryCount, totalMatches, pendingMatches, waitingMatches, processedMatches,
-    goalsAgg, yellowCardsAgg, latestPublication,
+    goalsAgg, yellowCardsAgg, latestStandPublication, latestStatsPublication,
   ] = season
     ? await Promise.all([
         prisma.teamEntry.count({ where: { seasonId: season.id } }),
@@ -27,9 +27,10 @@ export default async function AdminDashboardPage() {
           where: { match: { seasonId: season.id, status: { in: ["APPROVED", "PROCESSED"] } } },
           _sum: { yellowCards: true },
         }),
-        prisma.standingsPublication.findFirst({ where: { seasonId: season.id }, orderBy: { revealAt: "desc" } }),
+        prisma.standingsPublication.findFirst({ where: { seasonId: season.id, scope: { in: ["STAND", "BOTH"] } }, orderBy: { revealAt: "desc" } }),
+        prisma.standingsPublication.findFirst({ where: { seasonId: season.id, scope: { in: ["STATISTIEKEN", "BOTH"] } }, orderBy: { revealAt: "desc" } }),
       ])
-    : [0, 0, 0, 0, 0, 0, { _sum: { goalsScored: 0 } }, { _sum: { yellowCards: 0 } }, null];
+    : [0, 0, 0, 0, 0, 0, { _sum: { goalsScored: 0 } }, { _sum: { yellowCards: 0 } }, null, null];
 
   const totalGoalsScored = goalsAgg._sum.goalsScored ?? 0;
   const totalYellowCards = yellowCardsAgg._sum.yellowCards ?? 0;
@@ -38,11 +39,12 @@ export default async function AdminDashboardPage() {
   const deadlinePassed = !!deadline && deadline <= new Date();
   const registrationOpen = (settings?.registrationOpen ?? false) && !deadlinePassed;
 
-  // Zijn er wedstrijden verwerkt ná de laatste publicatie? Dan staat er een update klaar die
-  // deelnemers nog niet zien — precies het soort dingen waar een dashboard voor is bedoeld.
+  // Zijn er wedstrijden verwerkt ná de laatste publicatie van stand of statistieken? Dan staat er
+  // een update klaar die deelnemers nog niet zien — precies het soort dingen waar een dashboard voor is bedoeld.
   const hasUnpublishedChanges =
     !!settings?.standingsUpdatedAt &&
-    (!latestPublication || settings.standingsUpdatedAt > latestPublication.revealAt);
+    (!latestStandPublication || settings.standingsUpdatedAt > latestStandPublication.revealAt ||
+      !latestStatsPublication || settings.standingsUpdatedAt > latestStatsPublication.revealAt);
 
   const alerts: { text: string; href: string; tone: "amber" | "cyan" }[] = [];
   if (pendingMatches > 0) {
@@ -61,8 +63,8 @@ export default async function AdminDashboardPage() {
   }
   if (hasUnpublishedChanges) {
     alerts.push({
-      text: latestPublication
-        ? "Er staat een nieuwe tussenstand klaar die nog niet gepubliceerd is"
+      text: latestStandPublication || latestStatsPublication
+        ? "Er staat een nieuwe tussenstand of statistiek klaar die nog niet gepubliceerd is"
         : "De tussenstand is nog nooit gepubliceerd",
       href: "/admin/tussenstand",
       tone: "cyan",

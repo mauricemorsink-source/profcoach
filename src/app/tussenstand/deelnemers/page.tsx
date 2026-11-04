@@ -24,10 +24,10 @@ export default async function DeelnemersPage() {
 
   const season = await prisma.season.findFirst({ where: { isActive: true } });
 
-  // Iedereen (ook admin) ziet hier uitsluitend de meest recente publicatie — nooit live data.
+  // Iedereen (ook admin) ziet hier uitsluitend de meest recente publicatie van de stand — nooit live data.
   // De live stand + het publiceren/terugdraaien zit in het admin-tabje Tussenstand
   // (/admin/tussenstand), niet hier op de publieke pagina.
-  const publication = season ? await getVisibleStandingsPublication(season.id) : null;
+  const publication = season ? await getVisibleStandingsPublication(season.id, "STAND") : null;
   const data = publication?.data as PublishedStandingsData | undefined;
 
   return (
