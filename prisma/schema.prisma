@@ -115,10 +115,6 @@ model StandingsPublication {
   id          String    @id @default(cuid())
   seasonId    String
   label       String?
-  /// Welk onderdeel deze publicatie zichtbaar maakt: "BOTH", "STAND" of "STATISTIEKEN".
-  /// Stand en statistieken hebben elk hun eigen zichtbare publicatie, zodat ze los van elkaar
-  /// gepubliceerd kunnen worden. Oude rijen zijn "BOTH" en blijven zo werken.
-  scope       String    @default("BOTH")
   data        Json
   matchesAsOf DateTime?
   revealAt    DateTime

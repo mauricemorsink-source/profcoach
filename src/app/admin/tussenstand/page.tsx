@@ -9,14 +9,12 @@ export default async function AdminTussenstandPage() {
   let liveStats: Awaited<ReturnType<typeof computeTopStats>> = { topScorers: [], topAssists: [], topCleanSheets: [], snapshot: {} };
   if (season) {
     // Zelfde als bij publiceren: de +/- hier laat zien wat er zou veranderen t.o.v. de vorige
-    // publicatie van hetzelfde onderdeel (niet t.o.v. de laatste verwerkronde) — dus exact wat je zou publiceren.
-    const [prevStand, prevStats] = await Promise.all([
-      getVisibleStandingsPublication(season.id, "STAND"),
-      getVisibleStandingsPublication(season.id, "STATISTIEKEN"),
-    ]);
+    // publicatie (niet t.o.v. de laatste verwerkronde) — dus exact wat je zou publiceren.
+    const previous = await getVisibleStandingsPublication(season.id);
+    const prevData = previous?.data as PublishedStandingsData | undefined;
     [liveStandings, liveStats] = await Promise.all([
-      computeDeelnemersStandings(season.id, (prevStand?.data as PublishedStandingsData | undefined)?.deelnemers),
-      computeTopStats(season.id, (prevStats?.data as PublishedStandingsData | undefined)?.stats),
+      computeDeelnemersStandings(season.id, prevData?.deelnemers),
+      computeTopStats(season.id, prevData?.stats),
     ]);
   }
 

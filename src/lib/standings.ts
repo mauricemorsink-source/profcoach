@@ -8,20 +8,11 @@ export type DeelnemerStanding = {
   delta: number;
 };
 
-export type StandingsScope = "BOTH" | "STAND" | "STATISTIEKEN";
-export type StandingsPart = "STAND" | "STATISTIEKEN";
+export type PublishedStandingsData = { deelnemers: DeelnemerStanding[]; stats: TopStats };
 
-/** Een publicatie bevat alleen de onderdelen waarvoor ze gemaakt is (scope), dus beide zijn optioneel. */
-export type PublishedStandingsData = { deelnemers?: DeelnemerStanding[]; stats?: TopStats };
-
-/**
- * De zichtbare publicatie voor één onderdeel: de meest recente die bereikt is en dat onderdeel
- * bevat (zelf of via een BOTH-publicatie). Zo kan de stand los van de statistieken worden
- * bijgewerkt en omgekeerd.
- */
-export async function getVisibleStandingsPublication(seasonId: string, part: StandingsPart) {
+export async function getVisibleStandingsPublication(seasonId: string) {
   return prisma.standingsPublication.findFirst({
-    where: { seasonId, scope: { in: [part, "BOTH"] }, revealAt: { lte: new Date() } },
+    where: { seasonId, revealAt: { lte: new Date() } },
     orderBy: { revealAt: "desc" },
   });
 }
