@@ -80,7 +80,8 @@ export async function GET(
         if (won)                add("Gewonnen",        getPoints(configMap, "win",    pos));
         if (drew)               add("Gelijkspel",      getPoints(configMap, "draw",   pos));
         if (p.yellowCards > 0)  add("Gele kaarten",   p.yellowCards  * getPoints(configMap, "yellowCard",    pos));
-        if (p.redCard)          add("Rode kaart",      getPoints(configMap, "redCard", pos));
+        // Bij een tweede gele kaart is de rode kaart het gevolg van de gele kaarten: geen aparte aftrek (zie points.ts).
+        if (p.redCard && p.yellowCards < 2) add("Rode kaart", getPoints(configMap, "redCard", pos));
         if (cleanSheet && isApplicable(configMap, "cleanSheet", pos))
                                 add("Nul gehouden",    getPoints(configMap, "cleanSheet", pos));
         if (isApplicable(configMap, "goalsConceded", pos) && m.goalsConceded > 0) {

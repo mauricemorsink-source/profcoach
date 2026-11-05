@@ -300,7 +300,8 @@ export function calculateMatchPoints(
       assists: perf.assists,
       ownGoals: perf.ownGoals,
       yellowCards: perf.yellowCards,
-      redCards: perf.redCard ? 1 : 0,
+      // Zelfde regel als de punten: een tweede gele kaart telt als gele kaarten, niet als rode.
+      redCards: perf.redCard && perf.yellowCards < 2 ? 1 : 0,
       cleanSheets: cleanSheet && isApplicable(configMap, "cleanSheet", pos) ? 1 : 0,
       goalsConceded: !excluded && isApplicable(configMap, "goalsConceded", pos) ? match.goalsConceded : 0,
       wins: !excluded && won ? 1 : 0,
